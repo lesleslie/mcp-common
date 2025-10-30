@@ -1,0 +1,26 @@
+# Weather MCP Server Configuration
+# This file demonstrates YAML-based configuration with mcp-common's MCPBaseSettings
+#
+# Configuration precedence (later overrides earlier):
+# 1. Default values in WeatherSettings class
+# 2. This file (settings/weather.yaml)
+# 3. Local overrides (settings/local.yaml) - gitignored
+# 4. Environment variables (WEATHER_API_KEY, WEATHER_BASE_URL, etc.)
+
+# Server Information
+server_name: "Weather MCP"
+server_description: "Real-time weather data via OpenWeatherMap API"
+log_level: "INFO"
+enable_debug_mode: false
+
+# API Configuration
+# Override with environment variable: WEATHER_API_KEY=your_key_here
+api_key: "demo"  # Get your free API key at https://openweathermap.org/api
+base_url: "https://api.openweathermap.org/data/2.5"
+timeout: 10
+max_retries: 3
+
+# HTTP Client Configuration
+# Connection pooling provides 11x performance improvement over per-request clients
+http_max_connections: 50
+http_max_keepalive: 10
