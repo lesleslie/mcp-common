@@ -1,9 +1,10 @@
 # MCP Ecosystem Critical Audit Report
+
 **Date:** 2025-10-26
 **Auditor:** Claude Code Critical Audit Specialist
 **Scope:** 6 Production MCP Servers
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
@@ -17,6 +18,7 @@
 ### Key Findings
 
 **Strengths:**
+
 - ✅ All servers use FastMCP framework (standardized architecture)
 - ✅ Consistent Python 3.13+ requirement across ecosystem
 - ✅ Strong use of Pydantic for data validation
@@ -24,13 +26,14 @@
 - ✅ Active development and maintenance
 
 **Critical Gaps:**
+
 - ❌ **Test coverage varies drastically (26%-82%)** - inconsistent quality assurance
 - ❌ **Security: API keys retrieved from environment without validation** across all servers
 - ❌ **No centralized error handling patterns** - each server implements differently
 - ❌ **Missing rate limiting** in most servers (only opera-cloud mentions it)
 - ❌ **Hardcoded paths** in excalidraw-mcp break portability
 
----
+______________________________________________________________________
 
 ## Server-by-Server Analysis
 
@@ -42,6 +45,7 @@
 **MCP Protocol:** FastMCP 2.11.3+
 
 #### Strengths
+
 - **Excellent hybrid architecture** (Python MCP + TypeScript canvas server)
 - **Comprehensive monitoring** with circuit breaker, health checks, and alerting
 - **Strong test suite** with unit, integration, e2e, security, and performance tests
@@ -52,6 +56,7 @@
 #### Critical Issues
 
 **1. CRITICAL: Hardcoded Path Breaking Portability**
+
 ```python
 # excalidraw_mcp/server.py:101
 subprocess.Popen(
@@ -61,20 +66,24 @@ subprocess.Popen(
     stderr=subprocess.DEVNULL,
 )
 ```
+
 **Impact:** Server will fail on any system where path doesn't exist
 **Fix:** Use `Path(__file__).parent` or environment variable
 
 **2. HIGH: No API Key Validation**
+
 - Canvas server URL from environment is not validated
 - No check for required environment variables on startup
 - Silent failures possible with misconfiguration
 
 **3. MEDIUM: Process Management Risks**
+
 - Canvas server started with `DEVNULL` - no visibility into failures
 - No timeout on canvas server startup (waits 30 seconds max)
 - No cleanup of zombie processes if MCP server crashes
 
 #### Security Analysis
+
 - ✅ Good: Bandit security scanning configured
 - ✅ Good: Comprehensive security test markers
 - ⚠️ Medium: WebSocket connections not authenticated
@@ -82,6 +91,7 @@ subprocess.Popen(
 - ❌ High: No rate limiting on MCP tools
 
 #### Performance & Reliability
+
 - ✅ Excellent: Circuit breaker pattern implemented
 - ✅ Excellent: Retry logic with exponential backoff
 - ✅ Good: Health check endpoint
@@ -89,6 +99,7 @@ subprocess.Popen(
 - ⚠️ Medium: No caching strategy for frequently accessed data
 
 #### Code Quality
+
 - ✅ Excellent: Strict Pyright type checking (`typeCheckingMode = "strict"`)
 - ✅ Excellent: Comprehensive pre-commit hooks
 - ✅ Good: Ruff linting with max complexity 13
@@ -98,22 +109,23 @@ subprocess.Popen(
 #### Recommendations
 
 **CRITICAL (Must Fix):**
+
 1. Replace hardcoded path with dynamic resolution
-2. Add startup validation for required environment variables
-3. Implement proper error handling for subprocess failures
+1. Add startup validation for required environment variables
+1. Implement proper error handling for subprocess failures
 
 **HIGH PRIORITY:**
-4. Add authentication to WebSocket connections
-5. Implement rate limiting on MCP tools (suggestions: 100 req/min)
-6. Add connection pooling for HTTP client
-7. Improve process cleanup with atexit handlers
+4\. Add authentication to WebSocket connections
+5\. Implement rate limiting on MCP tools (suggestions: 100 req/min)
+6\. Add connection pooling for HTTP client
+7\. Improve process cleanup with atexit handlers
 
 **MEDIUM PRIORITY:**
-8. Add caching for element queries
-9. Implement request/response logging
-10. Add metrics collection (Prometheus format)
+8\. Add caching for element queries
+9\. Implement request/response logging
+10\. Add metrics collection (Prometheus format)
 
----
+______________________________________________________________________
 
 ### 2. Mailgun MCP Server ⭐ Score: 64/100
 
@@ -123,6 +135,7 @@ subprocess.Popen(
 **MCP Protocol:** FastMCP (latest)
 
 #### Strengths
+
 - **Simple, focused implementation** - does one thing well
 - **Comprehensive Mailgun API coverage** (29+ tools)
 - **Clean async/await patterns** throughout
@@ -132,32 +145,39 @@ subprocess.Popen(
 #### Critical Issues
 
 **1. CRITICAL: API Key Retrieved Without Validation**
+
 ```python
 # mailgun_mcp/main.py:15-20
 def get_mailgun_api_key() -> str | None:
     return os.environ.get("MAILGUN_API_KEY")  # ❌ NO VALIDATION
 
+
 def get_mailgun_domain() -> str | None:
     return os.environ.get("MAILGUN_DOMAIN")  # ❌ NO VALIDATION
 ```
+
 **Impact:** Server starts without required credentials, tools fail at runtime
 **Fix:** Validate at startup with `Settings` class using Pydantic
 
 **2. CRITICAL: HTTP Client Created Per Request**
+
 ```python
 # Every tool does this:
 async with httpx.AsyncClient() as client:  # ❌ NEW CLIENT EACH TIME
     response = await client.post(...)
 ```
+
 **Impact:** Poor performance, excessive connection overhead, socket exhaustion risk
 **Fix:** Use single long-lived client with connection pooling
 
 **3. HIGH: No Request Timeout Configuration**
+
 - All requests use httpx default timeout (5 seconds)
 - No retry logic for transient failures
 - No circuit breaker for failed API calls
 
 **4. HIGH: Sensitive Data in Error Responses**
+
 ```python
 return {
     "error": {
@@ -167,10 +187,12 @@ return {
     }
 }
 ```
+
 **Impact:** API errors might leak sensitive information
 **Fix:** Sanitize error responses, log full details separately
 
 #### Security Analysis
+
 - ❌ Critical: No API key validation or rotation support
 - ❌ Critical: No input sanitization for email addresses
 - ❌ High: No rate limiting (Mailgun has strict limits)
@@ -178,6 +200,7 @@ return {
 - ⚠️ Medium: Attachment handling not implemented (file upload risks)
 
 #### Performance & Reliability
+
 - ❌ Critical: No HTTP client reuse (performance killer)
 - ❌ High: No retry logic for transient failures
 - ❌ High: No request timeout configuration
@@ -185,6 +208,7 @@ return {
 - ⚠️ Medium: No caching (e.g., for domain lists)
 
 #### Code Quality
+
 - ✅ Good: Type hints on all functions
 - ✅ Good: Consistent error handling pattern
 - ✅ Good: Clear, descriptive tool names
@@ -193,6 +217,7 @@ return {
 - ❌ Low test coverage (49.9%)
 
 #### Integration & Compatibility
+
 - ✅ Good: Clean FastMCP integration
 - ✅ Good: Standard MCP tool decorator usage
 - ⚠️ Medium: No health check endpoint
@@ -202,20 +227,24 @@ return {
 #### Recommendations
 
 **CRITICAL (Must Fix):**
+
 1. **Create Settings class with Pydantic validation:**
+
 ```python
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
+
 class MailgunSettings(BaseSettings):
     api_key: str = Field(..., min_length=20, description="Mailgun API key")
-    domain: str = Field(..., pattern=r'^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$')
+    domain: str = Field(..., pattern=r"^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
 
     class Config:
         env_prefix = "MAILGUN_"
 ```
 
 2. **Implement shared HTTP client with connection pooling:**
+
 ```python
 client = httpx.AsyncClient(
     timeout=httpx.Timeout(30.0),
@@ -224,6 +253,7 @@ client = httpx.AsyncClient(
 ```
 
 3. **Add retry logic with exponential backoff:**
+
 ```python
 from tenacity import retry, stop_after_attempt, wait_exponential
 
@@ -233,20 +263,20 @@ async def call_mailgun_api(...):
 ```
 
 **HIGH PRIORITY:**
-4. Add input validation for email addresses (use pydantic.EmailStr)
-5. Implement rate limiting (Mailgun: 100 req/min per domain)
-6. Sanitize error responses before returning to client
-7. Add health check tool
-8. Increase test coverage to 80%+
+4\. Add input validation for email addresses (use pydantic.EmailStr)
+5\. Implement rate limiting (Mailgun: 100 req/min per domain)
+6\. Sanitize error responses before returning to client
+7\. Add health check tool
+8\. Increase test coverage to 80%+
 
 **MEDIUM PRIORITY:**
-9. Refactor repetitive code into base client class
-10. Add caching for domain/template listings
-11. Add example .mcp.json to repository
-12. Implement webhook signature verification
-13. Add metrics/observability support
+9\. Refactor repetitive code into base client class
+10\. Add caching for domain/template listings
+11\. Add example .mcp.json to repository
+12\. Implement webhook signature verification
+13\. Add metrics/observability support
 
----
+______________________________________________________________________
 
 ### 3. Opera Cloud MCP Server ⭐ Score: 68/100
 
@@ -256,6 +286,7 @@ async def call_mailgun_api(...):
 **MCP Protocol:** FastMCP 2.12.0+
 
 #### Strengths
+
 - **Enterprise-grade architecture** with proper client abstraction
 - **Comprehensive API coverage** (45+ tools across 5 domains)
 - **OAuth2 authentication** with token refresh
@@ -266,34 +297,41 @@ async def call_mailgun_api(...):
 #### Critical Issues
 
 **1. CRITICAL: Incomplete Tool Registration**
+
 ```python
 # opera_cloud_mcp/server.py (only 35 lines total)
 # Tools are defined in separate modules but never actually registered
 # No @mcp.tool decorators found in any tool files
 ```
+
 **Impact:** Server starts but tools may not be accessible to MCP clients
 **Fix:** Ensure all tool registration functions actually use FastMCP decorators
 
 **2. HIGH: Sensitive Credentials in Configuration**
+
 ```toml
 # pyproject.toml example shows:
 OPERA_CLOUD_CLIENT_SECRET=your_client_secret
 OPERA_CLOUD_PASSWORD=your_password  # ❌ PLAIN TEXT EXAMPLE
 ```
+
 **Impact:** Documentation might encourage insecure practices
 **Fix:** Document secure credential management (keyring, secrets manager)
 
 **3. HIGH: No OAuth Token Storage Strategy Documented**
+
 - README mentions OAuth2 but no implementation visible
 - No token refresh logic apparent in server.py
 - Risk of authentication failures mid-session
 
 **4. MEDIUM: Low Test Coverage (36.4%)**
+
 - Enterprise system with minimal testing
 - No apparent integration tests for OAuth flow
 - Critical business logic potentially untested
 
 #### Security Analysis
+
 - ✅ Good: OAuth2 authentication mentioned
 - ✅ Good: Security implementation docs exist
 - ✅ Good: Audit logging mentioned
@@ -303,6 +341,7 @@ OPERA_CLOUD_PASSWORD=your_password  # ❌ PLAIN TEXT EXAMPLE
 - ❌ High: Circuit breaker mentioned but not visible in codebase
 
 #### Performance & Reliability
+
 - ✅ Good: SQLModel for data persistence
 - ✅ Good: Structured logging mentioned
 - ⚠️ Medium: No visible connection pooling configuration
@@ -311,6 +350,7 @@ OPERA_CLOUD_PASSWORD=your_password  # ❌ PLAIN TEXT EXAMPLE
 - ❌ High: Retry logic not visible in base client
 
 #### Code Quality
+
 - ✅ Excellent: Strict MyPy configuration (`disallow_untyped_defs = true`)
 - ✅ Good: Comprehensive Ruff linting rules
 - ✅ Good: Pydantic models for request/response validation
@@ -319,6 +359,7 @@ OPERA_CLOUD_PASSWORD=your_password  # ❌ PLAIN TEXT EXAMPLE
 - ❌ Low test coverage (36.4%)
 
 #### Integration & Compatibility
+
 - ✅ Excellent: Multiple MCP client examples (Claude Desktop, etc.)
 - ✅ Good: Docker and Docker Compose support
 - ✅ Good: Environment variable configuration
@@ -326,6 +367,7 @@ OPERA_CLOUD_PASSWORD=your_password  # ❌ PLAIN TEXT EXAMPLE
 - ⚠️ Medium: Metrics endpoint mentioned but not visible
 
 #### Architecture Concerns
+
 - ⚠️ **Tool Module Organization**: Tools split across 5 files but registration unclear
 - ⚠️ **Client Factory Pattern**: Referenced but implementation not examined
 - ⚠️ **Base Client**: Mentioned refactored version but still has old base_client.py
@@ -333,7 +375,9 @@ OPERA_CLOUD_PASSWORD=your_password  # ❌ PLAIN TEXT EXAMPLE
 #### Recommendations
 
 **CRITICAL (Must Fix):**
+
 1. **Verify tool registration is actually working:**
+
 ```python
 # Ensure each tool file actually registers with FastMCP
 # Example in reservation_tools.py:
@@ -343,8 +387,10 @@ async def search_reservations(...):
 ```
 
 2. **Implement OAuth token management:**
+
 ```python
 from authlib.integrations.httpx_client import AsyncOAuth2Client
+
 
 class OperaCloudClient:
     def __init__(self):
@@ -358,24 +404,24 @@ class OperaCloudClient:
 3. **Add comprehensive integration tests for OAuth flow**
 
 **HIGH PRIORITY:**
-4. Implement visible rate limiting (mentioned in README, not in code)
-5. Implement circuit breaker pattern (mentioned in README, not in code)
-6. Add input validation in base client
-7. Document secure credential management (use keyring, not env vars for production)
-8. Increase test coverage to 80%+ (currently 36.4%)
-9. Add visible timeout configuration
-10. Add visible retry logic
+4\. Implement visible rate limiting (mentioned in README, not in code)
+5\. Implement circuit breaker pattern (mentioned in README, not in code)
+6\. Add input validation in base client
+7\. Document secure credential management (use keyring, not env vars for production)
+8\. Increase test coverage to 80%+ (currently 36.4%)
+9\. Add visible timeout configuration
+10\. Add visible retry logic
 
 **MEDIUM PRIORITY:**
-11. Consolidate base_client.py and base_client_refactored.py
-12. Add health check endpoint implementation
-13. Add metrics endpoint implementation (Prometheus format)
-14. Implement connection pooling
-15. Add caching for frequently accessed data
-16. Add request/response logging
-17. Document tool registration pattern
+11\. Consolidate base_client.py and base_client_refactored.py
+12\. Add health check endpoint implementation
+13\. Add metrics endpoint implementation (Prometheus format)
+14\. Implement connection pooling
+15\. Add caching for frequently accessed data
+16\. Add request/response logging
+17\. Document tool registration pattern
 
----
+______________________________________________________________________
 
 ### 4. Raindrop.io MCP Server ⭐ Score: 86/100 ⭐
 
@@ -385,6 +431,7 @@ class OperaCloudClient:
 **MCP Protocol:** FastMCP 2.12.0+
 
 #### Strengths
+
 - **Excellent test coverage** (82.4% - highest in ecosystem)
 - **Clean architecture** with proper client abstraction
 - **Graceful shutdown** with client cleanup in lifespan
@@ -397,27 +444,33 @@ class OperaCloudClient:
 #### Critical Issues
 
 **1. MEDIUM: No Token Validation on Startup**
+
 ```python
 # raindropio_mcp/config/settings.py
 class RaindropSettings(BaseSettings):
     token: str  # ❌ NO VALIDATION (length, format, etc.)
 ```
+
 **Impact:** Invalid tokens cause runtime failures
 **Fix:** Add Field validators for token format
 
 **2. MEDIUM: HTTP Client Timeout Not Configurable Per-Request**
+
 ```python
 # All requests use global timeout setting
 # No way to override for long-running operations
 ```
+
 **Impact:** Import/export operations might timeout
 **Fix:** Add per-operation timeout override option
 
 **3. LOW: Missing Example MCP Configuration**
+
 - `example.mcp.json` and `example.mcp.dev.json` referenced but not shown
 - New users might struggle with initial setup
 
 #### Security Analysis
+
 - ✅ Good: Token stored in environment variable
 - ✅ Good: No sensitive data in error responses
 - ✅ Good: User agent configuration for tracking
@@ -426,6 +479,7 @@ class RaindropSettings(BaseSettings):
 - ✅ Good: Bandit security scanning configured
 
 #### Performance & Reliability
+
 - ✅ Excellent: Single HTTP client with connection pooling
 - ✅ Excellent: Configurable max connections (10 default)
 - ✅ Good: Configurable timeout (30s default)
@@ -435,6 +489,7 @@ class RaindropSettings(BaseSettings):
 - ⚠️ Medium: No caching (bookmarks, collections)
 
 #### Code Quality
+
 - ✅ Excellent: Strict MyPy configuration
 - ✅ Excellent: Comprehensive type hints
 - ✅ Excellent: Pydantic models for all payloads
@@ -444,6 +499,7 @@ class RaindropSettings(BaseSettings):
 - ✅ Good: Lazy app initialization pattern
 
 #### Integration & Compatibility
+
 - ✅ Excellent: HTTP transport support
 - ✅ Excellent: Configurable bind host/port
 - ✅ Good: FastMCP integration best practices
@@ -454,9 +510,12 @@ class RaindropSettings(BaseSettings):
 #### Recommendations
 
 **HIGH PRIORITY:**
+
 1. **Add token validation:**
+
 ```python
 from pydantic import Field, field_validator
+
 
 class RaindropSettings(BaseSettings):
     token: str = Field(..., min_length=20, description="Raindrop.io API token")
@@ -469,26 +528,27 @@ class RaindropSettings(BaseSettings):
 ```
 
 2. **Implement retry logic with tenacity:**
+
 ```python
 from tenacity import retry, stop_after_attempt, wait_exponential
 
+
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-async def _request(self, method, endpoint, **kwargs):
-    ...
+async def _request(self, method, endpoint, **kwargs): ...
 ```
 
 3. **Add rate limiting to respect Raindrop.io API limits**
 
 **MEDIUM PRIORITY:**
-4. Add per-operation timeout override
-5. Implement caching for collections and tags
-6. Add health check tool
-7. Add ping tool for connectivity testing
-8. Create example MCP configurations
-9. Add circuit breaker for API failures
-10. Implement metrics collection
+4\. Add per-operation timeout override
+5\. Implement caching for collections and tags
+6\. Add health check tool
+7\. Add ping tool for connectivity testing
+8\. Create example MCP configurations
+9\. Add circuit breaker for API failures
+10\. Implement metrics collection
 
----
+______________________________________________________________________
 
 ### 5. Session Management MCP Server ⭐ Score: 72/100
 
@@ -498,6 +558,7 @@ async def _request(self, method, endpoint, **kwargs):
 **MCP Protocol:** FastMCP 2+
 
 #### Strengths
+
 - **Massive feature set** (70+ tools across 10 categories)
 - **Advanced AI integration** (local embeddings, semantic search)
 - **Innovative automatic lifecycle management** for git repos
@@ -511,31 +572,38 @@ async def _request(self, method, endpoint, **kwargs):
 #### Critical Issues
 
 **1. CRITICAL: Extreme Complexity - 70+ Tools**
+
 ```python
 # From README: 70+ specialized tools across 10 categories
 # Single MCP server trying to do everything
 ```
+
 **Impact:**
+
 - Overwhelming for new users
 - Difficult to maintain and test
 - High cognitive load
 - Unclear tool responsibility boundaries
 
 **Fix:** Consider splitting into focused micro-services:
+
 - session-mgmt-core-mcp (start/checkpoint/end)
 - session-mgmt-memory-mcp (reflection/search)
 - session-mgmt-quality-mcp (crackerjack integration)
 - session-mgmt-team-mcp (collaboration)
 
 **2. CRITICAL: Very Low Test Coverage (34.6%)**
+
 ```python
 # pyproject.toml
 fail_under = 35  # ❌ EXTREMELY LOW THRESHOLD
 ```
+
 **Impact:** High risk of bugs in production with 70+ tools
 **Fix:** Prioritize testing critical paths (start, end, search)
 
 **3. HIGH: Complex Dependency Tree**
+
 ```python
 # Depends on:
 - acb>=0.25.2 (local editable dependency)
@@ -543,12 +611,15 @@ fail_under = 35  # ❌ EXTREMELY LOW THRESHOLD
 - tiktoken, jinja2, rich, structlog
 - crackerjack (another local dependency)
 ```
+
 **Impact:**
+
 - Installation complexity
 - Version conflicts risk
 - Difficult for users to install
 
 **4. HIGH: Heavy Feature Flagging Indicates Incomplete State**
+
 ```python
 # server.py shows 12+ feature flags:
 SESSION_MANAGEMENT_AVAILABLE
@@ -556,18 +627,22 @@ REFLECTION_TOOLS_AVAILABLE
 ENHANCED_SEARCH_AVAILABLE
 # ... 9 more flags
 ```
+
 **Impact:** Unclear which features actually work
 **Fix:** Document feature flag status in README
 
 **5. MEDIUM: Local Dependency on ACB Framework**
+
 ```toml
 [tool.uv.sources]
 acb = { path = "../acb", editable = true }  # ❌ NON-PORTABLE
 ```
+
 **Impact:** Cannot install from PyPI, requires specific directory structure
 **Fix:** Publish ACB to PyPI or make optional
 
 #### Security Analysis
+
 - ✅ Good: Local embeddings (no external API calls for privacy)
 - ✅ Good: Structured logging with no PII
 - ✅ Good: Bandit security scanning configured
@@ -576,6 +651,7 @@ acb = { path = "../acb", editable = true }  # ❌ NON-PORTABLE
 - ⚠️ Medium: Session data persistence strategy unclear
 
 #### Performance & Reliability
+
 - ✅ Good: DuckDB for efficient vector storage
 - ✅ Good: ONNX runtime for local ML inference
 - ✅ Good: Token optimization features
@@ -584,6 +660,7 @@ acb = { path = "../acb", editable = true }  # ❌ NON-PORTABLE
 - ❌ High: Heavy dependencies (transformers, onnxruntime) slow startup
 
 #### Code Quality
+
 - ✅ Good: Comprehensive Ruff configuration (ALL rules enabled)
 - ✅ Good: Structured logging with structlog
 - ✅ Good: Pydantic models for configuration
@@ -592,6 +669,7 @@ acb = { path = "../acb", editable = true }  # ❌ NON-PORTABLE
 - ❌ Very low test coverage (34.6%)
 
 #### Integration & Compatibility
+
 - ✅ Excellent: Deep Crackerjack integration
 - ✅ Good: Serverless mode support
 - ✅ Good: Multiple transport options
@@ -603,28 +681,29 @@ acb = { path = "../acb", editable = true }  # ❌ NON-PORTABLE
 #### Recommendations
 
 **CRITICAL (Must Fix):**
+
 1. **Split into focused micro-services** (4-5 smaller servers)
-2. **Increase test coverage** from 34.6% to 80%+ (focus on critical paths first)
-3. **Remove local path dependency on ACB** (publish to PyPI)
-4. **Document feature flag status** in README (which features are production-ready)
+1. **Increase test coverage** from 34.6% to 80%+ (focus on critical paths first)
+1. **Remove local path dependency on ACB** (publish to PyPI)
+1. **Document feature flag status** in README (which features are production-ready)
 
 **HIGH PRIORITY:**
-5. Reduce dependency footprint (make transformers/onnxruntime optional)
-6. Add clear installation guide without local dependencies
-7. Simplify automatic lifecycle (add opt-out mechanism)
-8. Add error handling documentation for 70+ tools
-9. Create migration guide from manual to automatic lifecycle
-10. Add performance benchmarks (startup time, memory usage)
+5\. Reduce dependency footprint (make transformers/onnxruntime optional)
+6\. Add clear installation guide without local dependencies
+7\. Simplify automatic lifecycle (add opt-out mechanism)
+8\. Add error handling documentation for 70+ tools
+9\. Create migration guide from manual to automatic lifecycle
+10\. Add performance benchmarks (startup time, memory usage)
 
 **MEDIUM PRIORITY:**
-11. Add architecture diagram showing all 70+ tools
-12. Document data retention policies
-13. Add backup/restore procedures for DuckDB
-14. Implement caching for frequently used search queries
-15. Add metrics for tool usage patterns
-16. Document memory requirements (onnxruntime can be heavy)
+11\. Add architecture diagram showing all 70+ tools
+12\. Document data retention policies
+13\. Add backup/restore procedures for DuckDB
+14\. Implement caching for frequently used search queries
+15\. Add metrics for tool usage patterns
+16\. Document memory requirements (onnxruntime can be heavy)
 
----
+______________________________________________________________________
 
 ### 6. UniFi MCP Server ⭐ Score: 58/100 ⚠️
 
@@ -634,6 +713,7 @@ acb = { path = "../acb", editable = true }  # ❌ NON-PORTABLE
 **MCP Protocol:** FastMCP 2.12.3+
 
 #### Strengths
+
 - **Dual controller support** (Network + Access)
 - **Clean Settings class** with Pydantic validation
 - **CLI interface** for management tasks
@@ -643,13 +723,16 @@ acb = { path = "../acb", editable = true }  # ❌ NON-PORTABLE
 #### Critical Issues
 
 **1. CRITICAL: Tools Not Actually Registered with FastMCP**
+
 ```python
 # unifi_mcp/server.py:103, 118, 133, etc.
 # Every tool has this comment:
 # Skip tool registration for now since FastMCP doesn't have a 'tools' attribute
 ```
+
 **Impact:** **SERVER IS NON-FUNCTIONAL** - no tools exposed to MCP clients
 **Fix:** Use `@server.tool()` decorator properly:
+
 ```python
 @server.tool()
 async def get_unifi_sites() -> list[dict[str, Any]]:
@@ -658,14 +741,17 @@ async def get_unifi_sites() -> list[dict[str, Any]]:
 ```
 
 **2. CRITICAL: Extremely Low Test Coverage (26.0%)**
+
 ```python
 # Lowest coverage in entire ecosystem
 # No integration tests visible
 ```
+
 **Impact:** High bug risk, unclear if basic functionality works
 **Fix:** Add tests before attempting tool registration fix
 
 **3. HIGH: Network/Access Clients Not Stored in Server**
+
 ```python
 # Clients created but never stored for tool access
 network_client = _create_network_client(settings)
@@ -673,18 +759,22 @@ access_client = _create_access_client(settings)
 
 # Tools can't actually use these clients!
 ```
+
 **Impact:** Even if tools were registered, they'd have no client access
 **Fix:** Store clients in server context or pass as dependencies
 
 **4. HIGH: No Authentication Implementation Visible**
+
 ```python
 # Clients have username/password parameters but no auth implementation
 # No login/session management logic
 ```
+
 **Impact:** Can't actually connect to UniFi controllers
 **Fix:** Implement UniFi authentication flow
 
 **5. MEDIUM: Settings Validation Incomplete**
+
 ```python
 # Settings class exists but no validation of:
 # - Valid IP addresses/hostnames
@@ -693,6 +783,7 @@ access_client = _create_access_client(settings)
 ```
 
 #### Security Analysis
+
 - ❌ Critical: No authentication implementation
 - ❌ Critical: Password handling not visible
 - ❌ High: No SSL certificate verification configuration
@@ -701,6 +792,7 @@ access_client = _create_access_client(settings)
 - ⚠️ Medium: No mention of rate limiting
 
 #### Performance & Reliability
+
 - ✅ Good: Retry utilities with exponential backoff exist
 - ⚠️ Medium: Timeout configuration exists but default not shown
 - ❌ High: No connection pooling
@@ -708,6 +800,7 @@ access_client = _create_access_client(settings)
 - ❌ High: No health check implementation
 
 #### Code Quality
+
 - ✅ Good: Pydantic Settings for configuration
 - ✅ Good: Type hints present
 - ✅ Good: Retry utilities modularized
@@ -716,6 +809,7 @@ access_client = _create_access_client(settings)
 - ❌ Tools not actually functional
 
 #### Integration & Compatibility
+
 - ✅ Good: Supports both Network and Access controllers
 - ✅ Good: CLI for testing connectivity
 - ⚠️ Medium: No example .mcp.json shown
@@ -725,7 +819,9 @@ access_client = _create_access_client(settings)
 #### Recommendations
 
 **CRITICAL (Must Fix - Server Currently Non-Functional):**
+
 1. **Fix tool registration immediately:**
+
 ```python
 def _register_network_tools(server: FastMCP, network_client: NetworkClient) -> None:
     @server.tool()
@@ -737,21 +833,27 @@ def _register_network_tools(server: FastMCP, network_client: NetworkClient) -> N
     async def get_unifi_devices(site_id: str = "default") -> list[dict[str, Any]]:
         """Get all devices in a specific site"""
         return await get_unifi_devices(network_client, site_id)
+
     # ... repeat for all tools
 ```
 
 2. **Implement UniFi authentication:**
+
 ```python
 class NetworkClient(BaseClient):
     async def login(self):
-        response = await self.post("/api/login", {
-            "username": self.username,
-            "password": self.password,
-        })
+        response = await self.post(
+            "/api/login",
+            {
+                "username": self.username,
+                "password": self.password,
+            },
+        )
         self.session_cookie = response.cookies["unifises"]
 ```
 
 3. **Add comprehensive integration tests:**
+
 ```python
 @pytest.mark.integration
 async def test_get_sites_integration():
@@ -762,27 +864,28 @@ async def test_get_sites_integration():
 ```
 
 **HIGH PRIORITY:**
-4. Store clients in server context for tool access
-5. Implement SSL certificate verification properly
-6. Add health check endpoint
-7. Increase test coverage to 80%+
-8. Add connection pooling
-9. Document UniFi API authentication flow
-10. Add example .mcp.json configuration
+4\. Store clients in server context for tool access
+5\. Implement SSL certificate verification properly
+6\. Add health check endpoint
+7\. Increase test coverage to 80%+
+8\. Add connection pooling
+9\. Document UniFi API authentication flow
+10\. Add example .mcp.json configuration
 
 **MEDIUM PRIORITY:**
-11. Enhance Settings validation (IP addresses, ports)
-12. Implement API token authentication (more secure than username/password)
-13. Add rate limiting
-14. Add request/response logging
-15. Document supported UniFi controller versions
-16. Add Docker deployment instructions
+11\. Enhance Settings validation (IP addresses, ports)
+12\. Implement API token authentication (more secure than username/password)
+13\. Add rate limiting
+14\. Add request/response logging
+15\. Document supported UniFi controller versions
+16\. Add Docker deployment instructions
 
----
+______________________________________________________________________
 
 ## Comparative Analysis
 
 ### Test Coverage Distribution
+
 ```
 raindropio-mcp:      82.4%  ✅ Excellent
 excalidraw-mcp:      77.7%  ✅ Good
@@ -826,34 +929,40 @@ unifi-mcp:           26.0%  ❌ Critically Low
 ### Dependency Management Comparison
 
 **Lightest Dependencies:**
+
 1. mailgun-mcp: 2 core deps (fastmcp, httpx)
-2. unifi-mcp: 2 core deps (fastmcp, pydantic)
+1. unifi-mcp: 2 core deps (fastmcp, pydantic)
 
 **Heaviest Dependencies:**
+
 1. session-mgmt-mcp: 15+ deps including ML libraries
-2. excalidraw-mcp: 10+ deps including TypeScript ecosystem
-3. opera-cloud-mcp: 8+ deps including SQLModel, cryptography
+1. excalidraw-mcp: 10+ deps including TypeScript ecosystem
+1. opera-cloud-mcp: 8+ deps including SQLModel, cryptography
 
 **Insight:** No correlation between dependency count and quality.
 **Recommendation:** Keep dependencies minimal unless justified.
 
----
+______________________________________________________________________
 
 ## Common Anti-Patterns Identified
 
 ### 1. API Key Anti-Pattern
+
 **Found in:** mailgun, unifi, raindropio, excalidraw
 **Problem:** Direct `os.environ.get()` with no validation
 
 **Bad Example:**
+
 ```python
 def get_api_key() -> str | None:
     return os.environ.get("API_KEY")
 ```
 
 **Best Practice (from session-mgmt):**
+
 ```python
 from pydantic_settings import BaseSettings
+
 
 class Settings(BaseSettings):
     api_key: str = Field(..., min_length=20)
@@ -863,10 +972,12 @@ class Settings(BaseSettings):
 ```
 
 ### 2. HTTP Client Recreation Anti-Pattern
+
 **Found in:** mailgun (critical issue)
 **Problem:** Creating new client for each request
 
 **Bad Example:**
+
 ```python
 async def call_api():
     async with httpx.AsyncClient() as client:  # ❌ NEW CLIENT EVERY TIME
@@ -874,23 +985,23 @@ async def call_api():
 ```
 
 **Best Practice (from raindropio):**
+
 ```python
 class APIClient:
     def __init__(self):
-        self.client = httpx.AsyncClient(
-            timeout=30.0,
-            limits=httpx.Limits(max_connections=10)
-        )
+        self.client = httpx.AsyncClient(timeout=30.0, limits=httpx.Limits(max_connections=10))
 
     async def close(self):
         await self.client.aclose()
 ```
 
 ### 3. Error Leakage Anti-Pattern
+
 **Found in:** mailgun, excalidraw
 **Problem:** Returning raw API errors that may contain sensitive data
 
 **Bad Example:**
+
 ```python
 return {
     "error": response.text  # ❌ MAY CONTAIN API KEYS, TOKENS, ETC.
@@ -898,30 +1009,35 @@ return {
 ```
 
 **Best Practice (from raindropio):**
+
 ```python
 def sanitize_error(error: Exception) -> dict:
     if isinstance(error, httpx.HTTPStatusError):
         return {
             "type": "http_error",
             "status": error.response.status_code,
-            "message": "API request failed"
+            "message": "API request failed",
             # ✅ NO RAW ERROR TEXT
         }
 ```
 
 ### 4. Tool Registration Confusion
+
 **Found in:** unifi (critical), opera-cloud (unclear)
 **Problem:** Tools defined but not properly registered with FastMCP
 
 **Bad Example:**
+
 ```python
 async def my_tool():
     pass
+
 
 # ❌ Tool never registered!
 ```
 
 **Best Practice:**
+
 ```python
 @app.tool()
 async def my_tool():
@@ -930,10 +1046,12 @@ async def my_tool():
 ```
 
 ### 5. Hardcoded Path Anti-Pattern
+
 **Found in:** excalidraw
 **Problem:** Absolute paths break portability
 
 **Bad Example:**
+
 ```python
 subprocess.Popen(
     ["npm", "run", "canvas"],
@@ -942,6 +1060,7 @@ subprocess.Popen(
 ```
 
 **Best Practice:**
+
 ```python
 from pathlib import Path
 
@@ -952,15 +1071,17 @@ subprocess.Popen(
 )
 ```
 
----
+______________________________________________________________________
 
 ## Best Practices Identified
 
 ### 1. Graceful Shutdown Pattern ⭐
+
 **Implemented in:** raindropio, session-mgmt
 
 ```python
 from contextlib import asynccontextmanager
+
 
 @asynccontextmanager
 async def lifespan(server):
@@ -970,15 +1091,18 @@ async def lifespan(server):
     # Shutdown
     await client.close()
 
+
 app._mcp_server.lifespan = lifespan
 ```
 
 **Why it's good:**
+
 - Ensures cleanup of resources
 - Prevents connection leaks
 - Handles graceful termination
 
 ### 2. Lazy Initialization Pattern ⭐
+
 **Implemented in:** raindropio
 
 ```python
@@ -989,11 +1113,13 @@ def __getattr__(name: str) -> FastMCP:
 ```
 
 **Why it's good:**
+
 - Prevents import-time failures
 - Enables testing without full initialization
 - Defers expensive operations
 
 ### 3. Monitoring Supervisor Pattern ⭐
+
 **Implemented in:** excalidraw
 
 ```python
@@ -1005,15 +1131,18 @@ class MonitoringSupervisor:
 ```
 
 **Why it's good:**
+
 - Centralized health monitoring
 - Automatic failure detection
 - Production-ready observability
 
 ### 4. Settings Validation Pattern ⭐
+
 **Implemented in:** opera-cloud, raindropio, unifi, session-mgmt
 
 ```python
 from pydantic_settings import BaseSettings
+
 
 class ServiceSettings(BaseSettings):
     api_key: str = Field(..., min_length=20)
@@ -1025,12 +1154,14 @@ class ServiceSettings(BaseSettings):
 ```
 
 **Why it's good:**
+
 - Fail-fast on misconfiguration
 - Clear validation errors
 - Type safety
 - Environment variable support
 
 ### 5. Tool Registry Pattern ⭐
+
 **Implemented in:** raindropio, opera-cloud
 
 ```python
@@ -1042,35 +1173,39 @@ def register_all_tools(app: FastMCP, client: Client):
 ```
 
 **Why it's good:**
+
 - Modular tool organization
 - Easy to add/remove tool categories
 - Clear responsibility separation
 
----
+______________________________________________________________________
 
 ## Priority Action Plan
 
 ### Phase 1: Critical Fixes (Week 1)
 
 **unifi-mcp - Make Functional:**
+
 1. Fix tool registration (all tools currently inaccessible)
-2. Implement authentication
-3. Add basic integration tests
+1. Implement authentication
+1. Add basic integration tests
 
 **Effort:** 2-3 days
 **Owner:** UniFi MCP maintainer
 
 **mailgun-mcp - Fix Performance:**
+
 1. Implement shared HTTP client
-2. Add Pydantic Settings validation
-3. Add retry logic
+1. Add Pydantic Settings validation
+1. Add retry logic
 
 **Effort:** 1-2 days
 **Owner:** Mailgun MCP maintainer
 
 **excalidraw-mcp - Fix Portability:**
+
 1. Remove hardcoded path
-2. Add startup validation
+1. Add startup validation
 
 **Effort:** 4 hours
 **Owner:** Excalidraw MCP maintainer
@@ -1078,11 +1213,12 @@ def register_all_tools(app: FastMCP, client: Client):
 ### Phase 2: Security Hardening (Week 2-3)
 
 **All Servers:**
+
 1. Implement API key/token validation at startup
-2. Add input sanitization for user-provided data
-3. Sanitize error responses (no sensitive data leakage)
-4. Add rate limiting (per-server limits based on upstream APIs)
-5. Run security audit (bandit, safety)
+1. Add input sanitization for user-provided data
+1. Sanitize error responses (no sensitive data leakage)
+1. Add rate limiting (per-server limits based on upstream APIs)
+1. Run security audit (bandit, safety)
 
 **Effort:** 1 week (all servers)
 **Owner:** Each MCP server maintainer
@@ -1090,10 +1226,11 @@ def register_all_tools(app: FastMCP, client: Client):
 ### Phase 3: Test Coverage Improvement (Week 3-5)
 
 **Priority Order:**
+
 1. unifi-mcp: 26% → 70% (add 44 points)
-2. session-mgmt-mcp: 34.6% → 70% (add 35.4 points)
-3. opera-cloud-mcp: 36.4% → 70% (add 33.6 points)
-4. mailgun-mcp: 49.9% → 70% (add 20.1 points)
+1. session-mgmt-mcp: 34.6% → 70% (add 35.4 points)
+1. opera-cloud-mcp: 36.4% → 70% (add 33.6 points)
+1. mailgun-mcp: 49.9% → 70% (add 20.1 points)
 
 **Effort:** 2-3 weeks (parallel work)
 **Owner:** Each MCP server maintainer
@@ -1101,6 +1238,7 @@ def register_all_tools(app: FastMCP, client: Client):
 ### Phase 4: Ecosystem Standardization (Week 5-6)
 
 1. **Create MCP Server Template** with best practices:
+
    - Pydantic Settings validation
    - Shared HTTP client pattern
    - Graceful shutdown
@@ -1108,13 +1246,15 @@ def register_all_tools(app: FastMCP, client: Client):
    - Rate limiting implementation
    - Retry logic with exponential backoff
 
-2. **Create Shared Library** `mcp-common`:
+1. **Create Shared Library** `mcp-common`:
+
    - Base client with retry/circuit breaker
    - Error sanitization utilities
    - Rate limiter implementations
    - Health check utilities
 
-3. **Documentation Standards**:
+1. **Documentation Standards**:
+
    - Required: Example .mcp.json
    - Required: Security considerations section
    - Required: Performance characteristics
@@ -1126,10 +1266,11 @@ def register_all_tools(app: FastMCP, client: Client):
 ### Phase 5: Performance Optimization (Week 7-8)
 
 **All Servers:**
+
 1. Add connection pooling
-2. Implement caching where appropriate
-3. Add timeout configurations
-4. Benchmark and optimize slow paths
+1. Implement caching where appropriate
+1. Add timeout configurations
+1. Benchmark and optimize slow paths
 
 **Effort:** 2 weeks (parallel work)
 **Owner:** Each MCP server maintainer
@@ -1137,15 +1278,16 @@ def register_all_tools(app: FastMCP, client: Client):
 ### Phase 6: Monitoring & Observability (Week 9-10)
 
 **All Servers:**
+
 1. Add Prometheus metrics endpoint
-2. Implement structured logging
-3. Add health check endpoints
-4. Create Grafana dashboards
+1. Implement structured logging
+1. Add health check endpoints
+1. Create Grafana dashboards
 
 **Effort:** 2 weeks (parallel work)
 **Owner:** Each MCP server maintainer
 
----
+______________________________________________________________________
 
 ## Ecosystem Best Practices Guide
 
@@ -1189,13 +1331,15 @@ from fastmcp import FastMCP
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
+
 class Settings(BaseSettings):
     api_key: str = Field(..., min_length=20)
-    base_url: str = Field(..., pattern=r'^https?://')
+    base_url: str = Field(..., pattern=r"^https?://")
     timeout: int = Field(30, ge=1, le=300)
 
     class Config:
         env_prefix = "MYSERVICE_"
+
 
 def create_app() -> FastMCP:
     settings = Settings()
@@ -1206,6 +1350,7 @@ def create_app() -> FastMCP:
     setup_lifecycle(app, client)
 
     return app
+
 
 def setup_lifecycle(app: FastMCP, client: Any):
     from contextlib import asynccontextmanager
@@ -1221,6 +1366,7 @@ def setup_lifecycle(app: FastMCP, client: Any):
                 await client.close()
 
     app._mcp_server.lifespan = lifespan
+
 
 app = create_app()
 ```
@@ -1274,6 +1420,7 @@ async def my_tool(
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
 
+
 class APIClient:
     def __init__(self, settings: Settings):
         self.settings = settings
@@ -1308,12 +1455,14 @@ class APIClient:
 ```python
 from enum import Enum
 
+
 class ErrorType(str, Enum):
     VALIDATION = "validation_error"
     AUTH = "authentication_error"
     RATE_LIMIT = "rate_limit_exceeded"
     API = "api_error"
     NETWORK = "network_error"
+
 
 class MCPError(Exception):
     def __init__(self, error_type: ErrorType, message: str, details: dict | None = None):
@@ -1328,6 +1477,7 @@ class MCPError(Exception):
             "message": self.message,
             "details": self.details,  # ✅ NO RAW ERRORS
         }
+
 
 @app.tool()
 async def my_tool(param: str) -> dict:
@@ -1350,11 +1500,13 @@ async def my_tool(param: str) -> dict:
 import pytest
 from httpx import AsyncClient, Response
 
+
 @pytest.fixture
 async def mock_client(mocker):
     """Mock HTTP client for testing"""
     client = mocker.Mock(spec=AsyncClient)
     return client
+
 
 @pytest.mark.unit
 async def test_my_tool_success(mock_client):
@@ -1370,6 +1522,7 @@ async def test_my_tool_success(mock_client):
     assert result["data"] == {"data": "test"}
     mock_client.get.assert_called_once()
 
+
 @pytest.mark.unit
 async def test_my_tool_validation_error():
     """Test validation error handling"""
@@ -1377,6 +1530,7 @@ async def test_my_tool_validation_error():
         await my_tool("")
 
     assert exc_info.value.error_type == ErrorType.VALIDATION
+
 
 @pytest.mark.integration
 async def test_my_tool_real_api():
@@ -1433,11 +1587,12 @@ async def test_my_tool_real_api():
 - [ ] Performance characteristics
 - [ ] Contribution guidelines
 
----
+______________________________________________________________________
 
 ## Comparative Excellence: What to Replicate
 
 ### From raindropio-mcp (Highest Quality: 86/100)
+
 - ✅ Graceful shutdown with client cleanup
 - ✅ Lazy app initialization for testing
 - ✅ Excellent test coverage (82.4%)
@@ -1448,6 +1603,7 @@ async def test_my_tool_real_api():
 **Replicate:** Lifecycle management pattern, test coverage standards
 
 ### From excalidraw-mcp (Most Innovative: 82/100)
+
 - ✅ Monitoring supervisor pattern
 - ✅ Circuit breaker implementation
 - ✅ Health check system
@@ -1458,6 +1614,7 @@ async def test_my_tool_real_api():
 **Replicate:** Monitoring architecture, external service management
 
 ### From session-mgmt-mcp (Most Ambitious: 72/100)
+
 - ✅ Local ML embeddings for privacy
 - ✅ Automatic lifecycle management
 - ✅ Rich feature set (70+ tools)
@@ -1467,6 +1624,7 @@ async def test_my_tool_real_api():
 **Replicate:** Privacy-first approach, automatic lifecycle (but simplify)
 
 ### From opera-cloud-mcp (Most Enterprise-Ready: 68/100)
+
 - ✅ OAuth2 authentication
 - ✅ Production monitoring docs
 - ✅ Docker deployment ready
@@ -1475,54 +1633,61 @@ async def test_my_tool_real_api():
 
 **Replicate:** Enterprise patterns, deployment readiness
 
----
+______________________________________________________________________
 
 ## Anti-Patterns to Avoid
 
 ### From mailgun-mcp
+
 - ❌ Creating new HTTP client per request
 - ❌ No Settings validation
 - ❌ Repeating error handling code in 29 tools
 
 ### From unifi-mcp
+
 - ❌ Defining tools but never registering them
 - ❌ Creating clients but not storing them
 - ❌ Very low test coverage (26%)
 
 ### From excalidraw-mcp
+
 - ❌ Hardcoding absolute paths
 - ❌ Suppressing subprocess output completely
 
 ### From session-mgmt-mcp
+
 - ❌ Trying to do everything in one server (70+ tools)
 - ❌ Local path dependencies breaking portability
 - ❌ Very low test coverage threshold (35%)
 
----
+______________________________________________________________________
 
 ## Conclusion
 
 The MCP ecosystem shows strong potential with innovative features and comprehensive API coverage. However, significant inconsistencies in quality, security, and reliability require immediate attention.
 
 **Key Takeaways:**
+
 1. **raindropio-mcp and excalidraw-mcp** set the quality bar
-2. **unifi-mcp** needs fundamental functionality fixes
-3. **Test coverage** is the #1 quality indicator
-4. **Security practices** need ecosystem-wide standardization
-5. **Common patterns** (Settings, HTTP client, lifecycle) should be extracted to shared library
+1. **unifi-mcp** needs fundamental functionality fixes
+1. **Test coverage** is the #1 quality indicator
+1. **Security practices** need ecosystem-wide standardization
+1. **Common patterns** (Settings, HTTP client, lifecycle) should be extracted to shared library
 
 **Success Metrics:**
+
 - All servers >70% test coverage (within 5 weeks)
 - All servers pass security audit (within 3 weeks)
 - All critical issues resolved (within 1 week)
 - Shared library published (within 6 weeks)
 
 **Risk Assessment:**
+
 - **High Risk:** unifi-mcp (non-functional)
 - **Medium Risk:** session-mgmt-mcp (complexity), opera-cloud-mcp (unclear implementation)
 - **Low Risk:** raindropio-mcp, excalidraw-mcp, mailgun-mcp
 
----
+______________________________________________________________________
 
 **Report Generated:** 2025-10-26
 **Next Audit Recommended:** After Phase 3 completion (Week 5)

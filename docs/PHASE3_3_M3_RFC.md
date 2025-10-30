@@ -5,35 +5,38 @@
 **Priority**: Moderate (M3)
 **Estimated Effort**: 45 minutes
 
----
+______________________________________________________________________
 
 ## Problem Statement
 
 Multiple MCP servers use `sys.exit()` in library/module code for error handling. This creates several issues:
 
 1. **No Graceful Degradation**: Calling code cannot catch and handle errors
-2. **Poor Testability**: Difficult to test error conditions without exiting test runner
-3. **Coupling**: Forces immediate termination instead of allowing error handling strategies
-4. **Anti-Pattern**: Using `sys.exit()` in library code is considered non-Pythonic
+1. **Poor Testability**: Difficult to test error conditions without exiting test runner
+1. **Coupling**: Forces immediate termination instead of allowing error handling strategies
+1. **Anti-Pattern**: Using `sys.exit()` in library code is considered non-Pythonic
 
 ### Current sys.exit() Usage Patterns
 
 Found **18 files** with `sys.exit()` calls across MCP servers:
 
 **Configuration Validation** (should be replaced):
+
 - `/Users/les/Projects/unifi-mcp/unifi_mcp/config.py` (lines 90, 152, 157)
 - `/Users/les/Projects/excalidraw-mcp/excalidraw_mcp/config.py`
 - Other config modules
 
 **Dependency Checks** (should be replaced):
+
 - `/Users/les/Projects/session-mgmt-mcp/session_mgmt_mcp/server.py` (line 119 - FastMCP missing)
 
 **CLI Entry Points** (keep as-is):
+
 - `/Users/les/Projects/raindropio-mcp/raindropio_mcp/main.py` (line 70 - `--version` flag)
 - `/Users/les/Projects/opera-cloud-mcp/opera_cloud_mcp/main.py`
 - Other main.py entry points
 
----
+______________________________________________________________________
 
 ## Proposed Solution
 
@@ -56,9 +59,7 @@ class MCPServerError(Exception):
 class ServerConfigurationError(MCPServerError):
     """Raised when server configuration is invalid or incomplete."""
 
-    def __init__(
-        self, message: str, field: str | None = None, value: str | None = None
-    ) -> None:
+    def __init__(self, message: str, field: str | None = None, value: str | None = None) -> None:
         self.field = field
         self.value = value
         super().__init__(message)
@@ -98,6 +99,7 @@ class CredentialValidationError(ServerConfigurationError):
 ### 2. Migration Pattern
 
 **BEFORE (Anti-pattern)**:
+
 ```python
 def validate_credentials_at_startup(self) -> None:
     if not self.username or not self.username.strip():
@@ -107,8 +109,10 @@ def validate_credentials_at_startup(self) -> None:
 ```
 
 **AFTER (Custom Exception)**:
+
 ```python
 from mcp_common.exceptions import CredentialValidationError
+
 
 def validate_credentials_at_startup(self) -> None:
     if not self.username or not self.username.strip():
@@ -119,6 +123,7 @@ def validate_credentials_at_startup(self) -> None:
 ```
 
 **Entry Point Handling**:
+
 ```python
 def main() -> None:
     try:
@@ -137,70 +142,84 @@ def main() -> None:
 ### 3. Benefits
 
 1. **Graceful Error Handling**: Calling code can catch exceptions and implement retry logic
-2. **Better Testing**: Can test error conditions without exiting test runner
-3. **Rich Error Context**: Exceptions carry structured information (field, component, details)
-4. **Separation of Concerns**: Entry points decide exit strategy, not library code
-5. **Stack Traces**: Exceptions provide full context for debugging
+1. **Better Testing**: Can test error conditions without exiting test runner
+1. **Rich Error Context**: Exceptions carry structured information (field, component, details)
+1. **Separation of Concerns**: Entry points decide exit strategy, not library code
+1. **Stack Traces**: Exceptions provide full context for debugging
 
----
+______________________________________________________________________
 
 ## Implementation Plan
 
 ### Phase 1: Create Exception Module (5 minutes)
+
 1. Create `/Users/les/Projects/mcp-common/mcp_common/exceptions.py`
-2. Define exception hierarchy with docstrings
-3. Export exceptions in `__init__.py`
+1. Define exception hierarchy with docstrings
+1. Export exceptions in `__init__.py`
 
 ### Phase 2: Migrate Configuration Validation (20 minutes)
+
 Files to migrate:
+
 - `unifi-mcp/unifi_mcp/config.py` (3 instances)
 - `excalidraw-mcp/excalidraw_mcp/config.py`
 - `session-mgmt-mcp` (configuration-related sys.exit calls)
 - `opera-cloud-mcp` (configuration-related sys.exit calls)
 
 Pattern:
+
 1. Replace `sys.exit(1)` with appropriate exception
-2. Update entry points to catch and handle exceptions
-3. Preserve error messages (now in exception message)
+1. Update entry points to catch and handle exceptions
+1. Preserve error messages (now in exception message)
 
 ### Phase 3: Migrate Dependency Checks (10 minutes)
+
 Files to migrate:
+
 - `session-mgmt-mcp/session_mgmt_mcp/server.py:119` (FastMCP missing)
 - Other dependency checks
 
 Pattern:
+
 1. Replace `sys.exit(1)` with `DependencyMissingError`
-2. Include install command in exception for better UX
+1. Include install command in exception for better UX
 
 ### Phase 4: Update Entry Points (10 minutes)
+
 Files to update:
+
 - All `main.py` and `server.py` files with `run_server()` functions
 - Add try/except blocks to catch custom exceptions
 - Keep `sys.exit()` at entry point level (appropriate usage)
 
 ### Phase 5: Testing & Verification (10 minutes)
-1. Test all servers start correctly
-2. Test validation errors raise exceptions (not exit)
-3. Test entry points catch exceptions and exit gracefully
-4. Run existing test suites to ensure no regressions
 
----
+1. Test all servers start correctly
+1. Test validation errors raise exceptions (not exit)
+1. Test entry points catch exceptions and exit gracefully
+1. Run existing test suites to ensure no regressions
+
+______________________________________________________________________
 
 ## Files to Modify
 
 ### 1. Create New Module
+
 - `/Users/les/Projects/mcp-common/mcp_common/exceptions.py` (new)
 - `/Users/les/Projects/mcp-common/mcp_common/__init__.py` (export exceptions)
 
 ### 2. Configuration Files (Replace sys.exit)
+
 - `/Users/les/Projects/unifi-mcp/unifi_mcp/config.py`
 - `/Users/les/Projects/excalidraw-mcp/excalidraw_mcp/config.py`
 - `/Users/les/Projects/session-mgmt-mcp/session_mgmt_mcp/llm_providers.py` (if validation-related)
 
 ### 3. Server Initialization Files (Replace sys.exit)
+
 - `/Users/les/Projects/session-mgmt-mcp/session_mgmt_mcp/server.py:119`
 
 ### 4. Entry Points (Add exception handling)
+
 - `/Users/les/Projects/unifi-mcp/unifi_mcp/server.py` (run_server function)
 - `/Users/les/Projects/raindropio-mcp/raindropio_mcp/main.py` (main function)
 - `/Users/les/Projects/opera-cloud-mcp/opera_cloud_mcp/main.py` (main function)
@@ -208,15 +227,17 @@ Files to update:
 - Other entry points as needed
 
 ### 5. DO NOT Modify (Appropriate sys.exit Usage)
+
 - `--version` flag handlers (CLI convention)
 - `--help` flag handlers (CLI convention)
 - Final exit at entry point level (after catching exceptions)
 
----
+______________________________________________________________________
 
 ## Testing Strategy
 
 ### Unit Tests
+
 ```python
 def test_invalid_username_raises_exception():
     """Test that invalid username raises CredentialValidationError."""
@@ -229,6 +250,7 @@ def test_invalid_username_raises_exception():
 ```
 
 ### Integration Tests
+
 ```python
 def test_server_catches_config_error(capsys):
     """Test that server entry point catches and logs config errors."""
@@ -241,58 +263,67 @@ def test_server_catches_config_error(capsys):
     assert "Server Error" in captured.err
 ```
 
----
+______________________________________________________________________
 
 ## Decision Points
 
 ### Q1: Should we keep sys.exit() at entry point level?
+
 **Decision**: YES - Entry points (main.py, CLI commands) should use sys.exit() to return proper exit codes. This is Pythonic and expected for CLI tools.
 
 ### Q2: Should we replace ALL sys.exit() calls?
+
 **Decision**: NO - Only replace sys.exit() in:
+
 - Configuration validation methods
 - Dependency checks in library code
 - Server initialization code
 - Any code that might be imported and called programmatically
 
 Keep sys.exit() in:
+
 - CLI flag handlers (--version, --help)
 - Entry point error handling (after catching exceptions)
 
 ### Q3: Should exceptions include structured data?
+
 **Decision**: YES - Exceptions should include:
+
 - `field` for configuration errors (which field failed)
 - `component` for initialization errors (which component failed)
 - `dependency` + `install_command` for missing dependencies
-This enables better error messages and programmatic handling.
+  This enables better error messages and programmatic handling.
 
----
+______________________________________________________________________
 
 ## Risks & Mitigations
 
 ### Risk 1: Breaking existing error handling
+
 **Mitigation**: Add exception handling at entry points before removing sys.exit() calls
 
 ### Risk 2: Test failures due to expected exits
+
 **Mitigation**: Update tests to expect exceptions instead of SystemExit
 
 ### Risk 3: Missing some sys.exit() calls
+
 **Mitigation**: Use comprehensive grep to find all instances, document which to keep
 
----
+______________________________________________________________________
 
 ## Success Criteria
 
 1. ✅ Custom exception module created in mcp-common
-2. ✅ All configuration validation uses custom exceptions
-3. ✅ All dependency checks use custom exceptions
-4. ✅ Entry points catch exceptions and handle gracefully
-5. ✅ All servers start correctly
-6. ✅ Error messages are preserved (better UX)
-7. ✅ Test suites pass without regressions
-8. ✅ Documentation updated (migration guide)
+1. ✅ All configuration validation uses custom exceptions
+1. ✅ All dependency checks use custom exceptions
+1. ✅ Entry points catch exceptions and handle gracefully
+1. ✅ All servers start correctly
+1. ✅ Error messages are preserved (better UX)
+1. ✅ Test suites pass without regressions
+1. ✅ Documentation updated (migration guide)
 
----
+______________________________________________________________________
 
 ## References
 
@@ -300,7 +331,7 @@ This enables better error messages and programmatic handling.
 - **Python Best Practices**: Raise exceptions, don't exit
 - **Phase 3 Review**: `/Users/les/Projects/mcp-common/docs/PHASE3_CONSOLIDATED_REVIEW.md`
 
----
+______________________________________________________________________
 
 **Created**: 2025-01-27
 **Status**: 📝 Draft - Ready for Implementation

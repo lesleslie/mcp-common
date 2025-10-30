@@ -116,9 +116,7 @@ class RateLimitLoadTester:
         self.rate_limited_count = 0
         self.successful_count = 0
 
-    async def _simulate_request(
-        self, request_func: Callable[[], Awaitable[bool]]
-    ) -> bool:
+    async def _simulate_request(self, request_func: Callable[[], Awaitable[bool]]) -> bool:
         """Simulate a single request and track timing.
 
         Args:
@@ -144,9 +142,7 @@ class RateLimitLoadTester:
             self.rate_limited_count += 1
             return False
 
-    async def test_burst_capacity(
-        self, request_func: Callable[[], Awaitable[bool]]
-    ) -> bool:
+    async def test_burst_capacity(self, request_func: Callable[[], Awaitable[bool]]) -> bool:
         """Test burst capacity by sending rapid concurrent requests.
 
         Args:
@@ -219,9 +215,7 @@ class RateLimitLoadTester:
         """
         total_requests = self.successful_count + self.rate_limited_count
         avg_response_time = (
-            sum(self.response_times) / len(self.response_times)
-            if self.response_times
-            else 0.0
+            sum(self.response_times) / len(self.response_times) if self.response_times else 0.0
         )
         max_response_time = max(self.response_times) if self.response_times else 0.0
         requests_per_second = total_requests / test_duration if test_duration > 0 else 0.0

@@ -2,17 +2,18 @@
 
 **Phase 3.2 H5**: Comprehensive load testing framework for rate limit verification across all MCP servers.
 
----
+______________________________________________________________________
 
 ## Overview
 
 This framework provides comprehensive load testing for rate limiting across all 9 MCP servers in the ecosystem. It verifies:
+
 - **Sustainable request rates** (12-15 req/sec depending on server)
 - **Burst capacity limits** (16-40 requests depending on server)
 - **Rate limit enforcement** and recovery
 - **Response time tracking** (average and maximum)
 
----
+______________________________________________________________________
 
 ## Quick Start
 
@@ -40,7 +41,7 @@ pytest tests/performance/test_rate_limits_load.py::test_all_servers_load_summary
 - 1 summary test
 ```
 
----
+______________________________________________________________________
 
 ## Server Rate Limit Configurations
 
@@ -58,25 +59,29 @@ pytest tests/performance/test_rate_limits_load.py::test_all_servers_load_summary
 
 **Note**: ACB and FastBlocks use higher limits (15 req/sec, 40 burst) as they are core infrastructure components. Other servers use conservative limits (12 req/sec, 16 burst) for stability.
 
----
+______________________________________________________________________
 
 ## Framework Architecture
 
 ### Core Components
 
 #### 1. **RateLimitConfig** (Dataclass)
+
 Configuration for each MCP server:
+
 ```python
 @dataclass
 class RateLimitConfig:
-    server_name: str           # Server identifier
-    sustainable_rate: float    # Requests per second
-    burst_capacity: int        # Maximum burst requests
-    project_path: str          # Path to server project
+    server_name: str  # Server identifier
+    sustainable_rate: float  # Requests per second
+    burst_capacity: int  # Maximum burst requests
+    project_path: str  # Path to server project
 ```
 
 #### 2. **LoadTestResult** (Dataclass)
+
 Results from load testing:
+
 ```python
 @dataclass
 class LoadTestResult:
@@ -92,12 +97,14 @@ class LoadTestResult:
 ```
 
 #### 3. **RateLimitLoadTester** (Class)
+
 Load testing engine with three test modes:
+
 - **Burst Capacity Testing**: Send `burst_capacity + 5` concurrent requests
 - **Sustainable Rate Testing**: Maintain steady request rate for 5 seconds
 - **Results Collection**: Track timing, success/failure, and metrics
 
----
+______________________________________________________________________
 
 ## Test Modes Explained
 
@@ -106,6 +113,7 @@ Load testing engine with three test modes:
 **Purpose**: Verify server can handle burst traffic without crashing.
 
 **How it works**:
+
 ```python
 # Send burst_capacity + 5 requests simultaneously
 # For example: 16 + 5 = 21 requests for session-mgmt-mcp
@@ -119,6 +127,7 @@ results = await asyncio.gather(*tasks)
 ```
 
 **Pass Criteria**:
+
 - ✅ At least `burst_capacity` requests succeed
 - ✅ Extra requests beyond burst capacity are rate limited
 
@@ -127,6 +136,7 @@ results = await asyncio.gather(*tasks)
 **Purpose**: Verify server maintains steady throughput over time.
 
 **How it works**:
+
 ```python
 # Maintain sustainable_rate for duration_seconds (default 5s)
 # For example: 12 req/sec for 5 seconds = ~60 requests total
@@ -141,6 +151,7 @@ while time.time() - start_time < duration_seconds:
 ```
 
 **Pass Criteria**:
+
 - ✅ Achieved rate ≥ 90% of target (e.g., ≥10.8 req/sec for 12 req/sec target)
 - ✅ Less than 10% of requests rate limited
 
@@ -149,6 +160,7 @@ while time.time() - start_time < duration_seconds:
 **Purpose**: Track detailed performance metrics.
 
 **Metrics Tracked**:
+
 - **Total Requests**: All requests attempted
 - **Successful Requests**: Requests that completed without rate limiting
 - **Rate Limited Requests**: Requests blocked by rate limiter
@@ -156,7 +168,7 @@ while time.time() - start_time < duration_seconds:
 - **Max Response Time**: Maximum response time observed
 - **Requests Per Second**: Actual throughput achieved
 
----
+______________________________________________________________________
 
 ## Using the Framework
 
@@ -172,6 +184,7 @@ async def mock_mcp_request() -> bool:
 ```
 
 **Why mock mode?**
+
 - Tests the load testing framework logic
 - Verifies test parameterization works for all 9 servers
 - Runs quickly in CI/CD (28 tests in ~19 seconds)
@@ -184,6 +197,7 @@ To test against **live MCP servers**, replace `mock_mcp_request` with actual MCP
 ```python
 # Example: Integration with session-mgmt-mcp
 from session_mgmt_mcp.server import mcp
+
 
 async def live_mcp_request() -> bool:
     """Real MCP request to session-mgmt-mcp."""
@@ -200,60 +214,67 @@ async def live_mcp_request() -> bool:
 **Integration Steps**:
 
 1. **Start MCP Server**:
+
    ```bash
    # Example: Start session-mgmt-mcp
    cd /Users/les/Projects/session-mgmt-mcp
    python -m session_mgmt_mcp.server
    ```
 
-2. **Replace Mock Function**:
+1. **Replace Mock Function**:
+
    ```python
    # In test_rate_limits_load.py
    # Replace: mock_mcp_request
    # With: live_session_mgmt_request
    ```
 
-3. **Run Integration Tests**:
+1. **Run Integration Tests**:
+
    ```bash
    pytest tests/performance/test_rate_limits_load.py -v --live-servers
    ```
 
-4. **Verify Results**:
+1. **Verify Results**:
+
    - Burst tests should show actual rate limiting
    - Sustainable tests should maintain target rate
    - Response times reflect real network/processing delays
 
----
+______________________________________________________________________
 
 ## Adding New Servers
 
 To add a new MCP server to the load testing framework:
 
 1. **Add Configuration**:
+
    ```python
    # In tests/performance/test_rate_limits_load.py
    RATE_LIMIT_CONFIGS.append(
        RateLimitConfig(
            server_name="my-new-mcp",
            sustainable_rate=12.0,  # Requests per second
-           burst_capacity=16,       # Burst requests
+           burst_capacity=16,  # Burst requests
            project_path="/path/to/my-new-mcp",
        )
    )
    ```
 
-2. **Run Tests**:
+1. **Run Tests**:
+
    ```bash
    pytest tests/performance/test_rate_limits_load.py -v
    # Will automatically test new server (3 new tests)
    ```
 
-3. **Verify**:
+1. **Verify**:
+
    - Check burst capacity test passes
    - Check sustainable rate test passes
    - Check results collection test passes
 
----
+______________________________________________________________________
 
 ## Interpreting Results
 
@@ -292,114 +313,132 @@ session-mgmt-mcp          12.0            16         ✅ Configured
 | **Sustainable Rate** | Server maintains steady throughput | ≥90% of target rate, \<10% limited |
 | **Results Collection** | Metrics tracking works | All metrics collected correctly |
 
----
+______________________________________________________________________
 
 ## Troubleshooting
 
 ### Test Failures
 
 #### Burst Capacity Test Fails
+
 ```
 AssertionError: Burst test failed for session-mgmt-mcp
 ```
 
 **Possible Causes**:
+
 - Rate limiter too aggressive (all requests rate limited)
 - Burst capacity configured incorrectly
 - Server not handling concurrent requests
 
 **Fix**:
+
 1. Check `RateLimitingMiddleware` configuration
-2. Verify `burst_capacity` matches server configuration
-3. Test with live server to confirm behavior
+1. Verify `burst_capacity` matches server configuration
+1. Test with live server to confirm behavior
 
 #### Sustainable Rate Test Fails
+
 ```
 AssertionError: Sustainable rate test failed for acb
 ```
 
 **Possible Causes**:
+
 - Request interval too fast (exceeds sustainable rate)
 - Server rate limiting below configured threshold
 - Network delays causing slowdown
 
 **Fix**:
+
 1. Check actual achieved rate in test output
-2. Adjust `sustainable_rate` configuration if needed
-3. Increase tolerance (currently 90%) if appropriate
+1. Adjust `sustainable_rate` configuration if needed
+1. Increase tolerance (currently 90%) if appropriate
 
 ### Performance Issues
 
 #### Tests Run Too Slowly
+
 ```
 28 tests in 120+ seconds (expected ~20 seconds)
 ```
 
 **Possible Causes**:
+
 - Running against live servers (adds network latency)
 - Sustainable rate tests using long duration
 
 **Fix**:
-1. Use mock mode for framework testing
-2. Reduce `duration_seconds` in sustainable rate tests (currently 5s → try 2s)
-3. Run tests in parallel: `pytest -n auto`
 
----
+1. Use mock mode for framework testing
+1. Reduce `duration_seconds` in sustainable rate tests (currently 5s → try 2s)
+1. Run tests in parallel: `pytest -n auto`
+
+______________________________________________________________________
 
 ## Best Practices
 
 ### 1. **Mock Mode for Framework Testing**
+
 - Use mock requests to test framework logic
 - Fast feedback loop (~20 seconds for 28 tests)
 - No external dependencies
 
 ### 2. **Live Mode for Integration Testing**
+
 - Test against running MCP servers
 - Verify actual rate limiting behavior
 - Slower but more realistic
 
 ### 3. **Continuous Integration**
+
 - Run mock tests in CI/CD pipelines
 - Run live tests periodically (nightly/weekly)
 - Alert on regression
 
 ### 4. **Monitoring Production**
+
 - Use framework as baseline for production monitoring
 - Compare actual traffic to test results
 - Adjust rate limits based on real-world usage
 
----
+______________________________________________________________________
 
 ## Future Enhancements
 
 ### Planned Features
 
 1. **Live Server Integration**:
+
    - Automatic MCP server startup/shutdown
    - Direct FastMCP tool calls
    - Real rate limit exception handling
 
-2. **Advanced Metrics**:
+1. **Advanced Metrics**:
+
    - Percentile response times (p50, p95, p99)
    - Request distribution histograms
    - Rate limit recovery time measurement
 
-3. **Stress Testing**:
+1. **Stress Testing**:
+
    - Gradual load increase (ramp-up testing)
    - Extended duration tests (60+ seconds)
    - Multi-server concurrent testing
 
-4. **Result Persistence**:
+1. **Result Persistence**:
+
    - Save test results to database
    - Historical trending
    - Regression detection
 
-5. **CI/CD Integration**:
+1. **CI/CD Integration**:
+
    - Automated nightly load tests
    - Performance baseline enforcement
    - Alert on rate limit regressions
 
----
+______________________________________________________________________
 
 ## Related Documentation
 
@@ -408,10 +447,9 @@ AssertionError: Sustainable rate test failed for acb
 - **[Rate Limiting Middleware](../mcp_common/middleware/rate_limiting.py)**: Rate limiter implementation
 - **[Security Architecture](./SECURITY_ARCHITECTURE.md)**: Overall security design
 
----
+______________________________________________________________________
 
 **Created**: 2025-01-27 (Phase 3.2 H5)
 **Status**: ✅ Production Ready
 **Test Coverage**: 28/28 tests passing
 **Total Servers**: 9 MCP servers fully configured
-

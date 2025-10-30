@@ -260,10 +260,7 @@ class TestHTTPClientPerformance:
             )
 
         # Make concurrent requests
-        tasks = [
-            http_adapter.get(f"https://api.example.com/concurrent/{i}")
-            for i in range(5)
-        ]
+        tasks = [http_adapter.get(f"https://api.example.com/concurrent/{i}") for i in range(5)]
         responses = await asyncio.gather(*tasks)
 
         assert len(responses) == 5

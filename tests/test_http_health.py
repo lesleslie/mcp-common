@@ -165,9 +165,7 @@ class TestHTTPClientHealth:
     async def test_client_unhealthy_initialization_failure(self) -> None:
         """Should return UNHEALTHY when client initialization fails."""
         mock_adapter = MagicMock()
-        mock_adapter._create_client = AsyncMock(
-            side_effect=RuntimeError("Failed to create client")
-        )
+        mock_adapter._create_client = AsyncMock(side_effect=RuntimeError("Failed to create client"))
 
         result = await check_http_client_health(http_client=mock_adapter)
 
@@ -333,9 +331,7 @@ class TestHTTPConnectivityCheck:
         mock_adapter.settings.timeout = 30
 
         mock_client = AsyncMock(spec=httpx.AsyncClient)
-        mock_client.get = AsyncMock(
-            side_effect=httpx.HTTPError("Connection refused")
-        )
+        mock_client.get = AsyncMock(side_effect=httpx.HTTPError("Connection refused"))
         mock_adapter._create_client = AsyncMock(return_value=mock_client)
 
         result = await check_http_connectivity(

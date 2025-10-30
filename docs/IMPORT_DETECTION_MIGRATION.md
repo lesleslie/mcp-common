@@ -4,20 +4,21 @@
 
 **Status**: ✅ Implementation ready, 6 servers affected
 
----
+______________________________________________________________________
 
 ## Overview
 
 This guide shows how to migrate MCP servers from try/except import detection to the more idiomatic `importlib.util.find_spec()` pattern.
 
 **Benefits**:
+
 - ✅ **Explicit intent** - Clear that we're checking module availability
 - ✅ **No exception handling** - Avoids using exceptions for control flow
 - ✅ **Pythonic** - Standard library approach for module detection
 - ✅ **Safer** - Won't accidentally catch ImportErrors from within the module
 - ✅ **Type-safe** - Clear boolean return value
 
----
+______________________________________________________________________
 
 ## Quick Migration Example
 
@@ -27,6 +28,7 @@ This guide shows how to migrate MCP servers from try/except import detection to 
 # ❌ Using exceptions for control flow
 try:
     from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
+
     RATE_LIMITING_AVAILABLE = True
 except ImportError:
     RATE_LIMITING_AVAILABLE = False
@@ -63,7 +65,7 @@ if RATE_LIMITING_AVAILABLE:
     mcp.add_middleware(rate_limiter)
 ```
 
----
+______________________________________________________________________
 
 ## Why This Pattern is Better
 
@@ -73,6 +75,7 @@ if RATE_LIMITING_AVAILABLE:
 # ❌ OLD: Unclear why we're catching ImportError
 try:
     import something
+
     AVAILABLE = True
 except ImportError:
     AVAILABLE = False
@@ -89,6 +92,7 @@ Python's official style guide (PEP 8) discourages using exceptions for normal co
 # ❌ OLD: Exception-based control flow (anti-pattern)
 try:
     import module
+
     do_something()
 except ImportError:
     pass
@@ -96,6 +100,7 @@ except ImportError:
 # ✅ NEW: Explicit conditional logic
 if importlib.util.find_spec("module") is not None:
     import module
+
     do_something()
 ```
 
@@ -107,6 +112,7 @@ Try/except can accidentally catch ImportErrors from *within* the imported module
 # ❌ OLD: Catches ALL ImportErrors (including from inside the module)
 try:
     from my_module import something  # If this imports numpy and numpy fails...
+
     AVAILABLE = True
 except ImportError:
     AVAILABLE = False  # ...we'll silently treat my_module as unavailable!
@@ -123,6 +129,7 @@ if AVAILABLE:
 # ❌ OLD: Boolean set in two places, potential for inconsistency
 try:
     import module
+
     AVAILABLE = True  # Could forget this
 except ImportError:
     AVAILABLE = False
@@ -131,7 +138,7 @@ except ImportError:
 AVAILABLE = importlib.util.find_spec("module") is not None
 ```
 
----
+______________________________________________________________________
 
 ## Affected Servers
 
@@ -140,6 +147,7 @@ Based on Phase 3 codebase analysis:
 ### Servers Using This Pattern (6 servers)
 
 1. **session-mgmt-mcp** - 10+ instances
+
    - `MCP_AVAILABLE`
    - `SERVERPANELS_AVAILABLE`
    - `SECURITY_AVAILABLE`
@@ -153,31 +161,37 @@ Based on Phase 3 codebase analysis:
    - `LLM_PROVIDERS_AVAILABLE`
    - `SERVERLESS_MODE_AVAILABLE`
 
-2. **acb** - 2 instances
+1. **acb** - 2 instances
+
    - `RATE_LIMITING_AVAILABLE`
    - `SERVERPANELS_AVAILABLE`
 
-3. **opera-cloud-mcp** - 2 instances
+1. **opera-cloud-mcp** - 2 instances
+
    - `RATE_LIMITING_AVAILABLE`
    - `SERVERPANELS_AVAILABLE`
 
-4. **unifi-mcp** - 2 instances
+1. **unifi-mcp** - 2 instances
+
    - `RATE_LIMITING_AVAILABLE`
    - `SERVERPANELS_AVAILABLE`
 
-5. **raindropio-mcp** - 2 instances
+1. **raindropio-mcp** - 2 instances
+
    - `RATE_LIMITING_AVAILABLE`
    - `SERVERPANELS_AVAILABLE`
 
-6. **excalidraw-mcp** - 1 instance
+1. **excalidraw-mcp** - 1 instance
+
    - `SERVERPANELS_AVAILABLE`
 
 ### Servers Not Affected (3 servers)
+
 - **mailgun-mcp**: No pattern usage
 - **fastblocks**: No pattern usage
 - **crackerjack**: No pattern usage
 
----
+______________________________________________________________________
 
 ## Step-by-Step Migration
 
@@ -197,6 +211,7 @@ Find each try/except import block:
 # OLD (find this pattern):
 try:
     from module.path import Something
+
     SOMETHING_AVAILABLE = True
 except ImportError:
     SOMETHING_AVAILABLE = False
@@ -206,9 +221,7 @@ Replace with:
 
 ```python
 # NEW (replace with this):
-SOMETHING_AVAILABLE = (
-    importlib.util.find_spec("module.path") is not None
-)
+SOMETHING_AVAILABLE = importlib.util.find_spec("module.path") is not None
 ```
 
 ### Step 3: Move Import Inside Conditional
@@ -233,21 +246,24 @@ assert SOMETHING_AVAILABLE in (True, False)  # Should be boolean
 # Test with module present
 if SOMETHING_AVAILABLE:
     from module.path import Something
+
     print(f"✅ Module available: {Something}")
 else:
     print("⚠️ Module not available (expected in some environments)")
 ```
 
----
+______________________________________________________________________
 
 ## Migration Patterns by Use Case
 
 ### Pattern 1: Rate Limiting Middleware
 
 **Before**:
+
 ```python
 try:
     from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
+
     RATE_LIMITING_AVAILABLE = True
 except ImportError:
     RATE_LIMITING_AVAILABLE = False
@@ -259,6 +275,7 @@ if RATE_LIMITING_AVAILABLE:
 ```
 
 **After**:
+
 ```python
 import importlib.util
 
@@ -277,9 +294,11 @@ if RATE_LIMITING_AVAILABLE:
 ### Pattern 2: ServerPanels UI
 
 **Before**:
+
 ```python
 try:
     from mcp_common.ui import ServerPanels
+
     SERVERPANELS_AVAILABLE = True
 except ImportError:
     SERVERPANELS_AVAILABLE = False
@@ -291,12 +310,11 @@ if SERVERPANELS_AVAILABLE:
 ```
 
 **After**:
+
 ```python
 import importlib.util
 
-SERVERPANELS_AVAILABLE = (
-    importlib.util.find_spec("mcp_common.ui") is not None
-)
+SERVERPANELS_AVAILABLE = importlib.util.find_spec("mcp_common.ui") is not None
 
 # Usage (import moved here)
 if SERVERPANELS_AVAILABLE:
@@ -309,9 +327,11 @@ if SERVERPANELS_AVAILABLE:
 ### Pattern 3: Security Utilities
 
 **Before**:
+
 ```python
 try:
     from mcp_common.security import APIKeyValidator
+
     SECURITY_AVAILABLE = True
 except ImportError:
     SECURITY_AVAILABLE = False
@@ -322,12 +342,11 @@ if SECURITY_AVAILABLE:
 ```
 
 **After**:
+
 ```python
 import importlib.util
 
-SECURITY_AVAILABLE = (
-    importlib.util.find_spec("mcp_common.security") is not None
-)
+SECURITY_AVAILABLE = importlib.util.find_spec("mcp_common.security") is not None
 
 # Usage (import moved here)
 if SECURITY_AVAILABLE:
@@ -336,7 +355,7 @@ if SECURITY_AVAILABLE:
     validator = APIKeyValidator(...)
 ```
 
----
+______________________________________________________________________
 
 ## Testing Your Migration
 
@@ -366,20 +385,20 @@ def test_conditional_import():
     import importlib.util
 
     MODULE_AVAILABLE = (
-        importlib.util.find_spec("fastmcp.server.middleware.rate_limiting")
-        is not None
+        importlib.util.find_spec("fastmcp.server.middleware.rate_limiting") is not None
     )
 
     if MODULE_AVAILABLE:
         # Should import without error
         from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
+
         assert RateLimitingMiddleware is not None
     else:
         # Should not raise ImportError
         print("Module not available (expected in some test environments)")
 ```
 
----
+______________________________________________________________________
 
 ## Common Patterns Reference
 
@@ -394,9 +413,7 @@ MODULE_AVAILABLE = importlib.util.find_spec("module_name") is not None
 
 ```python
 # Check if submodule exists
-SUBMODULE_AVAILABLE = (
-    importlib.util.find_spec("package.submodule") is not None
-)
+SUBMODULE_AVAILABLE = importlib.util.find_spec("package.submodule") is not None
 ```
 
 ### Multiple Checks
@@ -406,12 +423,8 @@ SUBMODULE_AVAILABLE = (
 RATE_LIMITING_AVAILABLE = (
     importlib.util.find_spec("fastmcp.server.middleware.rate_limiting") is not None
 )
-SERVERPANELS_AVAILABLE = (
-    importlib.util.find_spec("mcp_common.ui") is not None
-)
-SECURITY_AVAILABLE = (
-    importlib.util.find_spec("mcp_common.security") is not None
-)
+SERVERPANELS_AVAILABLE = importlib.util.find_spec("mcp_common.ui") is not None
+SECURITY_AVAILABLE = importlib.util.find_spec("mcp_common.security") is not None
 ```
 
 ### With Conditional Import
@@ -430,7 +443,7 @@ else:
     logger.info("Feature module not available, skipping feature")
 ```
 
----
+______________________________________________________________________
 
 ## Migration Checklist
 
@@ -445,19 +458,21 @@ For each server:
 - [ ] Run existing tests to ensure no regressions
 - [ ] Update code comments to reflect new pattern
 
----
+______________________________________________________________________
 
 ## Troubleshooting
 
 ### Issue: `find_spec()` returns None for installed module
 
 **Problem**:
+
 ```python
 result = importlib.util.find_spec("my_module")
 assert result is not None  # Fails even though module is installed
 ```
 
 **Solution**: Check module name is correct:
+
 ```python
 # ❌ Wrong: Using import name
 importlib.util.find_spec("from_module")  # Wrong!
@@ -469,6 +484,7 @@ importlib.util.find_spec("actual_module_name")
 ### Issue: Import still fails with module available
 
 **Problem**:
+
 ```python
 AVAILABLE = importlib.util.find_spec("module") is not None  # True
 if AVAILABLE:
@@ -488,7 +504,7 @@ if AVAILABLE:
         AVAILABLE = False
 ```
 
----
+______________________________________________________________________
 
 ## Performance Considerations
 
@@ -501,22 +517,17 @@ import timeit
 
 # find_spec is much faster than try/except import
 timeit.timeit(
-    'importlib.util.find_spec("sys") is not None',
-    setup='import importlib.util',
-    number=100000
+    'importlib.util.find_spec("sys") is not None', setup="import importlib.util", number=100000
 )  # ~0.02 seconds
 
-timeit.timeit(
-    'try: import sys\nexcept: pass',
-    number=100000
-)  # ~0.15 seconds (7.5x slower!)
+timeit.timeit("try: import sys\nexcept: pass", number=100000)  # ~0.15 seconds (7.5x slower!)
 ```
 
 ### Caching
 
 `find_spec()` results are cached by Python's import system, so repeated checks are essentially free.
 
----
+______________________________________________________________________
 
 ## See Also
 
@@ -524,7 +535,7 @@ timeit.timeit(
 - **[Python importlib Documentation](https://docs.python.org/3/library/importlib.html#importlib.util.find_spec)**: Official Python docs
 - **[PEP 8 Style Guide](https://peps.python.org/pep-0008/)**: Python coding standards
 
----
+______________________________________________________________________
 
 **Created**: 2025-01-27 (Phase 3.3 M2)
 **Status**: ✅ Ready for implementation

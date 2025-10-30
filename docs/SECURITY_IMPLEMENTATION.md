@@ -7,6 +7,7 @@ This document provides comprehensive guidance for implementing the mcp-common se
 ## Overview
 
 The security module provides:
+
 - **API Key Validation**: Provider-specific pattern matching for multiple services
 - **Startup Validation**: Fail-fast validation during server initialization
 - **Safe Logging**: Automatic masking of sensitive data in logs
@@ -37,7 +38,7 @@ settings = MyServerSettings()
 try:
     validated_keys = settings.validate_api_keys_at_startup(
         key_fields=["api_key"],
-        provider="openai"  # or "anthropic", "mailgun", "github", etc.
+        provider="openai",  # or "anthropic", "mailgun", "github", etc.
     )
     print(f"✅ Server initialized with validated API key: {settings.get_masked_key()}")
 except ValueError as e:
@@ -94,10 +95,7 @@ When you know the provider, use provider-specific validation for better error me
 ```python
 # Validate with specific provider pattern
 try:
-    validated = settings.validate_api_keys_at_startup(
-        key_fields=["openai_key"],
-        provider="openai"
-    )
+    validated = settings.validate_api_keys_at_startup(key_fields=["openai_key"], provider="openai")
 except ValueError as e:
     # Error message includes provider-specific guidance:
     # "Invalid API key format for OpenAI. Expected: OpenAI API keys
@@ -110,11 +108,7 @@ except ValueError as e:
 ```python
 # Get API key with enhanced validation
 try:
-    key = settings.get_api_key_secure(
-        key_name="api_key",
-        provider="openai",
-        validate_format=True
-    )
+    key = settings.get_api_key_secure(key_name="api_key", provider="openai", validate_format=True)
     # Use key for API calls
 except ValueError as e:
     print(f"Invalid API key: {e}")
@@ -173,7 +167,7 @@ from mcp_common.security import sanitize_output
 response = {
     "status": "success",
     "message": "API call to sk-abc123def456... succeeded",
-    "data": {"user": "john"}
+    "data": {"user": "john"},
 }
 
 # Mask any API keys in output
@@ -200,19 +194,13 @@ except ValueError as e:
 
 # Confine paths to base directory
 try:
-    safe_path = sanitize_path(
-        "data/user_file.txt",
-        base_dir="/app/data"
-    )
+    safe_path = sanitize_path("data/user_file.txt", base_dir="/app/data")
     # Returns Path object confined to /app/data
 except ValueError as e:
     print(f"Path escape attempt: {e}")
 
 # Allow absolute paths to specific directories
-safe_path = sanitize_path(
-    "/tmp/cache/file.txt",
-    allow_absolute=True
-)
+safe_path = sanitize_path("/tmp/cache/file.txt", allow_absolute=True)
 # System directories (/etc, /sys, /proc) are always blocked
 ```
 
@@ -225,28 +213,20 @@ from mcp_common.security import sanitize_input
 
 # Basic sanitization
 user_input = sanitize_input(
-    "  user provided text  ",
-    max_length=100
+    "  user provided text  ", max_length=100
 )  # Returns: "user provided text"
 
 # HTML stripping
 user_comment = sanitize_input(
-    "<script>alert('xss')</script>Hello",
-    strip_html=True
+    "<script>alert('xss')</script>Hello", strip_html=True
 )  # Returns: "alert('xss')Hello" (tags removed)
 
 # Character restrictions
-username = sanitize_input(
-    "john_doe",
-    allowed_chars="a-z_"
-)  # Returns: "john_doe"
+username = sanitize_input("john_doe", allowed_chars="a-z_")  # Returns: "john_doe"
 
 # Reject invalid input
 try:
-    sanitize_input(
-        "invalid!@#$",
-        allowed_chars="a-z"
-    )
+    sanitize_input("invalid!@#$", allowed_chars="a-z")
 except ValueError as e:
     print(f"Invalid input: {e}")
 ```
@@ -263,7 +243,7 @@ custom_pattern = APIKeyPattern(
     name="CustomService",
     pattern=r"^cs-[0-9]{10}-[a-z]{8}$",
     description="Custom service keys: 'cs-' + 10 digits + '-' + 8 lowercase letters",
-    example="cs-1234567890-abcdefgh"
+    example="cs-1234567890-abcdefgh",
 )
 
 # Use in validation
@@ -291,9 +271,7 @@ class AutoValidatingSettings(MCPBaseSettings):
     api_key: str = Field(description="OpenAI API key")
 
     # Automatic validation on field assignment
-    _validate_api_key = field_validator("api_key")(
-        create_api_key_validator(provider="openai")
-    )
+    _validate_api_key = field_validator("api_key")(create_api_key_validator(provider="openai"))
 
 
 # Validation happens automatically during initialization
@@ -410,12 +388,12 @@ def test_safe_logging():
 ## Security Best Practices
 
 1. **Always validate API keys at startup** - Fail fast with clear error messages
-2. **Never log raw API keys** - Use `get_masked_key()` for all logging
-3. **Sanitize all user input** - Use `sanitize_input()` and `sanitize_path()`
-4. **Sanitize output data** - Use `sanitize_output()` before returning responses
-5. **Use provider-specific validation** - Better error messages for debugging
-6. **Handle optional keys gracefully** - `validate_api_keys_at_startup()` skips None values
-7. **Test validation logic** - Ensure your server fails to start with invalid keys
+1. **Never log raw API keys** - Use `get_masked_key()` for all logging
+1. **Sanitize all user input** - Use `sanitize_input()` and `sanitize_path()`
+1. **Sanitize output data** - Use `sanitize_output()` before returning responses
+1. **Use provider-specific validation** - Better error messages for debugging
+1. **Handle optional keys gracefully** - `validate_api_keys_at_startup()` skips None values
+1. **Test validation logic** - Ensure your server fails to start with invalid keys
 
 ## Common Patterns
 
@@ -449,7 +427,11 @@ class EnvironmentSettings(MCPBaseSettings):
     @property
     def active_key(self) -> str:
         """Get active key based on environment."""
-        return self.production_key if self.enable_debug_mode else self.development_key or self.production_key
+        return (
+            self.production_key
+            if self.enable_debug_mode
+            else self.development_key or self.production_key
+        )
 
 
 # Validate active key
@@ -457,10 +439,7 @@ settings = EnvironmentSettings()
 active_key_name = "production_key" if not settings.enable_debug_mode else "development_key"
 
 try:
-    settings.validate_api_keys_at_startup(
-        key_fields=[active_key_name],
-        provider="openai"
-    )
+    settings.validate_api_keys_at_startup(key_fields=[active_key_name], provider="openai")
 except ValueError as e:
     print(f"Environment configuration error: {e}")
     exit(1)
@@ -485,6 +464,7 @@ except ValueError:
 **Error**: "Invalid API key format for OpenAI"
 
 **Solution**: Verify your key matches the expected format:
+
 - OpenAI: `sk-` + 48 alphanumeric characters
 - Check for whitespace (automatically stripped)
 - Ensure the entire key is present
@@ -492,14 +472,12 @@ except ValueError:
 **Error**: "Validation failed for 'api_key'"
 
 **Solution**: Check which field is failing:
+
 ```python
 # Validate keys individually to identify the problem
 for field in ["api_key", "secondary_key"]:
     try:
-        settings.validate_api_keys_at_startup(
-            key_fields=[field],
-            provider="openai"
-        )
+        settings.validate_api_keys_at_startup(key_fields=[field], provider="openai")
         print(f"✅ {field} is valid")
     except ValueError as e:
         print(f"❌ {field} validation failed: {e}")
@@ -526,24 +504,28 @@ else:
 ## References
 
 - **Implementation Files**:
+
   - `mcp_common/security/api_keys.py` - API key validation
   - `mcp_common/security/sanitization.py` - Input/output sanitization
   - `mcp_common/config/base.py` - MCPBaseSettings security methods
 
 - **Test Files**:
+
   - `tests/test_security_api_keys.py` - 36 API key validation tests
   - `tests/test_security_sanitization.py` - 55 sanitization tests
   - `tests/test_config_security.py` - 32 MCPBaseSettings integration tests
 
 - **Documentation**:
+
   - `INTEGRATION_TRACKING.md` - Phase 3 implementation progress
   - `IMPLEMENTATION_PLAN.md` - Overall 10-week security roadmap
 
 ## Support
 
 For questions or issues with the security module:
+
 1. Review this guide and the test files for examples
-2. Check `INTEGRATION_TRACKING.md` for known issues
-3. Ensure you're using the latest version of mcp-common
+1. Check `INTEGRATION_TRACKING.md` for known issues
+1. Ensure you're using the latest version of mcp-common
 
 **Phase 3 Status**: Security module complete with 123 passing tests ✅

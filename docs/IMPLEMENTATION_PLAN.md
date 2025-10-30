@@ -1,15 +1,17 @@
 # MCP-Common Implementation Plan
+
 **Version:** 2.0.0 (ACB-Native)
 **Date:** 2025-10-26
 **Status:** ACB Integration Phase
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
 This plan outlines the creation of **mcp-common**, an **ACB-native foundation library** for the MCP server ecosystem consisting of 9 servers across 6 standalone projects and 3 ACB-integrated frameworks (ACB, Crackerjack, FastBlocks).
 
 **Problem:** All 9 MCP servers implement common patterns with inconsistent quality:
+
 - Critical bugs (mailgun-mcp performance, unifi-mcp broken tools)
 - Security gaps (no API key validation in 9/9 servers)
 - Inconsistent logging (some use loguru, some standard logging)
@@ -18,6 +20,7 @@ This plan outlines the creation of **mcp-common**, an **ACB-native foundation li
 - No dependency injection or lifecycle management
 
 **Solution:** Build ACB-native foundation library that provides:
+
 - **ACB Adapters** for HTTP, rate limiting, security
 - **ACB Settings** with YAML + environment variable support
 - **ACB Logger** for structured logging with context
@@ -26,13 +29,14 @@ This plan outlines the creation of **mcp-common**, an **ACB-native foundation li
 - **Tool Organization** patterns following crackerjack
 
 **Impact:**
+
 - Fix 3 critical bugs immediately
 - Unified logging/settings/console across all servers
 - Professional Rich UI for all servers
 - Reduce maintenance burden by 50%
 - Establish ACB-native patterns for future MCP servers
 
----
+______________________________________________________________________
 
 ## Server Inventory & Current State
 
@@ -48,6 +52,7 @@ This plan outlines the creation of **mcp-common**, an **ACB-native foundation li
 | **unifi-mcp** | 58/100 | 26% | **Tools not registered** | FastMCP (broken) |
 
 **Common Issues Across All 6:**
+
 - ❌ No API key validation at startup (6/6)
 - ❌ No rate limiting (5/6 - opera has basic)
 - ❌ Inconsistent error handling
@@ -63,6 +68,7 @@ This plan outlines the creation of **mcp-common**, an **ACB-native foundation li
 | **FastBlocks** | `fastblocks/mcp/` | Template & component management | FastMCP via ACB | Leverages ACB MCP |
 
 **Patterns Found in Integrated Servers:**
+
 - ✅ More sophisticated architecture (context management, websockets)
 - ✅ Crackerjack has rate limiting, progress monitoring
 - ✅ Better integration with project internals
@@ -71,18 +77,20 @@ This plan outlines the creation of **mcp-common**, an **ACB-native foundation li
 
 **Total Ecosystem:** 9 MCP servers, 74/100 avg health
 
----
+______________________________________________________________________
 
 ## Common Patterns Analysis
 
 ### 1. HTTP Client Management
 
 **Current State:**
+
 ```python
 # BAD: mailgun-mcp (5/6 standalone servers do this)
 async def send_email():
     async with httpx.AsyncClient() as client:  # ❌ New client each call
         response = await client.post(...)
+
 
 # GOOD: raindropio-mcp
 class RaindropServer:
@@ -91,15 +99,18 @@ class RaindropServer:
 ```
 
 **Impact:** mailgun creates ~1000 connections/hour under normal load. This causes:
+
 - Socket exhaustion
 - 10x slower response times
 - Resource leaks
 
 **Proposed Solution (ACB-Native):**
+
 ```python
 # Using HTTPClientAdapter with ACB dependency injection
 from acb.depends import depends
 from mcp_common.adapters.http import HTTPClientAdapter
+
 
 @mcp.tool()
 async def send_email():
@@ -111,6 +122,7 @@ async def send_email():
 ```
 
 **Pattern Benefits:**
+
 - Automatic lifecycle management (init/cleanup via ACB)
 - Connection pooling (11x performance improvement)
 - Structured logging via ACB logger
@@ -124,13 +136,16 @@ async def send_email():
 # Approach 1: Direct os.getenv (mailgun, unifi, excalidraw)
 API_KEY = os.getenv("API_KEY")  # ❌ No validation
 
+
 # Approach 2: Config class (session-mgmt)
 class Config:
     def __init__(self):
         self.api_key = os.getenv("API_KEY")  # ⚠️ Still no validation
 
+
 # Approach 3: Pydantic Settings (raindropio - BEST)
 from pydantic_settings import BaseSettings
+
 
 class Settings(BaseSettings):
     api_key: str  # ✅ Validated at startup
@@ -138,10 +153,12 @@ class Settings(BaseSettings):
 ```
 
 **Proposed Solution (ACB-Native):**
+
 ```python
 # Using ACB Settings with YAML + environment variable support
 from mcp_common.config import MCPBaseSettings
 from pydantic import Field
+
 
 class MailgunSettings(MCPBaseSettings):
     """Server configuration using ACB Settings.
@@ -152,15 +169,18 @@ class MailgunSettings(MCPBaseSettings):
     3. Environment variables MAILGUN_*
     4. Defaults below
     """
+
     api_key: str = Field(description="Mailgun API key")
     domain: str = Field(description="Mailgun domain")
     timeout: int = Field(default=30, description="Request timeout in seconds")
+
 
 # Validates at initialization - fails fast if required fields missing
 settings = MailgunSettings()
 ```
 
 **Pattern Benefits:**
+
 - Extends `acb.config.Settings` (ACB-native)
 - YAML file support (gitignored local.yaml for dev)
 - Environment variable override (12-factor app)
@@ -172,6 +192,7 @@ settings = MailgunSettings()
 ### 3. Rate Limiting
 
 **Current State:**
+
 - ❌ Missing in 5/6 standalone servers
 - ✅ Crackerjack has sophisticated rate limiting:
   ```python
@@ -182,9 +203,11 @@ settings = MailgunSettings()
   ```
 
 **Proposed Solution (ACB-Native):**
+
 ```python
 # Using RateLimiterAdapter with ACB dependency injection
 from mcp_common.adapters.rate_limit import RateLimiterAdapter, rate_limit
+
 
 @mcp.tool()
 @rate_limit(requests=100, window=60)  # 100 req/min
@@ -195,10 +218,11 @@ async def expensive_operation():
 ```
 
 **Pattern Benefits:**
+
 - Token bucket algorithm (smooth rate limiting)
 - Per-identifier tracking (user, IP, API key)
 - Structured logging of rate limit events via ACB
-- Zero overhead when limits not hit (<4% when active)
+- Zero overhead when limits not hit (\<4% when active)
 
 **Impact:** Prevents API abuse, adds professional quality to all servers
 
@@ -218,14 +242,17 @@ raise CanvasServerError("Connection failed")
 ```
 
 **Proposed Solution (ACB-Native):**
+
 ```python
 # Using ACB Actions for error handling
 from mcp_common.actions.error_handling import handle_mcp_errors
 from mcp_common.errors import MCPError, APIError
 from acb.adapters.logger import LoggerProtocol
 
+
 class APIError(MCPError):
     """External API failure"""
+
 
 @mcp.tool()
 @handle_mcp_errors  # Automatic sanitization + structured logging
@@ -240,6 +267,7 @@ async def call_api():
 ```
 
 **Pattern Benefits:**
+
 - ACB Actions for reusable error handling logic
 - Structured logging with correlation IDs via ACB logger
 - Automatic sensitive data sanitization
@@ -250,16 +278,19 @@ async def call_api():
 ### 5. Security Patterns
 
 **Current Gaps (all 9 servers):**
+
 - ❌ No input sanitization
 - ❌ No output filtering for sensitive data
 - ❌ API keys logged in exceptions
 - ❌ No CORS configuration helpers
 
 **Proposed Solution (ACB-Native):**
+
 ```python
 # Using Security Adapters with ACB dependency injection
 from acb.depends import depends
 from mcp_common.adapters.security import SanitizerAdapter, FilterAdapter
+
 
 @mcp.tool()
 async def send_email(email: str, api_key: str):
@@ -275,14 +306,14 @@ async def send_email(email: str, api_key: str):
 
     # Filter sensitive data from output
     safe_result = await output_filter.exclude_fields(
-        result,
-        exclude=['api_key', 'password', 'token']
+        result, exclude=["api_key", "password", "token"]
     )
 
     return safe_result
 ```
 
 **Pattern Benefits:**
+
 - ACB adapters for security (MODULE_ID, lifecycle management)
 - Input sanitization prevents injection attacks
 - Output filtering prevents credential leaks
@@ -292,21 +323,22 @@ async def send_email(email: str, api_key: str):
 ### 6. Testing Utilities
 
 **Current State:**
+
 - Test coverage ranges from 26% (unifi) to 88% (raindropio)
 - Each server implements own mocking strategies
 - No shared test fixtures
 
 **Proposed Solution (ACB-Native):**
+
 ```python
 # Using ACB dependency injection for testable code
 from acb.depends import depends
 from mcp_common.testing import MockMCPClient, mock_http_response, MockHTTPClientAdapter
 
+
 async def test_tool():
     # Create mock adapter
-    mock_http = MockHTTPClientAdapter(
-        responses={"https://api.example.com": {"ok": True}}
-    )
+    mock_http = MockHTTPClientAdapter(responses={"https://api.example.com": {"ok": True}})
 
     # Override in DI container (ACB pattern)
     depends.set(HTTPClientAdapter, mock_http)
@@ -321,6 +353,7 @@ async def test_tool():
 ```
 
 **Pattern Benefits:**
+
 - ACB dependency injection makes testing trivial
 - Mock adapters swap in via `depends.set()`
 - No need to patch or monkey-patch
@@ -329,13 +362,14 @@ async def test_tool():
 
 **Impact:** Easier to write tests, improves coverage ecosystem-wide
 
----
+______________________________________________________________________
 
 ## Extractable Code Identification
 
 ### High Priority (Use in All Servers)
 
 #### 1. HTTP Client Singleton (`mcp_common/http.py`)
+
 **Extracted from:** raindropio-mcp (working example)
 **Beneficiaries:** All 9 servers
 **Complexity:** Low
@@ -344,6 +378,7 @@ async def test_tool():
 ```python
 class MCPHTTPClient:
     """Singleton HTTP client with connection pooling."""
+
     _instance: httpx.AsyncClient | None = None
 
     @classmethod
@@ -357,6 +392,7 @@ class MCPHTTPClient:
 ```
 
 #### 2. Pydantic Settings Base (`mcp_common/config.py`)
+
 **Extracted from:** raindropio-mcp pattern
 **Beneficiaries:** All 9 servers
 **Complexity:** Low
@@ -368,6 +404,7 @@ from acb.config import Settings
 from pydantic import field_validator
 from pydantic_settings import SettingsConfigDict
 
+
 class MCPBaseSettings(Settings):
     """Base settings with ACB + YAML support.
 
@@ -377,6 +414,7 @@ class MCPBaseSettings(Settings):
     3. Environment variables {SERVER_NAME}_*
     4. Defaults
     """
+
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=False,
@@ -392,6 +430,7 @@ class MCPBaseSettings(Settings):
 ```
 
 #### 3. Rate Limiter (`mcp_common/rate_limit.py`)
+
 **Extracted from:** crackerjack/mcp/rate_limiter.py
 **Beneficiaries:** All 9 servers
 **Complexity:** Medium
@@ -400,6 +439,7 @@ class MCPBaseSettings(Settings):
 ```python
 class RateLimiter:
     """Token bucket rate limiter."""
+
     def __init__(self, max_requests: int, window: int):
         self.max_requests = max_requests
         self.window = window
@@ -413,8 +453,7 @@ class RateLimiter:
 
         # Remove old requests
         self.requests[identifier] = [
-            req for req in self.requests[identifier]
-            if now - req < self.window
+            req for req in self.requests[identifier] if now - req < self.window
         ]
 
         if len(self.requests[identifier]) >= self.max_requests:
@@ -427,6 +466,7 @@ class RateLimiter:
 ### Medium Priority (Enhance Quality)
 
 #### 4. Error Handling (`mcp_common/errors.py`)
+
 **New implementation** (best practices from audit)
 **Beneficiaries:** All 9 servers
 **Complexity:** Medium
@@ -435,6 +475,7 @@ class RateLimiter:
 ```python
 class MCPError(Exception):
     """Base error for MCP operations."""
+
     def __init__(self, message: str, details: dict | None = None):
         self.message = message
         self.details = details or {}
@@ -448,8 +489,10 @@ class MCPError(Exception):
             # details filtered based on allow list
         }
 
+
 def handle_errors(func):
     """Decorator for consistent error handling."""
+
     @functools.wraps(func)
     async def wrapper(*args, **kwargs):
         try:
@@ -459,10 +502,12 @@ def handle_errors(func):
         except Exception as e:
             logger.exception(f"Unexpected error in {func.__name__}")
             raise MCPError(f"Operation failed: {func.__name__}")
+
     return wrapper
 ```
 
 #### 5. Security Middleware (`mcp_common/security.py`)
+
 **New implementation** (patterns from audit + OWASP)
 **Beneficiaries:** All 9 servers
 **Complexity:** Medium
@@ -471,6 +516,7 @@ def handle_errors(func):
 ```python
 def sanitize_input(fields: list[str]):
     """Sanitize input fields."""
+
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
@@ -479,11 +525,15 @@ def sanitize_input(fields: list[str]):
                     # Email validation, SQL injection prevention, etc.
                     kwargs[field] = _sanitize(kwargs[field])
             return await func(*args, **kwargs)
+
         return wrapper
+
     return decorator
+
 
 def filter_output(exclude: list[str]):
     """Filter sensitive data from output."""
+
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
@@ -491,11 +541,14 @@ def filter_output(exclude: list[str]):
             if isinstance(result, dict):
                 return {k: v for k, v in result.items() if k not in exclude}
             return result
+
         return wrapper
+
     return decorator
 ```
 
 #### 6. Testing Utilities (`mcp_common/testing.py`)
+
 **Extracted from:** excalidraw-mcp test patterns
 **Beneficiaries:** All 9 servers
 **Complexity:** Medium
@@ -504,12 +557,14 @@ def filter_output(exclude: list[str]):
 ```python
 class MockMCPClient:
     """Mock MCP client for testing."""
+
     def __init__(self):
         self.called_tools = []
 
     async def call_tool(self, name: str, **kwargs):
         self.called_tools.append((name, kwargs))
         return {"success": True}
+
 
 @contextmanager
 def mock_http_response(status: int = 200, json: dict | None = None):
@@ -523,18 +578,20 @@ def mock_http_response(status: int = 200, json: dict | None = None):
 ### Low Priority (Nice-to-Have)
 
 #### 7. Health Checks (`mcp_common/health.py`)
+
 **Extracted from:** excalidraw-mcp monitoring
 **Beneficiaries:** Standalone servers (6)
 **Complexity:** Low
 **Impact:** Low (operational visibility)
 
 #### 8. Metrics Collection (`mcp_common/metrics.py`)
+
 **New implementation**
 **Beneficiaries:** Production servers
 **Complexity:** Medium
 **Impact:** Low (observability)
 
----
+______________________________________________________________________
 
 ## Library Architecture Design
 
@@ -666,6 +723,7 @@ __all__ = [
 ### Dependency Strategy
 
 **Core Dependencies** (required):
+
 ```toml
 [project]
 name = "mcp-common"
@@ -718,10 +776,11 @@ all = [
 ```
 
 **Key Changes from v1.0:**
+
 1. **ACB is core** - Not optional, required for all functionality
-2. **No standalone mode** - All servers must adopt ACB patterns
-3. **Rich UI included** - Part of ACB console integration
-4. **Structured for adapters** - Follows ACB component system
+1. **No standalone mode** - All servers must adopt ACB patterns
+1. **Rich UI included** - Part of ACB console integration
+1. **Structured for adapters** - Follows ACB component system
 
 ### Version Compatibility
 
@@ -729,28 +788,31 @@ all = [
 - **FastMCP:** 2.0+ (compatible with all servers)
 - **ACB:** 0.16+ (for integrated servers)
 
----
+______________________________________________________________________
 
 ## Integration Roadmap
 
 ### Phase 1: ACB Foundation (Week 1)
+
 **Goal:** Create ACB-native library with core adapters
 
 **Tasks:**
+
 1. ✅ Set up project structure (done)
-2. ✅ Update ARCHITECTURE.md for ACB-native design (done)
-3. ✅ Update IMPLEMENTATION_PLAN.md for ACB patterns (done)
-4. ✅ Create docs/ACB_FOUNDATION.md (done)
-5. Implement package registration (`__init__.py` with `register_pkg`)
-6. Implement `mcp_common/adapters/http/client.py` (HTTPClientAdapter)
-7. Implement `mcp_common/config/base.py` (MCPBaseSettings)
-8. Implement `mcp_common/ui/panels.py` (ServerPanels using acb.console)
-9. Write comprehensive tests (target 90% coverage)
-10. Create example server
+1. ✅ Update ARCHITECTURE.md for ACB-native design (done)
+1. ✅ Update IMPLEMENTATION_PLAN.md for ACB patterns (done)
+1. ✅ Create docs/ACB_FOUNDATION.md (done)
+1. Implement package registration (`__init__.py` with `register_pkg`)
+1. Implement `mcp_common/adapters/http/client.py` (HTTPClientAdapter)
+1. Implement `mcp_common/config/base.py` (MCPBaseSettings)
+1. Implement `mcp_common/ui/panels.py` (ServerPanels using acb.console)
+1. Write comprehensive tests (target 90% coverage)
+1. Create example server
 
 **Note:** No logging/ directory - ACB Logger is used directly via LoggerProtocol injection
 
 **Deliverables:**
+
 - Working mcp-common v2.0.0 (ACB-native)
 - Core adapters implemented
 - Rich UI panels working
@@ -758,17 +820,19 @@ all = [
 - Example ACB-native server
 
 ### Phase 2: Critical Fixes with ACB Integration (Week 1-2)
+
 **Goal:** Fix 3 critical issues using ACB-native patterns
 
 #### Fix 1: unifi-mcp Tool Registration + ACB Integration
+
 **Server:** unifi-mcp (58/100 → 80/100)
 **Issue:** Tools not registered with FastMCP, no logging/UI
 **Effort:** 3-4 days
 
 ```python
 # Before (BROKEN):
-async def get_clients():
-    ...
+async def get_clients(): ...
+
 
 # After (ACB-NATIVE):
 from acb import register_pkg
@@ -783,6 +847,7 @@ register_pkg("unifi_mcp")
 # Initialize FastMCP
 mcp = FastMCP("UniFi")
 
+
 @mcp.tool()
 async def get_clients():
     # Get HTTP adapter from DI (includes automatic logging)
@@ -792,12 +857,13 @@ async def get_clients():
     response = await client.get("/api/clients")
     return response.json()
 
+
 # Rich UI on startup
 if __name__ == "__main__":
     ServerPanels.startup_success(
         server_name="UniFi MCP",
         http_endpoint="http://localhost:8000",
-        features=["Network Management", "Client Discovery"]
+        features=["Network Management", "Client Discovery"],
     )
     mcp.run()
 ```
@@ -805,6 +871,7 @@ if __name__ == "__main__":
 **Testing:** Verify all 10+ tools exposed + Rich UI working
 
 #### Fix 2: mailgun-mcp HTTP Client + ACB Adapters
+
 **Server:** mailgun-mcp (64/100 → 82/100)
 **Issue:** New HTTP client per request, no rate limiting, no logging
 **Effort:** 2-3 days
@@ -815,10 +882,12 @@ async def send_email():
     async with httpx.AsyncClient() as client:
         ...
 
+
 # After (FAST + ACB-NATIVE):
 from acb.depends import depends
 from mcp_common.adapters.http import HTTPClientAdapter
 from mcp_common.adapters.rate_limit import rate_limit
+
 
 @mcp.tool()
 @rate_limit(requests=100, window=60)
@@ -829,8 +898,7 @@ async def send_email(email: str, subject: str):
 
     # Adapter logs request/response automatically with correlation IDs
     response = await client.post(
-        f"https://api.mailgun.net/v3/{domain}/messages",
-        data={"to": email, "subject": subject}
+        f"https://api.mailgun.net/v3/{domain}/messages", data={"to": email, "subject": subject}
     )
     return {"success": response.status_code == 200, "status": response.status_code}
 ```
@@ -838,6 +906,7 @@ async def send_email(email: str, subject: str):
 **Testing:** Benchmark shows 10x improvement + rate limiting works
 
 #### Fix 3: excalidraw-mcp Hardcoded Path
+
 **Server:** excalidraw-mcp (82/100 → 88/100)
 **Issue:** Hardcoded `/Users/les/Projects/...`
 **Effort:** 4 hours
@@ -848,6 +917,7 @@ subprocess.Popen(["npm", "run", "canvas"], cwd="/Users/les/Projects/excalidraw-m
 
 # After (PORTABLE):
 from pathlib import Path
+
 project_root = Path(__file__).parent.parent
 subprocess.Popen(["npm", "run", "canvas"], cwd=project_root)
 ```
@@ -855,16 +925,19 @@ subprocess.Popen(["npm", "run", "canvas"], cwd=project_root)
 **Testing:** Works on different machines
 
 ### Phase 3: Security Hardening (Week 2-3)
+
 **Goal:** Add missing security features to all servers
 
 **Tasks:**
+
 1. Implement `mcp_common/security.py`
-2. Add API key validation to all 9 servers
-3. Implement rate limiting in 5 standalone servers
-4. Add input sanitization
-5. Add output filtering
+1. Add API key validation to all 9 servers
+1. Implement rate limiting in 5 standalone servers
+1. Add input sanitization
+1. Add output filtering
 
 **Integration Example:**
+
 ```python
 # Before:
 @mcp.tool()
@@ -872,14 +945,17 @@ async def send_email(email: str):
     API_KEY = os.getenv("API_KEY")  # No validation
     ...
 
+
 # After (ACB-Native):
 from acb.depends import depends
 from mcp_common.config import MCPBaseSettings
 from mcp_common.adapters.rate_limit import rate_limit
 from mcp_common.adapters.security import SanitizerAdapter
 
+
 class Settings(MCPBaseSettings):
     api_key: str  # Validated at startup
+
 
 @mcp.tool()
 @rate_limit(requests=100, window=60)
@@ -893,34 +969,40 @@ async def send_email(email: str):
 **Impact:** Ecosystem health 74/100 → 82/100
 
 ### Phase 4: Test Coverage Improvement (Week 3-5)
+
 **Goal:** Bring all servers to 70% minimum coverage
 
 **Current State:**
+
 - unifi-mcp: 26% → Target: 70% (+44%)
 - mailgun-mcp: 50% → Target: 70% (+20%)
 - opera-cloud-mcp: 54% → Target: 70% (+16%)
 - session-mgmt-mcp: 62% → Target: 70% (+8%)
 
 **Strategy:**
+
 1. Use `mcp_common/testing.py` utilities
-2. Focus on tool functions first (highest impact)
-3. Add integration tests for critical paths
-4. Use pytest fixtures from mcp-common
+1. Focus on tool functions first (highest impact)
+1. Add integration tests for critical paths
+1. Use pytest fixtures from mcp-common
 
 **Effort:** ~1 week per server (focus on unifi first)
 
 ### Phase 5: Standalone Server Adoption (Week 4-6)
+
 **Goal:** All 6 standalone servers use mcp-common
 
 **Priority Order:**
+
 1. **raindropio-mcp** (easiest, sets example) - 2 days
-2. **mailgun-mcp** (already fixing) - included in Phase 2
-3. **excalidraw-mcp** (already fixing) - included in Phase 2
-4. **unifi-mcp** (already fixing) - included in Phase 2
-5. **opera-cloud-mcp** (medium complexity) - 3 days
-6. **session-mgmt-mcp** (most complex) - 4 days
+1. **mailgun-mcp** (already fixing) - included in Phase 2
+1. **excalidraw-mcp** (already fixing) - included in Phase 2
+1. **unifi-mcp** (already fixing) - included in Phase 2
+1. **opera-cloud-mcp** (medium complexity) - 3 days
+1. **session-mgmt-mcp** (most complex) - 4 days
 
 **Per-Server Checklist:**
+
 - [ ] Add mcp-common dependency
 - [ ] Add `register_pkg("server_name")` to `__init__.py`
 - [ ] Migrate to MCPBaseSettings (extends acb.config.Settings)
@@ -932,9 +1014,11 @@ async def send_email(email: str):
 - [ ] Update documentation
 
 ### Phase 6: Integrated Server Enhancement (Week 7-8)
+
 **Goal:** ACB, Crackerjack, FastBlocks benefit from mcp-common
 
 #### ACB Integration
+
 **Approach:** mcp-common enhances, doesn't replace ACB patterns
 
 ```python
@@ -942,14 +1026,15 @@ async def send_email(email: str):
 from mcp_common.adapters.rate_limit import rate_limit
 from mcp_common.actions.error_handling import handle_mcp_errors
 
+
 @mcp.tool()
 @rate_limit(requests=100, window=60)  # Add rate limiting
 @handle_mcp_errors  # Standardized errors with ACB logging
-async def list_components():
-    ...
+async def list_components(): ...
 ```
 
 **Benefits:**
+
 - Adds missing rate limiting
 - Consistent error handling
 - Security middleware
@@ -957,6 +1042,7 @@ async def list_components():
 **Effort:** 3-4 days (ACB is the foundation, be careful)
 
 #### Crackerjack Enhancement
+
 **Approach:** Extract rate limiter to mcp-common, then import back
 
 ```python
@@ -965,13 +1051,14 @@ async def list_components():
 
 from mcp_common.adapters.rate_limit import rate_limit
 
+
 @mcp.tool()
 @rate_limit(requests=100, window=60)
-async def monitor_build():
-    ...
+async def monitor_build(): ...
 ```
 
 **Benefits:**
+
 - Code deduplication
 - Better tested implementation
 - Easier maintenance
@@ -979,32 +1066,37 @@ async def monitor_build():
 **Effort:** 2-3 days
 
 #### FastBlocks Integration
+
 **Approach:** Since FastBlocks uses ACB's MCP, benefits come automatically
 
 **Benefits:** Inherits ACB improvements
 **Effort:** 0 days (automatic)
 
 ### Phase 7: Ecosystem Standardization (Week 9-10)
+
 **Goal:** All servers follow same patterns
 
 **Tasks:**
+
 1. Create shared .mcp.json template
-2. Standardize logging format
-3. Add health check endpoints to all
-4. Implement consistent error codes
-5. Create monitoring dashboard
+1. Standardize logging format
+1. Add health check endpoints to all
+1. Implement consistent error codes
+1. Create monitoring dashboard
 
 **Deliverables:**
+
 - Ecosystem monitoring dashboard
 - Standardized documentation
 - Deployment guide
 - Security audit report (all green)
 
----
+______________________________________________________________________
 
 ## Testing Strategy
 
 ### Unit Tests (90% coverage target)
+
 **Location:** `tests/`
 
 ```python
@@ -1019,6 +1111,7 @@ async def test_http_client_adapter():
     http2 = depends(HTTPClientAdapter)
     assert http1 is http2  # Same instance from DI
 
+
 # tests/test_rate_limit.py
 async def test_rate_limiting():
     limiter = RateLimiter(max_requests=5, window=60)
@@ -1030,6 +1123,7 @@ async def test_rate_limiting():
     # 6th request blocked
     assert not await limiter.check_rate_limit("user1")
 
+
 # tests/test_config.py
 def test_config_validation():
     """Test MCPBaseSettings validation (ACB-native)."""
@@ -1037,12 +1131,15 @@ def test_config_validation():
     from pydantic import ValidationError
 
     with pytest.raises(ValidationError):
+
         class BadSettings(MCPBaseSettings):
             api_key: str  # Required field
+
         BadSettings()  # Missing required field - should raise
 ```
 
 ### Integration Tests
+
 **Location:** `tests/integration/`
 
 ```python
@@ -1058,6 +1155,7 @@ async def test_mailgun_integration():
 ```
 
 ### Benchmark Tests
+
 **Location:** `tests/benchmarks/`
 
 ```python
@@ -1087,18 +1185,20 @@ async def test_http_client_performance():
     assert fast_time < slow_time / 5  # At least 5x faster with adapter
 ```
 
----
+______________________________________________________________________
 
 ## Migration Guide
 
 ### For Standalone Servers
 
 #### Step 1: Add Dependency
+
 ```bash
 pip install mcp-common>=2.0.0
 ```
 
 Or in `pyproject.toml`:
+
 ```toml
 dependencies = [
     "mcp-common>=2.0.0",  # ACB-native version
@@ -1107,6 +1207,7 @@ dependencies = [
 ```
 
 #### Step 2: Add Package Registration + Update Configuration
+
 ```python
 # your_server/__init__.py
 from acb import register_pkg
@@ -1123,6 +1224,7 @@ DOMAIN = os.getenv("DOMAIN")
 from mcp_common.config import MCPBaseSettings
 from pydantic import Field
 
+
 class Settings(MCPBaseSettings):
     """Server settings using ACB.
 
@@ -1132,13 +1234,16 @@ class Settings(MCPBaseSettings):
     3. Environment variables YOUR_SERVER_*
     4. Defaults below
     """
+
     api_key: str = Field(description="API key")
     domain: str = Field(description="Domain")
+
 
 settings = Settings()  # Auto-validates, fails fast if missing
 ```
 
 #### Step 3: Use HTTPClientAdapter
+
 ```python
 # Before:
 async with httpx.AsyncClient() as client:
@@ -1147,6 +1252,7 @@ async with httpx.AsyncClient() as client:
 # After (ACB-Native with DI):
 from acb.depends import depends
 from mcp_common.adapters.http import HTTPClientAdapter
+
 
 @mcp.tool()
 async def my_tool():
@@ -1159,14 +1265,16 @@ async def my_tool():
 ```
 
 #### Step 4: Add Rate Limiting
+
 ```python
 # Before:
 @mcp.tool()
-async def expensive_operation():
-    ...
+async def expensive_operation(): ...
+
 
 # After (ACB-Native):
 from mcp_common.adapters.rate_limit import rate_limit
+
 
 @mcp.tool()
 @rate_limit(requests=100, window=60)  # Token bucket, per-identifier tracking
@@ -1177,15 +1285,17 @@ async def expensive_operation():
 ```
 
 #### Step 5: Add Security
+
 ```python
 # Before:
 @mcp.tool()
-async def process_data(email: str):
-    ...
+async def process_data(email: str): ...
+
 
 # After (ACB-Native with Security Adapters):
 from acb.depends import depends
 from mcp_common.adapters.security import SanitizerAdapter, FilterAdapter
+
 
 @mcp.tool()
 async def process_data(email: str):
@@ -1200,10 +1310,7 @@ async def process_data(email: str):
     result = await internal_processing(clean_email)
 
     # Filter sensitive output
-    safe_result = await output_filter.exclude_fields(
-        result,
-        exclude=['internal_data', 'api_key']
-    )
+    safe_result = await output_filter.exclude_fields(result, exclude=["internal_data", "api_key"])
     return safe_result
 ```
 
@@ -1217,6 +1324,7 @@ from mcp_common.adapters.rate_limit import rate_limit
 from mcp_common.actions.error_handling import handle_mcp_errors
 from acb.mcp import registry  # ACB-specific features
 
+
 @mcp.tool()
 @rate_limit(requests=100, window=60)  # mcp-common adapter
 @handle_mcp_errors  # mcp-common action
@@ -1227,13 +1335,14 @@ async def list_components():
 ```
 
 **Benefits:**
+
 - Keep ACB's powerful component system
 - Add mcp-common's battle-tested adapters (HTTP, rate limiting, security)
 - Unified DI container (ACB's depends)
 - Rich UI panels for professional console output
 - Best of both worlds
 
----
+______________________________________________________________________
 
 ## Success Metrics
 
@@ -1272,25 +1381,28 @@ async def list_components():
 
 **Ecosystem Average:** 74/100 → 85/100 (+11 points)
 
----
+______________________________________________________________________
 
 ## Risk Assessment
 
 ### Technical Risks
 
 **Risk 1: ACB Integration Complexity**
+
 - **Probability:** Medium
 - **Impact:** High
 - **Mitigation:** Make mcp-common ACB-aware, test thoroughly
 - **Contingency:** Keep ACB servers on custom implementation
 
 **Risk 2: Breaking Changes in FastMCP**
+
 - **Probability:** Low
 - **Impact:** High
 - **Mitigation:** Pin FastMCP version, test against pre-releases
 - **Contingency:** Version mcp-common per FastMCP version
 
 **Risk 3: Performance Regression**
+
 - **Probability:** Low
 - **Impact:** Medium
 - **Mitigation:** Comprehensive benchmarks before/after
@@ -1299,27 +1411,31 @@ async def list_components():
 ### Adoption Risks
 
 **Risk 1: Resistance to Change**
+
 - **Probability:** Low (only one developer - you!)
 - **Impact:** Low
 - **Mitigation:** Start with best-performing server (raindropio)
 - **Contingency:** Keep old implementations working
 
 **Risk 2: Maintenance Burden**
+
 - **Probability:** Medium
 - **Impact:** Medium
 - **Mitigation:** High test coverage (90%), clear documentation
 - **Contingency:** Simplify library if needed
 
----
+______________________________________________________________________
 
 ## Next Steps
 
 ### Immediate Actions (This Session - DONE)
+
 - [x] Create ~/Projects/mcp-common directory
 - [x] Copy MCP audit document
 - [x] Create this implementation plan
 
 ### Week 1 Actions (Next Session)
+
 - [ ] Set up pyproject.toml with dependencies
 - [ ] Implement mcp_common/http.py
 - [ ] Implement mcp_common/config.py
@@ -1327,32 +1443,35 @@ async def list_components():
 - [ ] Create examples/
 
 ### Week 2 Actions
+
 - [ ] Fix unifi-mcp tool registration
 - [ ] Fix mailgun-mcp HTTP client
 - [ ] Fix excalidraw-mcp hardcoded path
 - [ ] Validate fixes with tests
 
 ### Week 3-8 Actions
+
 - Follow phased roadmap above
 
----
+______________________________________________________________________
 
 ## Conclusion
 
 The **mcp-common v2.0 ACB-native** library will transform the MCP ecosystem from inconsistent implementations into a unified, professional system built on proven ACB patterns from crackerjack, session-mgmt-mcp, and fastblocks.
 
 **Key Takeaways:**
+
 1. **ACB-Native Foundation** - Not a utility library, but a comprehensive foundation
-2. **9 servers benefit** - All servers adopt consistent patterns
-3. **3 critical bugs fixed** - With professional ACB integration
-4. **Unified Stack:**
+1. **9 servers benefit** - All servers adopt consistent patterns
+1. **3 critical bugs fixed** - With professional ACB integration
+1. **Unified Stack:**
    - **Logging:** ACB Logger (structured, context-aware)
    - **Settings:** ACB Settings (YAML + env vars)
    - **Console:** ACB Console + Rich panels
    - **DI:** ACB depends system
    - **Adapters:** MODULE_ID + MODULE_STATUS pattern
-5. **50% reduction** in maintenance burden
-6. **Foundation** for all future MCP servers
+1. **50% reduction** in maintenance burden
+1. **Foundation** for all future MCP servers
 
 **Transformation Summary:**
 
@@ -1368,10 +1487,11 @@ The **mcp-common v2.0 ACB-native** library will transform the MCP ecosystem from
 | **Patterns** | Standalone | crackerjack/session-mgmt |
 
 **Why ACB-Native Wins:**
+
 1. **Consistency** - All servers use same logging, settings, console
-2. **Rich UI** - Professional panels like crackerjack
-3. **Modularity** - Adapters are discoverable and testable
-4. **Proven** - Patterns from 3 production systems
-5. **Future-Proof** - ACB is our ecosystem standard
+1. **Rich UI** - Professional panels like crackerjack
+1. **Modularity** - Adapters are discoverable and testable
+1. **Proven** - Patterns from 3 production systems
+1. **Future-Proof** - ACB is our ecosystem standard
 
 **Status:** ACB-native architecture complete. Ready to implement! 🚀

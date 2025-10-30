@@ -14,6 +14,7 @@ from pydantic import Field, field_validator
 # Import security utilities (with fallback for backward compatibility)
 try:
     from mcp_common.security import APIKeyValidator, validate_api_key_startup
+
     SECURITY_AVAILABLE = True
 except ImportError:
     SECURITY_AVAILABLE = False

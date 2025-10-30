@@ -4,13 +4,14 @@
 
 **Status**: ✅ Module created, 36/36 tests passing
 
----
+______________________________________________________________________
 
 ## Overview
 
 This guide shows how to migrate MCP servers from hardcoded rate limit values to the centralized `RateLimitConfig` system in mcp-common.
 
 **Benefits**:
+
 - ✅ **Eliminates magic numbers** - All rate limits in one place
 - ✅ **Type-safe configuration** - Validated at creation time
 - ✅ **Standardized profiles** - Conservative/Moderate/Aggressive
@@ -18,13 +19,14 @@ This guide shows how to migrate MCP servers from hardcoded rate limit values to 
 - ✅ **Custom configs** - Easy to create new configurations
 - ✅ **Immutable** - Frozen dataclasses prevent accidental modification
 
----
+______________________________________________________________________
 
 ## Quick Migration Examples
 
 ### Example 1: Using Server-Specific Config
 
 **Before** (hardcoded values):
+
 ```python
 from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
 
@@ -38,6 +40,7 @@ mcp.add_middleware(rate_limiter)
 ```
 
 **After** (using server config):
+
 ```python
 from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
 from mcp_common.middleware import get_config_for_server
@@ -56,6 +59,7 @@ mcp.add_middleware(rate_limiter)
 ### Example 2: Using Profile
 
 **Before** (hardcoded):
+
 ```python
 rate_limiter = RateLimitingMiddleware(
     max_requests_per_second=15.0,  # What does 15 mean?
@@ -65,6 +69,7 @@ rate_limiter = RateLimitingMiddleware(
 ```
 
 **After** (using profile):
+
 ```python
 from mcp_common.middleware import get_profile_config, RateLimitProfile
 
@@ -81,6 +86,7 @@ rate_limiter = RateLimitingMiddleware(
 ### Example 3: Custom Configuration
 
 **Before** (hardcoded):
+
 ```python
 rate_limiter = RateLimitingMiddleware(
     max_requests_per_second=20.0,
@@ -90,6 +96,7 @@ rate_limiter = RateLimitingMiddleware(
 ```
 
 **After** (validated custom config):
+
 ```python
 from mcp_common.middleware import create_custom_config
 
@@ -108,7 +115,7 @@ rate_limiter = RateLimitingMiddleware(
 )
 ```
 
----
+______________________________________________________________________
 
 ## Available Profiles
 
@@ -147,7 +154,7 @@ config = get_profile_config(RateLimitProfile.AGGRESSIVE)
 
 **Examples**: acb, fastblocks
 
----
+______________________________________________________________________
 
 ## Server-Specific Configurations
 
@@ -162,6 +169,7 @@ for server_name, config in SERVER_CONFIGS.items():
 ```
 
 **Output**:
+
 ```
 acb: 15.0 req/sec, burst 40
 fastblocks: 15.0 req/sec, burst 40 (inherits from ACB)
@@ -174,7 +182,7 @@ mailgun-mcp: 5.0 req/sec, burst 15
 excalidraw-mcp: 12.0 req/sec, burst 16
 ```
 
----
+______________________________________________________________________
 
 ## Step-by-Step Migration
 
@@ -190,8 +198,10 @@ uv add mcp-common
 ```python
 # Add to imports
 from mcp_common.middleware import get_config_for_server
+
 # Or for profiles:
 from mcp_common.middleware import get_profile_config, RateLimitProfile
+
 # Or for custom:
 from mcp_common.middleware import create_custom_config
 ```
@@ -199,6 +209,7 @@ from mcp_common.middleware import create_custom_config
 ### Step 3: Replace Hardcoded Values
 
 Find rate limiter initialization:
+
 ```python
 # OLD (find this pattern):
 rate_limiter = RateLimitingMiddleware(
@@ -209,6 +220,7 @@ rate_limiter = RateLimitingMiddleware(
 ```
 
 Replace with configuration lookup:
+
 ```python
 # NEW (replace with this):
 config = get_config_for_server("your-server-name")  # ✅ Semantic
@@ -222,6 +234,7 @@ rate_limiter = RateLimitingMiddleware(
 ### Step 4: Update ServerPanels (Optional)
 
 Show configuration source in server panels:
+
 ```python
 from mcp_common.ui import ServerPanels
 
@@ -255,7 +268,7 @@ except AttributeError:
     print("✅ Config is properly immutable")
 ```
 
----
+______________________________________________________________________
 
 ## Adding New Servers
 
@@ -282,7 +295,6 @@ Edit `mcp_common/middleware/rate_limit_config.py`:
 ```python
 SERVER_CONFIGS: dict[str, RateLimitConfig] = {
     # ... existing servers ...
-
     # Add your server
     "my-new-server": RateLimitConfig(
         max_requests_per_second=10.0,
@@ -309,13 +321,14 @@ my_config = create_custom_config(
 )
 ```
 
----
+______________________________________________________________________
 
 ## Configuration Validation
 
 The `RateLimitConfig` dataclass automatically validates:
 
 ### 1. Positive Request Rate
+
 ```python
 # ❌ Will raise ValueError
 RateLimitConfig(max_requests_per_second=0.0, burst_capacity=10)
@@ -326,6 +339,7 @@ RateLimitConfig(max_requests_per_second=10.0, burst_capacity=20)
 ```
 
 ### 2. Valid Burst Capacity
+
 ```python
 # ❌ Will raise ValueError
 RateLimitConfig(max_requests_per_second=10.0, burst_capacity=0)
@@ -336,6 +350,7 @@ RateLimitConfig(max_requests_per_second=10.0, burst_capacity=20)
 ```
 
 ### 3. Burst ≥ Rate
+
 ```python
 # ❌ Will raise ValueError (burst should be >= rate)
 RateLimitConfig(max_requests_per_second=20.0, burst_capacity=10)
@@ -344,7 +359,7 @@ RateLimitConfig(max_requests_per_second=20.0, burst_capacity=10)
 RateLimitConfig(max_requests_per_second=10.0, burst_capacity=20)
 ```
 
----
+______________________________________________________________________
 
 ## Testing Your Migration
 
@@ -368,11 +383,12 @@ def test_rate_limiting_config():
         config.max_requests_per_second = 999
 ```
 
----
+______________________________________________________________________
 
 ## Common Patterns by Server Type
 
 ### External API Servers (with authentication)
+
 - **Pattern**: Use `get_config_for_server()` with server name
 - **Example**: mailgun-mcp, opera-cloud-mcp, raindropio-mcp
 
@@ -381,6 +397,7 @@ config = get_config_for_server("my-api-server")
 ```
 
 ### Local Framework Servers (no external APIs)
+
 - **Pattern**: Use `RateLimitProfile.AGGRESSIVE` or inherit from parent
 - **Example**: acb, crackerjack, fastblocks
 
@@ -389,6 +406,7 @@ config = get_profile_config(RateLimitProfile.AGGRESSIVE)
 ```
 
 ### Hybrid Servers (optional external APIs)
+
 - **Pattern**: Use moderate profile with custom description
 - **Example**: session-mgmt-mcp (Ollama vs OpenAI/Gemini)
 
@@ -402,19 +420,21 @@ config = create_custom_config(
 )
 ```
 
----
+______________________________________________________________________
 
 ## Troubleshooting
 
 ### Issue: `KeyError` when getting server config
 
 **Problem**:
+
 ```python
 config = get_config_for_server("my-server")
 # KeyError: 'my-server'
 ```
 
 **Solution**: Use a profile or create custom config:
+
 ```python
 # Option 1: Use profile
 config = get_profile_config(RateLimitProfile.MODERATE)
@@ -426,12 +446,14 @@ config = create_custom_config(10.0, 20)
 ### Issue: `ValueError` during config creation
 
 **Problem**:
+
 ```python
 config = RateLimitConfig(max_requests_per_second=-5.0, burst_capacity=10)
 # ValueError: max_requests_per_second must be positive
 ```
 
 **Solution**: Use valid positive values:
+
 ```python
 config = RateLimitConfig(max_requests_per_second=10.0, burst_capacity=20)
 ```
@@ -441,6 +463,7 @@ config = RateLimitConfig(max_requests_per_second=10.0, burst_capacity=20)
 **Problem**: Configs are immutable (frozen dataclasses)
 
 **Solution**: Create a new config instead of modifying:
+
 ```python
 # ❌ Won't work
 config.max_requests_per_second = 15.0
@@ -449,7 +472,7 @@ config.max_requests_per_second = 15.0
 config = create_custom_config(15.0, 40)
 ```
 
----
+______________________________________________________________________
 
 ## Migration Checklist
 
@@ -463,7 +486,7 @@ config = create_custom_config(15.0, 40)
 - [ ] Update documentation to reference centralized config
 - [ ] Remove magic number comments (no longer needed!)
 
----
+______________________________________________________________________
 
 ## See Also
 
@@ -471,9 +494,8 @@ config = create_custom_config(15.0, 40)
 - **[Phase 3 Consolidated Review](./PHASE3_CONSOLIDATED_REVIEW.md)**: M1 issue details
 - **[Integration Tracking](../INTEGRATION_TRACKING.md)**: Phase 3 server status
 
----
+______________________________________________________________________
 
 **Created**: 2025-01-27 (Phase 3.3 M1)
 **Status**: ✅ Module ready, migration guide complete
 **Tests**: 36/36 passing
-

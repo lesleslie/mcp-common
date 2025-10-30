@@ -9,10 +9,10 @@ A production-ready weather API server showcasing all mcp-common components:
 ### Features Demonstrated
 
 1. **HTTPClientAdapter** - Connection pooling for 11x performance improvement
-2. **MCPBaseSettings** - YAML + environment variable configuration
-3. **ServerPanels** - Beautiful Rich UI terminal output
-4. **ACB Dependency Injection** - Testable, modular architecture
-5. **FastMCP Integration** - MCP protocol tools and resources
+1. **MCPBaseSettings** - YAML + environment variable configuration
+1. **ServerPanels** - Beautiful Rich UI terminal output
+1. **ACB Dependency Injection** - Testable, modular architecture
+1. **FastMCP Integration** - MCP protocol tools and resources
 
 ### Quick Start
 
@@ -97,7 +97,7 @@ result = await get_current_weather(city="London", units="metric")
     "description": "cloudy",
     "humidity": 72,
     "wind_speed": 4.5,
-    "units": "metric"
+    "units": "metric",
 }
 ```
 
@@ -111,12 +111,7 @@ result = await get_forecast(city="New York", days=3, units="imperial")
 
 # Returns list of forecasts:
 [
-    {
-        "date": "2025-10-27",
-        "temperature": 68.5,
-        "description": "sunny",
-        "humidity": 45
-    },
+    {"date": "2025-10-27", "temperature": 68.5, "description": "sunny", "humidity": 45},
     # ... more days
 ]
 ```
@@ -128,6 +123,7 @@ result = await get_forecast(city="New York", days=3, units="imperial")
 ```python
 from mcp_common import MCPBaseSettings
 
+
 class WeatherSettings(MCPBaseSettings):
     """Extends MCPBaseSettings for YAML + env var config."""
 
@@ -137,6 +133,7 @@ class WeatherSettings(MCPBaseSettings):
 ```
 
 **Benefits:**
+
 - Automatic YAML file loading from `settings/{name}.yaml`
 - Environment variable overrides
 - Type validation with Pydantic
@@ -163,6 +160,7 @@ response = await http_adapter.get("https://api.example.com/data")
 ```
 
 **Benefits:**
+
 - 11x performance improvement vs per-request clients
 - Automatic connection reuse
 - Configurable pool size
@@ -199,6 +197,7 @@ ServerPanels.status_table(
 ```
 
 **Benefits:**
+
 - Consistent, professional UI across all MCP servers
 - Rich formatting with colors and emojis
 - Tables, panels, and status displays
@@ -213,6 +212,7 @@ from acb.depends import depends
 depends.set(settings)
 depends.set(http_adapter)
 
+
 # Use in MCP tools
 @mcp.tool()
 async def my_tool() -> dict:
@@ -226,6 +226,7 @@ async def my_tool() -> dict:
 ```
 
 **Benefits:**
+
 - No global state or singletons
 - Easy testing with mock dependencies
 - Modular, testable architecture
@@ -237,14 +238,14 @@ async def my_tool() -> dict:
 import pytest
 from unittest.mock import Mock
 
+
 @pytest.fixture
 def mock_http_adapter():
     """Create mock HTTP adapter for testing."""
     adapter = Mock(spec=HTTPClientAdapter)
-    adapter.get = Mock(return_value=Mock(
-        json=lambda: {"temp": 15.2, "description": "sunny"}
-    ))
+    adapter.get = Mock(return_value=Mock(json=lambda: {"temp": 15.2, "description": "sunny"}))
     return adapter
+
 
 @pytest.mark.asyncio
 async def test_get_current_weather(mock_http_adapter):
@@ -262,9 +263,9 @@ async def test_get_current_weather(mock_http_adapter):
 ## Next Steps
 
 1. **Get an API Key**: Sign up at [OpenWeatherMap](https://openweathermap.org/api)
-2. **Configure**: Update `settings/weather.yaml` or set `WEATHER_API_KEY` env var
-3. **Run**: `python weather_server.py`
-4. **Customize**: Adapt this example for your own MCP server
+1. **Configure**: Update `settings/weather.yaml` or set `WEATHER_API_KEY` env var
+1. **Run**: `python weather_server.py`
+1. **Customize**: Adapt this example for your own MCP server
 
 ## Learn More
 

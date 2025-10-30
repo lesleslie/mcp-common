@@ -206,7 +206,9 @@ class HTTPClientAdapter(AdapterBase):
         self.logger.debug(
             "HTTP GET request",
             url=url,
-            **{k: v for k, v in kwargs.items() if k != "headers"},  # Don't log headers (may contain secrets)
+            **{
+                k: v for k, v in kwargs.items() if k != "headers"
+            },  # Don't log headers (may contain secrets)
         )
 
         response = await client.get(url, **kwargs)

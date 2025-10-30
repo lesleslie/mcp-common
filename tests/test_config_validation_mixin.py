@@ -147,7 +147,9 @@ class TestValidateCredentials:
             CredentialValidationError,
             match="password is too short. Minimum: 12 characters, got: 5",
         ) as exc_info:
-            settings.validate_credentials(username="admin", password="short", min_password_length=12)
+            settings.validate_credentials(
+                username="admin", password="short", min_password_length=12
+            )
 
         assert exc_info.value.field == "password"
 

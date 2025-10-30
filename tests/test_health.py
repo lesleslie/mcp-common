@@ -308,8 +308,12 @@ class TestHealthCheckIntegration:
     def test_multi_component_failure_cascade(self) -> None:
         """Should handle cascading failures correctly."""
         components = [
-            ComponentHealth(name="primary_db", status=HealthStatus.UNHEALTHY, message="Connection timeout"),
-            ComponentHealth(name="read_replica", status=HealthStatus.DEGRADED, message="High replication lag"),
+            ComponentHealth(
+                name="primary_db", status=HealthStatus.UNHEALTHY, message="Connection timeout"
+            ),
+            ComponentHealth(
+                name="read_replica", status=HealthStatus.DEGRADED, message="High replication lag"
+            ),
             ComponentHealth(name="cache", status=HealthStatus.HEALTHY),
             ComponentHealth(name="queue", status=HealthStatus.HEALTHY),
         ]

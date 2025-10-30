@@ -150,12 +150,14 @@ async def get_forecast(city: str, days: int = 3, units: str = "metric") -> list[
         # Group by day and take midday forecast
         for i in range(0, min(len(data["list"]), days * 8), 8):
             forecast = data["list"][i]
-            forecasts.append({
-                "date": forecast["dt_txt"].split()[0],
-                "temperature": forecast["main"]["temp"],
-                "description": forecast["weather"][0]["description"],
-                "humidity": forecast["main"]["humidity"],
-            })
+            forecasts.append(
+                {
+                    "date": forecast["dt_txt"].split()[0],
+                    "temperature": forecast["main"]["temp"],
+                    "description": forecast["weather"][0]["description"],
+                    "humidity": forecast["main"]["humidity"],
+                }
+            )
 
         return forecasts
 

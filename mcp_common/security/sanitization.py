@@ -129,9 +129,7 @@ def sanitize_dict_for_logging(
             sanitized[key] = sanitize_dict_for_logging(value, sensitive_keys)
         elif isinstance(value, list):
             sanitized[key] = [
-                sanitize_dict_for_logging(item, sensitive_keys)
-                if isinstance(item, dict)
-                else item
+                sanitize_dict_for_logging(item, sensitive_keys) if isinstance(item, dict) else item
                 for item in value
             ]
         else:

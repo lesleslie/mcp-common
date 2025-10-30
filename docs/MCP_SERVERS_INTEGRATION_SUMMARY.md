@@ -4,7 +4,7 @@
 **Phase**: Week 2 Days 3-5 - Critical Fixes & ServerPanels Integration
 **Status**: ✅ **3/3 Servers Complete**
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
@@ -18,7 +18,7 @@ Successfully integrated mcp-common adapters and ServerPanels into three critical
 | **mailgun-mcp** | ✅ 31 HTTP clients optimized | ✅ Complete | **11x faster** |
 | **excalidraw-mcp** | ✅ No fixes needed | ✅ Complete | Already optimized |
 
----
+______________________________________________________________________
 
 ## 1. unifi-mcp Integration
 
@@ -31,22 +31,26 @@ Successfully integrated mcp-common adapters and ServerPanels into three critical
 **Root Cause**: Functions created with modified `__name__` and `__doc__` but never decorated with `@server.tool()`.
 
 **Solution**: Complete rewrite of server.py (323 → 299 lines)
+
 - Moved from separate `_create_*_tool()` functions to nested functions
 - Applied `@server.tool()` decorator to all 13 tools
 - Functions close over client instances from outer scope
 
 **Files Modified**:
+
 - `/Users/les/Projects/unifi-mcp/unifi_mcp/server.py` (323→299 lines)
 
 ### ServerPanels Integration
 
 **Features Added**:
+
 - Dynamic feature list based on configured controllers
 - Network Controller: 8 tools (sites, devices, clients, WLANs, AP control, statistics)
 - Access Controller: 5 tools (door access, users, schedules, event logs)
 - Beautiful Rich UI startup with feature showcase
 
 **Implementation**:
+
 ```python
 # Import with fallback
 try:
@@ -70,7 +74,7 @@ if SERVERPANELS_AVAILABLE:
 
 **Already Optimized**: unifi-mcp already uses proper connection pooling via `httpx.AsyncClient` created once in `BaseClient.__init__` and reused across all requests. No HTTPClientAdapter migration needed.
 
----
+______________________________________________________________________
 
 ## 2. mailgun-mcp Integration
 
@@ -81,17 +85,20 @@ if SERVERPANELS_AVAILABLE:
 **Problem**: 31 tools each created new `httpx.AsyncClient()` on every request.
 
 **Impact**:
+
 - New TCP connection for each API call
 - 11x slower than necessary
 - Excessive resource usage
 
 **Solution**: HTTPClientAdapter with connection pooling
+
 - Added mcp-common dependency (36 packages)
 - Created `_http_request()` helper function
 - Replaced all 31 instances of per-request clients
 - 20 max connections, 10 keep-alive connections
 
 **Pattern Transformation**:
+
 ```python
 # BEFORE (31 instances - slow)
 async with httpx.AsyncClient() as client:
@@ -102,17 +109,20 @@ response = await _http_request("POST", url, auth=auth, data=data)
 ```
 
 **Files Modified**:
+
 - `/Users/les/Projects/mailgun-mcp/mailgun_mcp/main.py` (all 31 tools optimized)
 
 ### ServerPanels Integration
 
 **Features Showcased**:
+
 - 📧 Complete Email Management (send, templates, scheduling)
 - 🔧 Advanced Operations (bounces, complaints, unsubscribes, routes, webhooks)
 - ⚡ Connection Pooling (11x faster HTTP)
 - 🎨 31 FastMCP Tools Available
 
 **Implementation**:
+
 ```python
 # Module-level startup (ASGI app)
 if SERVERPANELS_AVAILABLE:
@@ -127,17 +137,20 @@ if SERVERPANELS_AVAILABLE:
 ### Performance Metrics
 
 **Before**:
+
 - Per-request HTTP client creation
 - New TCP handshake for every API call
 - Baseline performance: 1x
 
 **After**:
+
 - Connection pooling with HTTPClientAdapter
 - TCP connections reused across requests
 - Performance: **11x faster**
 
 **Measurement Methodology**:
 The 11x performance improvement is based on connection overhead reduction:
+
 - **Per-request overhead**: TCP handshake (~50ms) + TLS negotiation (~100ms) = ~150ms per request
 - **Typical API call**: ~100ms execution time
 - **Before**: 150ms overhead + 100ms execution = 250ms total per request
@@ -145,12 +158,13 @@ The 11x performance improvement is based on connection overhead reduction:
 - **Speedup factor**: 250ms / 100ms ≈ 2.5x for single requests, ~11x for concurrent workloads where connection pooling benefits compound
 
 The measurement accounts for:
+
 - TCP connection establishment overhead elimination
 - TLS handshake overhead elimination via connection reuse
 - Connection keep-alive reducing per-request latency
 - Concurrent request handling with pooled connections (20 max, 10 keep-alive)
 
----
+______________________________________________________________________
 
 ## 3. excalidraw-mcp Integration
 
@@ -163,12 +177,14 @@ The measurement accounts for:
 ### ServerPanels Integration
 
 **Features Showcased**:
+
 - 🎨 Canvas Management (create, update, query elements)
 - 🔒 Element Locking & State Control
 - ⚡ Real-time Canvas Sync (background monitoring)
 - 🎨 Modern FastMCP Architecture
 
 **Implementation**:
+
 ```python
 # In main() function before mcp.run()
 if SERVERPANELS_AVAILABLE:
@@ -181,9 +197,10 @@ if SERVERPANELS_AVAILABLE:
 ```
 
 **Files Modified**:
+
 - `/Users/les/Projects/excalidraw-mcp/excalidraw_mcp/server.py` (startup enhanced)
 
----
+______________________________________________________________________
 
 ## 4. Phase P1: Rate Limiting Integration
 
@@ -196,10 +213,12 @@ Following Phase P0 (LLM Provider Analysis), Phase P1 integrated FastMCP's built-
 ### unifi-mcp Rate Limiting
 
 **Configuration**:
+
 ```python
 # Import FastMCP rate limiting middleware
 try:
     from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
+
     RATE_LIMITING_AVAILABLE = True
 except ImportError:
     RATE_LIMITING_AVAILABLE = False
@@ -217,6 +236,7 @@ if RATE_LIMITING_AVAILABLE:
 ```
 
 **Rationale**:
+
 - **Sustainable Rate**: 10 req/sec matches UniFi controller capacity
 - **Burst Capacity**: 20 allows brief spikes for legitimate batch operations
 - **Global Limiting**: Protects backend API across all clients
@@ -225,10 +245,12 @@ if RATE_LIMITING_AVAILABLE:
 ### mailgun-mcp Rate Limiting
 
 **Configuration**:
+
 ```python
 # Import FastMCP rate limiting middleware
 try:
     from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
+
     RATE_LIMITING_AVAILABLE = True
 except ImportError:
     RATE_LIMITING_AVAILABLE = False
@@ -246,6 +268,7 @@ if RATE_LIMITING_AVAILABLE:
 ```
 
 **Rationale**:
+
 - **Conservative Rate**: 5 req/sec protects free tier (300 emails/day) and paid tiers
 - **Burst Capacity**: 15 allows batch email operations (newsletters, notifications)
 - **Global Limiting**: Prevents exceeding Mailgun API rate limits
@@ -254,10 +277,12 @@ if RATE_LIMITING_AVAILABLE:
 ### Implementation Pattern
 
 **Graceful Degradation**:
+
 ```python
 # Try/except ImportError ensures backward compatibility
 try:
     from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
+
     RATE_LIMITING_AVAILABLE = True
 except ImportError:
     RATE_LIMITING_AVAILABLE = False
@@ -269,6 +294,7 @@ if RATE_LIMITING_AVAILABLE:
 ```
 
 **ServerPanels Display**:
+
 ```python
 # Dynamic feature list with conditional rate limiting display
 features = [
@@ -284,25 +310,30 @@ features = [f for f in features if f is not None]
 ### Key Decisions
 
 **Use FastMCP Middleware Instead of Custom Adapter**:
+
 - FastMCP provides production-ready `RateLimitingMiddleware` with Token Bucket and Sliding Window algorithms
 - No need to create custom `mcp_common.adapters.rate_limit` adapter
 - Leverages existing framework capabilities
 - Reduces maintenance burden
 
 **Token Bucket vs Sliding Window**:
+
 - **Token Bucket** (chosen): Allows bursts while maintaining sustainable rate, better for batch operations
 - **Sliding Window**: More precise tracking but penalizes legitimate bursts
 
 **Global vs Per-Client Limiting**:
+
 - **Global Limiting** (chosen): Protects backend APIs from total request volume
 - **Per-Client Limiting**: Would allow multiple clients to overwhelm API
 
 ### Files Modified
 
 **unifi-mcp**:
+
 - `/Users/les/Projects/unifi-mcp/unifi_mcp/server.py` - Added rate limiting middleware
 
 **mailgun-mcp**:
+
 - `/Users/les/Projects/mailgun-mcp/mailgun_mcp/main.py` - Added rate limiting middleware
 
 ### Syntax Validation
@@ -313,7 +344,7 @@ features = [f for f in features if f is not None]
 ✅ python -m py_compile mailgun_mcp/main.py
 ```
 
----
+______________________________________________________________________
 
 ## 5. Phase P2: Configuration Standardization Assessment
 
@@ -326,23 +357,27 @@ Phase P2 assessed the value proposition of adopting `mcp_common.config.MCPBaseSe
 ### Assessment Results
 
 **unifi-mcp (config.py)**:
+
 - **Current**: Sophisticated Pydantic BaseSettings with nested configurations
 - **Pattern**: `.env` file + `env_nested_delimiter` for nested config
 - **Type Safety**: Full Pydantic validation with NetworkSettings, AccessSettings, LocalSettings
 - **Assessment**: ✅ Current approach is comprehensive and type-safe
 
 **mailgun-mcp (main.py)**:
+
 - **Current**: Direct `os.environ.get()` for MAILGUN_API_KEY and MAILGUN_DOMAIN
 - **Pattern**: Simple environment variable access
 - **Type Safety**: Runtime string checks in individual tools
 - **Assessment**: ✅ Simple approach appropriate for straightforward needs
 
 **session-mgmt-mcp**:
+
 - **Current**: Extensive custom Settings with Pydantic models
 - **Pattern**: Sophisticated configuration management
 - **Assessment**: ✅ Already has advanced configuration system
 
 **excalidraw-mcp**:
+
 - **Current**: Minimal configuration (primarily constants)
 - **Pattern**: Configuration appears embedded in code
 - **Assessment**: ✅ Minimal needs appropriately handled
@@ -352,20 +387,22 @@ Phase P2 assessed the value proposition of adopting `mcp_common.config.MCPBaseSe
 For **new MCP servers**, MCPBaseSettings provides:
 
 1. **YAML + Environment Loading**: `settings/{name}.yaml` + environment variable overrides
-2. **ACB Framework Integration**: Path expansion, type validation, field descriptions
-3. **Helper Methods**: `get_api_key()`, `get_data_dir()` with automatic validation
-4. **Standardization**: Consistent server_name, log_level, enable_debug_mode across servers
-5. **Type Safety**: Pydantic validation with clear error messages
+1. **ACB Framework Integration**: Path expansion, type validation, field descriptions
+1. **Helper Methods**: `get_api_key()`, `get_data_dir()` with automatic validation
+1. **Standardization**: Consistent server_name, log_level, enable_debug_mode across servers
+1. **Type Safety**: Pydantic validation with clear error messages
 
 ### Deferral Rationale
 
 **Why Defer**:
+
 - Current configurations are **functional and appropriate** for each server's needs
 - Migration effort **not justified** by standardization benefits
 - No blocking issues or functionality gaps
 - Each server has configuration patterns suited to its complexity
 
 **Recommendation**:
+
 - ✅ **Keep MCPBaseSettings in mcp-common** for new servers to adopt from day one
 - ⏸️ **Don't retrofit existing servers** unless specifically beneficial
 - 🎯 **Focus on new server development** starting with MCPBaseSettings
@@ -373,32 +410,37 @@ For **new MCP servers**, MCPBaseSettings provides:
 ### Future Considerations
 
 **When to Adopt MCPBaseSettings** (for existing servers):
+
 - Server undergoes major configuration refactoring
 - Adding YAML config file support becomes requirement
 - Need for standardized server metadata (server_name, description)
 - Desire for path expansion and data directory management
 
 **For New Servers**:
+
 - **Always start with MCPBaseSettings** to benefit from standardization
 - Use `MCPServerSettings` as base class for common patterns
 - Override and extend with server-specific configuration needs
 
----
+______________________________________________________________________
 
 ## Integration Patterns & Best Practices
 
 ### 1. ServerPanels Integration Pattern
 
 **Import with Fallback**:
+
 ```python
 try:
     from mcp_common.ui import ServerPanels
+
     SERVERPANELS_AVAILABLE = True
 except ImportError:
     SERVERPANELS_AVAILABLE = False
 ```
 
 **Conditional Display**:
+
 ```python
 if SERVERPANELS_AVAILABLE:
     ServerPanels.startup_success(
@@ -415,17 +457,21 @@ else:
 ### 2. HTTPClientAdapter Integration Pattern
 
 **Initialization**:
+
 ```python
 from mcp_common import HTTPClientAdapter, HTTPClientSettings
 
-http_adapter = HTTPClientAdapter(settings=HTTPClientSettings(
-    timeout=30,
-    max_connections=20,
-    max_keepalive_connections=10,
-))
+http_adapter = HTTPClientAdapter(
+    settings=HTTPClientSettings(
+        timeout=30,
+        max_connections=20,
+        max_keepalive_connections=10,
+    )
+)
 ```
 
 **Helper Function**:
+
 ```python
 async def _http_request(method: str, url: str, **kwargs) -> httpx.Response:
     """Make HTTP request with connection pooling."""
@@ -439,6 +485,7 @@ async def _http_request(method: str, url: str, **kwargs) -> httpx.Response:
 ```
 
 **Usage**:
+
 ```python
 # Replace: async with httpx.AsyncClient() as client: response = await client.post(...)
 # With:
@@ -448,6 +495,7 @@ response = await _http_request("POST", url, **kwargs)
 ### 3. Tool Registration Pattern (FastMCP)
 
 **Correct Pattern** (unifi-mcp fix):
+
 ```python
 def _register_network_tools(server: FastMCP, network_client: NetworkClient) -> None:
     """Register network tools with the server."""
@@ -462,6 +510,7 @@ def _register_network_tools(server: FastMCP, network_client: NetworkClient) -> N
 ```
 
 **Incorrect Pattern** (what was fixed):
+
 ```python
 # DON'T DO THIS - tools never registered!
 def _create_get_sites_tool(network_client: NetworkClient) -> None:
@@ -474,31 +523,35 @@ def _create_get_sites_tool(network_client: NetworkClient) -> None:
     # Missing: @server.tool() decorator!
 ```
 
----
+______________________________________________________________________
 
 ## Backward Compatibility
 
 **100% Maintained**: All integrations include fallback patterns ensuring servers work even without mcp-common.
 
 ### Import Fallbacks
+
 ```python
 try:
     from mcp_common import HTTPClientAdapter, HTTPClientSettings
     from mcp_common.ui import ServerPanels
+
     MCP_COMMON_AVAILABLE = True
 except ImportError:
     MCP_COMMON_AVAILABLE = False
 ```
 
 ### Execution Fallbacks
+
 - **HTTPClientAdapter**: Falls back to per-request `httpx.AsyncClient()`
 - **ServerPanels**: Falls back to plain `print()` statements to stderr
 
----
+______________________________________________________________________
 
 ## Testing & Validation
 
 ### Syntax Validation
+
 ```bash
 # All servers validated
 python -m py_compile unifi_mcp/server.py
@@ -507,6 +560,7 @@ python -m py_compile excalidraw_mcp/server.py
 ```
 
 ### HTTP Client Verification
+
 ```bash
 # mailgun-mcp: Verified all 31 tools use connection pooling
 grep -n "async with httpx.AsyncClient" mailgun_mcp/main.py | wc -l
@@ -516,7 +570,7 @@ grep -n "await _http_request(" mailgun_mcp/main.py | wc -l
 # Output: 31 (all tools now optimized)
 ```
 
----
+______________________________________________________________________
 
 ## Performance Impact Summary
 
@@ -529,36 +583,42 @@ grep -n "await _http_request(" mailgun_mcp/main.py | wc -l
 ### Resource Efficiency
 
 **mailgun-mcp Before**:
+
 - 31 tools × N requests/second = 31N TCP connections/second
 - Constant connection setup/teardown overhead
 - High CPU and memory usage
 
 **mailgun-mcp After**:
+
 - 20 persistent connections (10 keep-alive)
 - TCP connections reused across all requests
 - 91% reduction in connection overhead
 
----
+______________________________________________________________________
 
 ## Files Changed Summary
 
 ### unifi-mcp
+
 - `unifi_mcp/server.py` (rewritten: 323→299 lines)
 - `pyproject.toml` (added mcp-common dependency)
 
 ### mailgun-mcp
+
 - `mailgun_mcp/main.py` (all 31 tools optimized)
 - `pyproject.toml` (added mcp-common dependency)
 
 ### excalidraw-mcp
+
 - `excalidraw_mcp/server.py` (ServerPanels added)
 - `pyproject.toml` (added mcp-common dependency)
 
----
+______________________________________________________________________
 
 ## Dependencies Added
 
 All three servers now include:
+
 ```toml
 dependencies = [
     "mcp-common>=2.0.0",
@@ -567,16 +627,18 @@ dependencies = [
 ```
 
 **mcp-common brings**:
+
 - HTTPClientAdapter (connection pooling)
 - ServerPanels (Rich UI components)
 - ACB framework (async component base)
 - SQLAlchemy/SQLModel (database utilities)
 
----
+______________________________________________________________________
 
 ## Next Steps & Recommendations
 
 ### Immediate
+
 - ✅ All critical fixes complete
 - ✅ All ServerPanels integrated
 - ✅ Rate limiting integrated (Phase P1)
@@ -586,65 +648,75 @@ dependencies = [
 ### Future Enhancements
 
 **1. unifi-mcp**:
+
 - ✅ Rate limiting complete (10 req/sec, burst 20)
 - Add error panels with ServerPanels.error()
 - Implement retry logic for network failures
 
 **2. mailgun-mcp**:
+
 - ✅ Rate limiting complete (5 req/sec, burst 15)
 - Enhance error messages with ServerPanels
 - Consider template validation tools
 
 **3. excalidraw-mcp**:
+
 - No immediate improvements needed
 - Already has excellent architecture
 
 ### Monitoring & Metrics
 
 **Recommended for all servers**:
+
 - Add performance metrics collection
 - Monitor connection pool utilization
 - Track API rate limit usage
 - Log slow requests (>1s)
 
----
+______________________________________________________________________
 
 ## Lessons Learned
 
 ### Tool Registration (unifi-mcp)
+
 - **Always use `@server.tool()` decorator** for FastMCP
 - Function name/doc modification alone is insufficient
 - Nested functions work well with closure over client instances
 
 ### HTTP Optimization (mailgun-mcp)
+
 - **Per-request clients are 11x slower** than connection pooling
 - Helper functions provide clean abstraction
 - Fallback patterns ensure backward compatibility
 
 ### UI Enhancement (all servers)
+
 - **ServerPanels dramatically improves UX**
 - Consistent branding across MCP servers
 - Feature lists help users understand capabilities
 
----
+______________________________________________________________________
 
 ## References
 
 ### mcp-common Components
+
 - **HTTPClientAdapter**: `/Users/les/Projects/mcp-common/mcp_common/adapters/http/client.py`
 - **ServerPanels**: `/Users/les/Projects/mcp-common/mcp_common/ui/panels.py`
 - **MCPBaseSettings**: `/Users/les/Projects/mcp-common/mcp_common/config/base.py`
 
 ### Integration Examples
+
 - **unifi-mcp**: `/Users/les/Projects/unifi-mcp/unifi_mcp/server.py`
 - **mailgun-mcp**: `/Users/les/Projects/mailgun-mcp/mailgun_mcp/main.py`
 - **excalidraw-mcp**: `/Users/les/Projects/excalidraw-mcp/excalidraw_mcp/server.py`
 
 ### Previous Integration Work
+
 - **session-mgmt-mcp**: Reference implementation with HTTPClientAdapter, ServerPanels, and DuckPGQ
 - **INTEGRATION_TRACKING.md**: `/Users/les/Projects/mcp-common/INTEGRATION_TRACKING.md`
 
----
+______________________________________________________________________
 
 **Status**: ✅ **Phase P0, P1, & P2 COMPLETE** (Week 2 Days 3-5 + Rate Limiting + Configuration Assessment)
 **Quality**: ✅ **All syntax validated, zero breaking changes**
@@ -652,4 +724,3 @@ dependencies = [
 **Security**: 🛡️ **Rate limiting integrated (unifi-mcp: 10 req/sec, mailgun-mcp: 5 req/sec)**
 **UX**: 🎨 **Beautiful Rich UI panels across all 3 servers**
 **Phase P2**: 🔍 **MCPBaseSettings assessment complete - deferred as low priority**
-

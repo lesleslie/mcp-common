@@ -5,7 +5,7 @@
 **Status**: DRAFT
 **Related**: Phase 3.3 M6 - Planning for future architectural improvements
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
@@ -23,7 +23,7 @@ This RFC provides detailed technical specifications for Phases 4-10 of the MCP e
 | **Phase 9** | Advanced Features | **LOW** | Defer (YAGNI) | Speculative, no proven need |
 | **Phase 5** | HTTPClientAdapter Migration | **CANCELLED** | Archive | Conflicts with SDK best practices |
 
----
+______________________________________________________________________
 
 ## Phase 10: Production Hardening (HIGH PRIORITY)
 
@@ -46,6 +46,7 @@ import typing as t
 
 class HealthStatus(Enum):
     """Health check status values."""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
@@ -54,6 +55,7 @@ class HealthStatus(Enum):
 @dataclass
 class ComponentHealth:
     """Health status for individual component."""
+
     name: str
     status: HealthStatus
     message: str | None = None
@@ -63,6 +65,7 @@ class ComponentHealth:
 @dataclass
 class HealthCheckResponse:
     """Comprehensive health check response."""
+
     status: HealthStatus
     timestamp: str
     version: str
@@ -73,24 +76,28 @@ class HealthCheckResponse:
 **Implementation Per Server Type**:
 
 1. **External API Servers** (mailgun, unifi, raindropio, opera-cloud, session-mgmt):
+
    - Check external API connectivity (with timeout)
    - Validate API credentials still work
    - Check rate limit headroom
    - Measure API response latency
 
-2. **Local Framework Servers** (acb, crackerjack):
+1. **Local Framework Servers** (acb, crackerjack):
+
    - Check file system access
    - Validate required tools available
    - Check Python environment health
 
-3. **Database Servers** (session-mgmt with DuckDB):
+1. **Database Servers** (session-mgmt with DuckDB):
+
    - Check database connectivity
    - Validate schema migrations
    - Check disk space availability
 
 **Success Criteria**:
+
 - All servers expose `/health` endpoint
-- Health checks complete in <100ms
+- Health checks complete in \<100ms
 - Failures don't crash the server
 - Includes component-level detail
 
@@ -134,14 +141,16 @@ class GracefulShutdownHandler:
 ```
 
 **Cleanup Sequence**:
+
 1. Stop accepting new requests (30s grace period)
-2. Complete in-flight requests
-3. Flush pending writes (database, logs)
-4. Close external API connections
-5. Release file handles and resources
-6. Log final shutdown message
+1. Complete in-flight requests
+1. Flush pending writes (database, logs)
+1. Close external API connections
+1. Release file handles and resources
+1. Log final shutdown message
 
 **Success Criteria**:
+
 - Zero data loss on shutdown
 - In-flight requests complete successfully
 - All resources properly released
@@ -160,6 +169,7 @@ import time
 
 class CircuitState(Enum):
     """Circuit breaker states."""
+
     CLOSED = "closed"  # Normal operation
     OPEN = "open"  # Blocking requests
     HALF_OPEN = "half_open"  # Testing recovery
@@ -168,6 +178,7 @@ class CircuitState(Enum):
 @dataclass
 class CircuitBreakerConfig:
     """Circuit breaker configuration."""
+
     failure_threshold: int = 5  # Failures before opening
     timeout_seconds: int = 60  # Time before attempting recovery
     success_threshold: int = 2  # Successes before fully closing
@@ -201,11 +212,13 @@ class CircuitBreaker:
 ```
 
 **Integration Points**:
+
 - External API calls (mailgun, unifi, raindropio, opera-cloud)
 - Database operations (session-mgmt)
 - File system operations (all servers)
 
 **Success Criteria**:
+
 - Automatic failure detection
 - Self-healing after timeout
 - Metrics for circuit breaker events
@@ -214,12 +227,14 @@ class CircuitBreaker:
 #### 10.4 Container Orchestration Support
 
 **Docker Health Check** (all servers):
+
 ```dockerfile
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD python -m mcp_server.health_check || exit 1
 ```
 
 **Kubernetes Readiness/Liveness Probes**:
+
 ```yaml
 apiVersion: v1
 kind: Pod
@@ -241,12 +256,13 @@ spec:
 ```
 
 **Success Criteria**:
+
 - Docker health checks work out of the box
 - Kubernetes probes supported
 - Container restarts are clean
 - Zero-downtime deployments possible
 
----
+______________________________________________________________________
 
 ## Phase 7: Documentation & Developer Experience (HIGH PRIORITY)
 
@@ -261,38 +277,44 @@ Create comprehensive documentation and improve developer experience to reduce on
 **Core Documentation**:
 
 1. **Architecture Guide** (`docs/ARCHITECTURE.md`)
+
    - Server patterns (External API, Local Framework, Database)
    - Dependency injection with ACB
    - Settings management patterns
    - Security patterns
    - Rate limiting patterns
 
-2. **API Reference** (`docs/API_REFERENCE.md`)
+1. **API Reference** (`docs/API_REFERENCE.md`)
+
    - `mcp_common.adapters.HTTPClientAdapter`
    - `mcp_common.config.MCPBaseSettings`
    - `mcp_common.config.ValidationMixin`
    - `mcp_common.security.api_keys`
    - `mcp_common.exceptions` hierarchy
 
-3. **Migration Guides** (`docs/migrations/`)
+1. **Migration Guides** (`docs/migrations/`)
+
    - Migrating to mcp-common
    - Adding rate limiting
    - Implementing custom exceptions
    - Using ValidationMixin
 
-4. **Plugin/Extension Pattern** (`docs/PLUGIN_PATTERN.md`)
+1. **Plugin/Extension Pattern** (`docs/PLUGIN_PATTERN.md`)
+
    - FastBlocks inheritance pattern
    - Creating custom MCP servers
    - Extending mcp-common
 
 **Per-Server Documentation**:
+
 - README.md with quick start
 - Configuration examples
 - Tool usage examples
 - Troubleshooting guide
 
 **Success Criteria**:
-- New developer can create MCP server in <30 minutes
+
+- New developer can create MCP server in \<30 minutes
 - Common questions answered in docs
 - Zero unanswered Stack Overflow questions
 - 90%+ documentation coverage
@@ -300,6 +322,7 @@ Create comprehensive documentation and improve developer experience to reduce on
 #### 7.2 Developer Experience Improvements
 
 **DX Metrics**:
+
 - Time to first successful server run
 - Number of configuration errors
 - Test execution time
@@ -308,6 +331,7 @@ Create comprehensive documentation and improve developer experience to reduce on
 **Improvements**:
 
 1. **Better Error Messages**:
+
 ```python
 # Instead of:
 raise ValueError("Invalid configuration")
@@ -315,12 +339,13 @@ raise ValueError("Invalid configuration")
 # Do:
 raise ServerConfigurationError(
     message="Mailgun API key is required but not set. "
-            "Set MAILGUN_API_KEY environment variable or add to config.yaml",
+    "Set MAILGUN_API_KEY environment variable or add to config.yaml",
     field="api_key",
 )
 ```
 
 2. **Configuration Validation at Init**:
+
 ```python
 class Settings(MCPBaseSettings, ValidationMixin):
     api_key: str
@@ -331,18 +356,20 @@ class Settings(MCPBaseSettings, ValidationMixin):
 ```
 
 3. **Template Generation**:
+
 ```bash
 # New command for creating servers
 mcp-common init my-server --type=external-api
 ```
 
 **Success Criteria**:
+
 - 50% reduction in configuration errors
 - Clear error messages for all failures
 - Template generation works
 - IDE autocomplete support
 
----
+______________________________________________________________________
 
 ## Phase 6: Enhanced Observability (MEDIUM PRIORITY)
 
@@ -364,6 +391,7 @@ Implement comprehensive observability with metrics, logging, and distributed tra
 | **Dashboards** | Grafana | Free, powerful, Prometheus integration |
 
 **Alternative** (Serverless/Cloud):
+
 - AWS CloudWatch
 - Google Cloud Operations
 - Datadog (commercial)
@@ -371,6 +399,7 @@ Implement comprehensive observability with metrics, logging, and distributed tra
 #### 6.2 Metrics Implementation
 
 **Core Metrics** (all servers):
+
 ```python
 # mcp_common/observability/metrics.py
 from prometheus_client import Counter, Histogram, Gauge
@@ -433,20 +462,24 @@ circuit_breaker_state = Gauge(
 **Server-Specific Metrics**:
 
 1. **mailgun-mcp**:
+
    - `mailgun_emails_sent_total`
    - `mailgun_email_send_duration_seconds`
    - `mailgun_api_errors_total`
 
-2. **session-mgmt-mcp**:
+1. **session-mgmt-mcp**:
+
    - `session_active_sessions_total`
    - `reflection_database_size_bytes`
    - `reflection_search_duration_seconds`
 
-3. **acb/crackerjack**:
+1. **acb/crackerjack**:
+
    - `component_execution_duration_seconds`
    - `quality_check_results_total`
 
 **Success Criteria**:
+
 - All servers expose `/metrics` endpoint
 - Key business metrics tracked
 - Grafana dashboards available
@@ -494,6 +527,7 @@ class StructuredLogger:
 ```
 
 **Log Levels**:
+
 - **DEBUG**: Detailed diagnostic information
 - **INFO**: General operational events
 - **WARNING**: Recoverable errors, degraded performance
@@ -501,6 +535,7 @@ class StructuredLogger:
 - **CRITICAL**: System-wide failures
 
 **Success Criteria**:
+
 - All logs structured JSON
 - Context propagates through call chain
 - Searchable in log aggregator
@@ -531,18 +566,20 @@ def setup_tracing(app: FastMCP, service_name: str) -> None:
 ```
 
 **Trace Points**:
+
 - HTTP requests (automatic)
 - External API calls (automatic via httpx)
 - Database operations (manual spans)
 - Business operations (manual spans)
 
 **Success Criteria**:
+
 - End-to-end request tracing
 - External API calls traced
 - Performance bottlenecks visible
 - Works with Jaeger/Zipkin
 
----
+______________________________________________________________________
 
 ## Phase 8: Performance Optimization (MEDIUM PRIORITY)
 
@@ -553,6 +590,7 @@ Establish performance baselines and optimize based on production metrics from Ph
 ### Prerequisites
 
 **Must Complete First**:
+
 - Phase 6 (metrics collection)
 - Phase 10.1 (health checks for baseline)
 
@@ -584,6 +622,7 @@ def test_external_api_call_performance(benchmark, mailgun_client):
 | acb | component_execution | 10ms | 50ms | 100ms |
 
 **Success Criteria**:
+
 - Baselines documented
 - Regression tests prevent degradation
 - Load testing framework in place
@@ -591,28 +630,31 @@ def test_external_api_call_performance(benchmark, mailgun_client):
 #### 8.2 Optimization Strategies
 
 **Only Optimize If**:
+
 1. Metrics show degradation
-2. User complaints about performance
-3. SLO violations
+1. User complaints about performance
+1. SLO violations
 
 **Common Optimizations**:
 
 1. **Connection Pooling** (already done via HTTPClientAdapter)
-2. **Caching** (add if metrics show repeated identical requests)
-3. **Async Optimization** (profile for blocking calls)
-4. **Database Indexing** (add for slow queries)
+1. **Caching** (add if metrics show repeated identical requests)
+1. **Async Optimization** (profile for blocking calls)
+1. **Database Indexing** (add for slow queries)
 
 **Anti-Patterns to Avoid**:
+
 - Premature optimization
 - Over-caching
 - Complex async patterns without profiling
 
 **Success Criteria**:
+
 - No performance regressions
 - SLOs met 99.9% of time
 - Optimization ROI documented
 
----
+______________________________________________________________________
 
 ## Phase 4: Advanced MCPBaseSettings Migration (LOW PRIORITY)
 
@@ -621,37 +663,42 @@ def test_external_api_call_performance(benchmark, mailgun_client):
 **Rationale**: Phase P2 analysis recommended deferring complex base class patterns. Current pattern works well.
 
 **Reconsider If**:
+
 - Multiple servers need identical settings patterns
 - Configuration validation becomes repetitive across 5+ servers
 - ACB settings evolution requires it
 
 **Success Criteria for Future Consideration**:
+
 - Clear pain point documented
 - Benefits quantified
 - Migration path non-disruptive
 
----
+______________________________________________________________________
 
 ## Phase 9: Advanced Features (LOW PRIORITY)
 
 ### Status: DEFERRED (YAGNI)
 
 **Features Under Consideration**:
+
 1. Multi-tenancy support
-2. Advanced caching strategies
-3. Request/response transformation
+1. Advanced caching strategies
+1. Request/response transformation
 
 **Reconsider If**:
+
 - User demand proven (3+ requests)
 - Clear use cases documented
 - Cost-benefit analysis favorable
 
 **Success Criteria for Future Consideration**:
+
 - User stories written
 - Technical design approved
 - No simpler solution exists
 
----
+______________________________________________________________________
 
 ## Phase 5: HTTPClientAdapter Migration (CANCELLED)
 
@@ -660,6 +707,7 @@ def test_external_api_call_performance(benchmark, mailgun_client):
 **Decision**: Do NOT migrate OpenAI/Gemini SDKs to HTTPClientAdapter
 
 **Rationale**:
+
 - Official SDKs provide better abstraction
 - SDKs handle auth, retries, rate limits internally
 - httpx connection pooling already used by SDKs
@@ -669,62 +717,71 @@ def test_external_api_call_performance(benchmark, mailgun_client):
 **Documentation**: Add to `docs/ARCHITECTURE.md` explaining why some servers don't use HTTPClientAdapter
 
 **Success Criteria**:
+
 - Decision documented
 - Phase 5 removed from roadmap
 - No future attempts to "complete" this phase
 
----
+______________________________________________________________________
 
 ## Implementation Roadmap
 
 ### Immediate (Next 2 Weeks)
+
 1. ✅ Phase 3.3 M1-M6 completion
-2. 🎯 Phase 10.1: Health check endpoints
-3. 🎯 Phase 7.1: Core documentation
+1. 🎯 Phase 10.1: Health check endpoints
+1. 🎯 Phase 7.1: Core documentation
 
 ### Short Term (1-2 Months)
+
 1. Phase 10.2: Graceful shutdown
-2. Phase 7.2: DX improvements
-3. Phase 6.1: Observability stack setup
+1. Phase 7.2: DX improvements
+1. Phase 6.1: Observability stack setup
 
 ### Medium Term (3-6 Months)
+
 1. Phase 6.2-6.4: Full observability rollout
-2. Phase 10.3: Circuit breaker implementation
-3. Phase 8.1: Performance baseline establishment
+1. Phase 10.3: Circuit breaker implementation
+1. Phase 8.1: Performance baseline establishment
 
 ### Long Term (6+ Months)
-1. Phase 8.2: Optimization based on metrics
-2. Phase 10.4: Container orchestration hardening
-3. Phase 4/9: Reconsider if proven need emerges
 
----
+1. Phase 8.2: Optimization based on metrics
+1. Phase 10.4: Container orchestration hardening
+1. Phase 4/9: Reconsider if proven need emerges
+
+______________________________________________________________________
 
 ## Success Metrics
 
 ### Phase 10 (Production Hardening)
+
 - 100% health check coverage
 - Zero unclean shutdowns
 - Circuit breaker prevents cascading failures
 - 99.9% uptime in production
 
 ### Phase 7 (Documentation & DX)
-- Developer onboarding time <30 minutes
+
+- Developer onboarding time \<30 minutes
 - Zero unanswered documentation questions
 - 90%+ doc coverage
 - Positive developer feedback
 
 ### Phase 6 (Observability)
+
 - All critical metrics tracked
 - Dashboards provide actionable insights
-- Incidents detected in <1 minute
+- Incidents detected in \<1 minute
 - MTTR reduced by 50%
 
 ### Phase 8 (Performance)
+
 - SLOs met 99.9% of time
 - No performance regressions
 - Optimization ROI >3x investment
 
----
+______________________________________________________________________
 
 ## References
 

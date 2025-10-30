@@ -1,28 +1,31 @@
 # MCP-Common Architecture
+
 **Version:** 2.0.0
 **Status:** ACB-Native Design Phase
 
----
+______________________________________________________________________
 
 ## Overview
 
 mcp-common is an **ACB-native** utility library providing battle-tested patterns for MCP (Model Context Protocol) servers. Built on the Asynchronous Component Base (ACB) framework, it provides a comprehensive foundation for building production-grade MCP servers with consistent logging, configuration, rich UI, and modular architecture.
 
 **Prerequisites:** Understanding of ACB is required. See [`docs/ACB_FOUNDATION.md`](./docs/ACB_FOUNDATION.md) for:
+
 - What ACB is and why it's required
 - Core ACB concepts (adapters, DI, logger, settings)
 - Getting started guide
 - ACB vs mcp-common boundaries
 
 **Design Principles:**
-1. **ACB-Native** - Built on ACB's component system, not layered on top
-2. **Dependency Injection** - Uses ACB's `depends` system throughout
-3. **Rich UI** - Beautiful console output with panels and notifications
-4. **Modular** - Organized around adapters, actions, and tools
-5. **Type-safe** - Full type hints with crackerjack checking
-6. **Production-Ready** - 90% test coverage minimum
 
----
+1. **ACB-Native** - Built on ACB's component system, not layered on top
+1. **Dependency Injection** - Uses ACB's `depends` system throughout
+1. **Rich UI** - Beautiful console output with panels and notifications
+1. **Modular** - Organized around adapters, actions, and tools
+1. **Type-safe** - Full type hints with crackerjack checking
+1. **Production-Ready** - 90% test coverage minimum
+
+______________________________________________________________________
 
 ## Module Architecture
 
@@ -66,7 +69,7 @@ Note: Logging uses ACB logger directly (acb.adapters.logger.LoggerProtocol)
       No logging/ directory - logger is injected by ACB into adapters
 ```
 
----
+______________________________________________________________________
 
 ## Core Modules
 
@@ -77,6 +80,7 @@ Note: Logging uses ACB logger directly (acb.adapters.logger.LoggerProtocol)
 **Problem Solved:** mailgun-mcp creates new client per request (10x performance penalty)
 
 **Architecture:**
+
 ```
 ┌──────────────────┐
 │ Tool Function    │
@@ -101,6 +105,7 @@ Note: Logging uses ACB logger directly (acb.adapters.logger.LoggerProtocol)
 ```
 
 **Key Features:**
+
 - ACB adapter pattern (MODULE_ID, MODULE_STATUS)
 - Registered with dependency injection
 - Configurable via ACB Settings
@@ -108,6 +113,7 @@ Note: Logging uses ACB logger directly (acb.adapters.logger.LoggerProtocol)
 - Rich console output for diagnostics
 
 **Implementation:**
+
 ```python
 # mcp_common/adapters/http/client.py
 from acb.config import AdapterBase, Settings
@@ -141,12 +147,15 @@ MODULE_METADATA = AdapterMetadata(
     description="HTTP client adapter with connection pooling for MCP servers",
 )
 
+
 class HTTPClientSettings(Settings):
     """Settings for HTTP client adapter."""
+
     max_connections: int = 100
     max_keepalive_connections: int = 20
     timeout: float = 30.0
     follow_redirects: bool = True
+
 
 class HTTPClientAdapter(AdapterBase):
     """ACB adapter for HTTP client with connection pooling.
@@ -218,6 +227,7 @@ class HTTPClientAdapter(AdapterBase):
         in async contexts.
         """
         import asyncio
+
         loop = asyncio.get_event_loop()
         if loop.is_running():
             raise RuntimeError(
@@ -226,6 +236,7 @@ class HTTPClientAdapter(AdapterBase):
             )
         return loop.run_until_complete(self._create_client())
 
+
 # Auto-register with DI container
 # CRITICAL: Must be at module level, after class definition, with suppress()
 with suppress(Exception):
@@ -233,9 +244,11 @@ with suppress(Exception):
 ```
 
 **Usage:**
+
 ```python
 from acb.depends import depends
 from mcp_common.adapters.http import HTTPClientAdapter
+
 
 @mcp.tool()
 async def call_api():
@@ -257,6 +270,7 @@ async def call_api():
 **Problem Solved:** 9/9 servers don't validate API keys at startup
 
 **Architecture:**
+
 ```
 acb.config.Settings (ACB base)
          ↓
@@ -275,6 +289,7 @@ acb.config.Settings (ACB base)
 ```
 
 **Key Features:**
+
 - Extends ACB Settings (inherits all ACB features)
 - YAML configuration file support (settings/local.yaml, settings/{name}.yaml)
 - Environment variable override (e.g., MAILGUN_API_KEY)
@@ -283,12 +298,14 @@ acb.config.Settings (ACB base)
 - Nested configuration support
 
 **Implementation:**
+
 ```python
 # mcp_common/config/base.py
 from acb.config import Settings
 from pydantic import Field, field_validator
 from pathlib import Path
 import os
+
 
 class MCPBaseSettings(Settings):
     """Base settings for MCP servers using ACB Settings.
@@ -316,32 +333,25 @@ class MCPBaseSettings(Settings):
 ```
 
 **Usage:**
+
 ```python
 from mcp_common.config import MCPBaseSettings
 from pydantic import Field
+
 
 class MailgunSettings(MCPBaseSettings):
     """Mailgun MCP server settings."""
 
     # API Configuration
-    api_key: str = Field(
-        description="Mailgun API key"
-    )
-    domain: str = Field(
-        description="Mailgun domain"
-    )
+    api_key: str = Field(description="Mailgun API key")
+    domain: str = Field(description="Mailgun domain")
 
     # HTTP Configuration
-    timeout: int = Field(
-        default=30,
-        description="HTTP request timeout in seconds"
-    )
+    timeout: int = Field(default=30, description="HTTP request timeout in seconds")
 
     # Logging
-    log_level: str = Field(
-        default="INFO",
-        description="Logging level"
-    )
+    log_level: str = Field(default="INFO", description="Logging level")
+
 
 # Loads from:
 # 1. settings/local.yaml (if exists)
@@ -354,6 +364,7 @@ settings = MailgunSettings()
 ```
 
 **YAML Configuration Example:**
+
 ```yaml
 # settings/mailgun.yaml
 api_key: "${MAILGUN_API_KEY}"  # Reference env var
@@ -369,6 +380,7 @@ log_level: "DEBUG"
 **Problem Solved:** 5/6 standalone servers have no rate limiting
 
 **Architecture:**
+
 ```
 ┌────────────────┐
 │ @rate_limit    │ ← Decorator
@@ -396,13 +408,15 @@ log_level: "DEBUG"
 ```
 
 **Token Bucket Algorithm:**
+
 1. Bucket has capacity (max_requests)
-2. Each request consumes 1 token
-3. Tokens refill at steady rate (window / max_requests)
-4. If bucket empty, request denied
-5. Logged via ACB Logger with context
+1. Each request consumes 1 token
+1. Tokens refill at steady rate (window / max_requests)
+1. If bucket empty, request denied
+1. Logged via ACB Logger with context
 
 **Implementation:**
+
 ```python
 # mcp_common/adapters/rate_limit/limiter.py
 from acb.config import AdapterBase, Settings
@@ -433,11 +447,14 @@ MODULE_METADATA = AdapterMetadata(
     description="Token bucket rate limiter for MCP servers",
 )
 
+
 class RateLimiterSettings(Settings):
     """Settings for rate limiter adapter."""
+
     default_max_requests: int = 100
     default_window: int = 60
     enable_logging: bool = True
+
 
 class RateLimiterAdapter(AdapterBase):
     """ACB adapter for rate limiting using token bucket algorithm.
@@ -491,10 +508,7 @@ class RateLimiterAdapter(AdapterBase):
             self.buckets[identifier] = []
 
         # Remove expired tokens (sliding window)
-        self.buckets[identifier] = [
-            req for req in self.buckets[identifier]
-            if now - req < window
-        ]
+        self.buckets[identifier] = [req for req in self.buckets[identifier] if now - req < window]
 
         # Check limit
         if len(self.buckets[identifier]) >= max_requests:
@@ -517,18 +531,22 @@ class RateLimiterAdapter(AdapterBase):
         self.buckets.clear()
         self.logger.info("Rate limiter state cleared")
 
+
 # Auto-register
 with suppress(Exception):
     depends.set(RateLimiterAdapter)
 ```
 
 **Decorator Usage:**
+
 ```python
 from acb.depends import depends
 from mcp_common.adapters.rate_limit import RateLimiterAdapter
 
+
 def rate_limit(requests: int = 100, window: int = 60):
     """Decorator for rate limiting."""
+
     def decorator(func):
         async def wrapper(*args, **kwargs):
             limiter = depends(RateLimiterAdapter)
@@ -540,13 +558,15 @@ def rate_limit(requests: int = 100, window: int = 60):
                 raise RateLimitError(f"Rate limit exceeded: {requests}/{window}s")
 
             return await func(*args, **kwargs)
+
         return wrapper
+
     return decorator
+
 
 @mcp.tool()
 @rate_limit(requests=100, window=60)
-async def expensive_operation():
-    ...
+async def expensive_operation(): ...
 ```
 
 ### 4. Structured Logging (Using ACB Logger Directly)
@@ -556,6 +576,7 @@ async def expensive_operation():
 **Problem Solved:** Inconsistent logging, no structured context, no correlation IDs
 
 **Architecture:**
+
 ```
 ┌──────────────────┐
 │ MCP Tool/Adapter │
@@ -575,10 +596,12 @@ async def expensive_operation():
 ```
 
 **In Adapters (Preferred):**
+
 ```python
 # Logger is automatically injected by ACB
 from acb.config import AdapterBase
 from acb.adapters.logger import LoggerProtocol
+
 
 class MyAdapter(AdapterBase):
     logger: LoggerProtocol  # ACB injects automatically - DO NOT create
@@ -593,7 +616,7 @@ class MyAdapter(AdapterBase):
             email="user@example.com",
             subject="Test",
             message_id="abc123",
-            duration_ms=234
+            duration_ms=234,
         )
 
         # Bind context for multiple log calls
@@ -603,24 +626,23 @@ class MyAdapter(AdapterBase):
 ```
 
 **In Non-Adapter Code (when needed):**
+
 ```python
 # Get logger from DI container
 from acb.depends import depends
 from acb.adapters import import_adapter
+
 
 async def standalone_function():
     # Get logger from DI
     Logger = import_adapter("logger")
     logger = depends.get_sync(Logger)
 
-    logger.info(
-        "Standalone function called",
-        function="standalone_function",
-        context="value"
-    )
+    logger.info("Standalone function called", function="standalone_function", context="value")
 ```
 
 **Log Output (JSON format):**
+
 ```json
 {
   "timestamp": "2025-10-26T12:34:56.789Z",
@@ -637,6 +659,7 @@ async def standalone_function():
 ```
 
 **Key Benefits:**
+
 - **No Logger Creation** - ACB injects `LoggerProtocol` automatically
 - **Structured Context** - All fields logged as JSON
 - **Correlation IDs** - Automatic request tracking
@@ -650,12 +673,14 @@ async def standalone_function():
 **Problem Solved:** Inconsistent server output, no visual feedback
 
 **Implementation:**
+
 ```python
 # mcp_common/ui/panels.py
 from acb.console import console  # Use ACB console
 from rich.panel import Panel
 from rich.text import Text
 from rich.table import Table
+
 
 class ServerPanels:
     """Rich panel utilities for MCP server operations."""
@@ -733,6 +758,7 @@ class ServerPanels:
 ```
 
 **Usage:**
+
 ```python
 from acb.console import console
 from mcp_common.ui import ServerPanels
@@ -741,28 +767,18 @@ from mcp_common.ui import ServerPanels
 ServerPanels.startup_success(
     server_name="Mailgun MCP",
     http_endpoint="http://localhost:8000",
-    features=["Rate Limiting", "Security Filters", "Structured Logging"]
+    features=["Rate Limiting", "Security Filters", "Structured Logging"],
 )
 
 # Error display
 ServerPanels.error(
     "Failed to connect to Mailgun API",
-    details={
-        "status_code": 401,
-        "error": "Invalid API key",
-        "timestamp": "2025-10-26T12:34:56Z"
-    }
+    details={"status_code": 401, "error": "Invalid API key", "timestamp": "2025-10-26T12:34:56Z"},
 )
 
 # Statistics
 ServerPanels.stats(
-    "Server Metrics",
-    {
-        "Total Requests": 1234,
-        "Rate Limited": 45,
-        "Errors": 12,
-        "Uptime": "2h 34m"
-    }
+    "Server Metrics", {"Total Requests": 1234, "Rate Limited": 45, "Errors": 12, "Uptime": "2h 34m"}
 )
 ```
 
@@ -773,6 +789,7 @@ ServerPanels.stats(
 **Problem Solved:** Inconsistent error handling, potential data leaks
 
 **Architecture:**
+
 ```
 Exception
     ↓
@@ -790,6 +807,7 @@ Each error has:
 ```
 
 **Error Sanitization Flow:**
+
 ```
 Tool raises exception
         ↓
@@ -803,14 +821,17 @@ Client receives safe error (no leaks)
 ```
 
 **Key Features:**
+
 - Structured error types
 - Automatic sanitization (no API keys, passwords in responses)
 - Detailed logging (separate from responses)
 - User-friendly messages
 
 **Usage:**
+
 ```python
 from mcp_common import MCPError, APIError, handle_errors
+
 
 @mcp.tool()
 @handle_errors  # Automatic sanitization
@@ -818,7 +839,7 @@ async def call_api():
     if not response.ok:
         raise APIError(
             f"API call failed: {response.status_code}",
-            details={"response": response.text}  # Logged, not returned
+            details={"response": response.text},  # Logged, not returned
         )
 ```
 
@@ -829,11 +850,13 @@ async def call_api():
 **Problem Solved:** No input validation, sensitive data in outputs
 
 **Architecture:**
+
 ```
 Input → @sanitize_input → Validation → Tool → @filter_output → Safe Output
 ```
 
 **Sanitization Pipeline:**
+
 ```
 Email Input
     ↓
@@ -847,6 +870,7 @@ Sanitized Email
 ```
 
 **Output Filtering:**
+
 ```
 Tool Result:
 {
@@ -865,6 +889,7 @@ Filtered Result:
 ```
 
 **Key Features:**
+
 - Email validation
 - SQL injection prevention
 - Path traversal prevention
@@ -872,14 +897,15 @@ Filtered Result:
 - CORS helpers
 
 **Usage:**
+
 ```python
 from mcp_common import sanitize_input, filter_output
 
+
 @mcp.tool()
-@sanitize_input(['email', 'domain'])
-@filter_output(exclude=['api_key', 'password'])
-async def process_data(email: str):
-    ...
+@sanitize_input(["email", "domain"])
+@filter_output(exclude=["api_key", "password"])
+async def process_data(email: str): ...
 ```
 
 ### 6. Testing Utilities (`testing.py`)
@@ -889,6 +915,7 @@ async def process_data(email: str):
 **Problem Solved:** Each server implements own test infrastructure
 
 **Architecture:**
+
 ```
 Test Suite
     ├── MockMCPClient (simulates MCP tool calls)
@@ -897,14 +924,17 @@ Test Suite
 ```
 
 **Key Features:**
+
 - Mock MCP tool invocations
 - HTTP response mocking
 - Async test support
 - Shared fixtures
 
 **Usage:**
+
 ```python
 from mcp_common.testing import MockMCPClient, mock_http_response
+
 
 async def test_send_email():
     client = MockMCPClient()
@@ -915,7 +945,7 @@ async def test_send_email():
     assert result["success"]
 ```
 
----
+______________________________________________________________________
 
 ## Integration Patterns
 
@@ -945,12 +975,15 @@ from mcp_common.di import configure_di
 # Configure DI container
 configure_di()
 
+
 # 1. ACB Settings
 class MailgunSettings(MCPBaseSettings):
     """Mailgun server settings using ACB Settings."""
+
     api_key: str
     domain: str
     timeout: int = 30
+
 
 # Load settings (from YAML + env vars)
 settings = MailgunSettings()
@@ -960,6 +993,7 @@ logger = get_logger("mailgun-mcp")
 
 # 3. Initialize MCP server
 mcp = FastMCP("Mailgun")
+
 
 # 4. Tools with ACB adapters
 @mcp.tool()
@@ -982,13 +1016,13 @@ async def send_email(email: str, subject: str, body: str):
         response = await client.post(
             f"https://api.mailgun.net/v3/{settings.domain}/messages",
             auth=("api", settings.api_key),
-            data={"to": email, "subject": subject, "text": body}
+            data={"to": email, "subject": subject, "text": body},
         )
 
         logger.info(
             "Email sent successfully",
             status_code=response.status_code,
-            message_id=response.json().get("id")
+            message_id=response.json().get("id"),
         )
 
         return {"success": response.status_code == 200}
@@ -996,6 +1030,7 @@ async def send_email(email: str, subject: str, body: str):
     except Exception as e:
         logger.error("Failed to send email", error=str(e))
         raise
+
 
 # 5. Server startup with Rich UI
 if __name__ == "__main__":
@@ -1008,7 +1043,7 @@ if __name__ == "__main__":
             "HTTP Connection Pooling",
             "Structured Logging",
             "ACB Dependency Injection",
-        ]
+        ],
     )
 
     try:
@@ -1034,6 +1069,7 @@ from mcp_common.adapters.http import HTTPClientAdapter
 from mcp_common.logging import get_logger
 
 logger = get_logger("mailgun-mcp.email")
+
 
 def register_email_tools(mcp: FastMCP) -> None:
     """Register email-related tools."""
@@ -1075,6 +1111,7 @@ from mcp_common.logging import MCPLogger
 
 _configured = False
 
+
 def configure(*, force: bool = False) -> None:
     """Configure DI container for mailgun-mcp."""
     global _configured
@@ -1096,24 +1133,27 @@ def configure(*, force: bool = False) -> None:
 ```
 
 **Benefits:**
+
 - Full ACB integration (logging, settings, DI, console)
 - Modular tool organization
 - Rich UI feedback
 - Production-ready patterns
 - Consistent with crackerjack, session-mgmt-mcp, fastblocks
 
----
+______________________________________________________________________
 
 ## Design Decisions
 
 ### 1. Why ACB as Core Foundation?
 
 **Alternatives Considered:**
+
 - Standalone utility library (original plan)
 - Django-style framework (too heavyweight)
 - Flask-style minimal (too scattered)
 
 **Chosen:** ACB-Native
+
 - **Pros:**
   - Proven patterns from crackerjack, session-mgmt-mcp, fastblocks
   - Unified logging, settings, DI, console
@@ -1127,11 +1167,13 @@ def configure(*, force: bool = False) -> None:
 ### 2. Why ACB Adapters over Singletons?
 
 **Alternatives Considered:**
+
 - Singleton pattern (original plan for HTTP client)
 - Factory pattern (more boilerplate)
 - Global instances (hard to test)
 
 **Chosen:** ACB Adapters with DI
+
 - **Pros:**
   - Testable via dependency injection
   - Automatic lifecycle management
@@ -1143,11 +1185,13 @@ def configure(*, force: bool = False) -> None:
 ### 3. Why ACB Settings over Raw Pydantic?
 
 **Alternatives Considered:**
+
 - Raw Pydantic Settings (less features)
 - python-decouple (no validation)
 - Manual os.getenv (error-prone)
 
 **Chosen:** ACB Settings (extends Pydantic)
+
 - **Pros:**
   - YAML configuration support
   - Environment variable override
@@ -1159,11 +1203,13 @@ def configure(*, force: bool = False) -> None:
 ### 4. Why ACB Logger over Loguru/Standard Logging?
 
 **Alternatives Considered:**
+
 - Standard logging (no structured context)
 - Loguru (not ACB-integrated)
 - Custom logger (reinventing wheel)
 
 **Chosen:** ACB Logger
+
 - **Pros:**
   - Structured logging with context binding
   - Automatic correlation IDs
@@ -1175,6 +1221,7 @@ def configure(*, force: bool = False) -> None:
 ### 5. Why Rich Panels via ACB Console?
 
 **Chosen:** ACB Console + Rich
+
 - **Pros:**
   - Beautiful, consistent UI
   - Follows crackerjack pattern
@@ -1185,6 +1232,7 @@ def configure(*, force: bool = False) -> None:
 ### 6. Why Modular Tool Organization?
 
 **Chosen:** Tool modules like crackerjack
+
 - **Pros:**
   - Easy to maintain
   - Clear separation of concerns
@@ -1192,13 +1240,14 @@ def configure(*, force: bool = False) -> None:
   - Follows proven pattern
 - **Cons:** More files (acceptable)
 
----
+______________________________________________________________________
 
 ## Performance Considerations
 
 ### HTTP Client Reuse
 
 **Benchmark (mailgun-mcp):**
+
 ```
 Before (new client per request):
 - 100 requests: 45 seconds
@@ -1214,6 +1263,7 @@ After (singleton client):
 ### Rate Limiter Overhead
 
 **Benchmark:**
+
 ```
 Without rate limiting:
 - 1000 requests: 1.2 seconds
@@ -1227,6 +1277,7 @@ With rate limiting:
 ### Decorator Stack Impact
 
 **Benchmark:**
+
 ```
 @mcp.tool()  # Base
 - Latency: 1ms
@@ -1241,19 +1292,21 @@ With rate limiting:
 
 **Verdict:** 0.3ms overhead negligible compared to network I/O (50-200ms)
 
----
+______________________________________________________________________
 
 ## Security Model
 
 ### Threat Model
 
 **Threats Mitigated:**
+
 1. **API abuse** → Rate limiting
-2. **Injection attacks** → Input sanitization
-3. **Data leaks** → Output filtering
-4. **Misconfiguration** → Startup validation
+1. **Injection attacks** → Input sanitization
+1. **Data leaks** → Output filtering
+1. **Misconfiguration** → Startup validation
 
 **Out of Scope:**
+
 - Network-level attacks (handled by firewall/load balancer)
 - Authentication (server-specific)
 - Authorization (server-specific)
@@ -1261,6 +1314,7 @@ With rate limiting:
 ### Security Checklist
 
 Per-server security with mcp-common:
+
 - [x] API keys validated at startup
 - [x] Rate limiting on expensive operations
 - [x] Input sanitization (email, paths, etc.)
@@ -1269,7 +1323,7 @@ Per-server security with mcp-common:
 - [x] HTTPS enforcement (FastMCP handles)
 - [x] Dependency scanning (Bandit, Safety)
 
----
+______________________________________________________________________
 
 ## Testing Strategy
 
@@ -1282,12 +1336,14 @@ async def test_singleton():
     c2 = await get_http_client()
     assert c1 is c2
 
+
 # tests/test_rate_limit.py
 async def test_rate_limit_enforcement():
     limiter = RateLimiter(2, 60)
     assert await limiter.check("user1")  # 1st allowed
     assert await limiter.check("user1")  # 2nd allowed
     assert not await limiter.check("user1")  # 3rd blocked
+
 
 # tests/test_config.py
 def test_validation():
@@ -1312,6 +1368,7 @@ async def test_mailgun_with_mcp_common():
 # tests/property/test_rate_limit.py
 from hypothesis import given, strategies as st
 
+
 @given(st.integers(min_value=1, max_value=1000))
 async def test_rate_limit_never_exceeds_max(max_requests):
     limiter = RateLimiter(max_requests, 60)
@@ -1321,11 +1378,12 @@ async def test_rate_limit_never_exceeds_max(max_requests):
     # Verify internal state is correct
 ```
 
----
+______________________________________________________________________
 
 ## Versioning Strategy
 
 **Semantic Versioning:**
+
 - **0.1.0** - Initial release (HTTP, Config, Rate Limit)
 - **0.2.0** - Add Security middleware
 - **0.3.0** - Add Testing utilities
@@ -1333,15 +1391,17 @@ async def test_rate_limit_never_exceeds_max(max_requests):
 - **1.0.0** - Production-ready (all features, battle-tested)
 
 **Breaking Changes:**
+
 - Major version bump (1.x → 2.x)
 - Deprecation warnings for 2 minor versions
 - Migration guide in CHANGELOG
 
 **Backward Compatibility:**
+
 - Maintain for 1 year after deprecation
 - Clear upgrade path documented
 
----
+______________________________________________________________________
 
 ## Deployment Model
 
@@ -1365,11 +1425,12 @@ FROM python:3.13-slim
 RUN pip install mcp-common
 ```
 
----
+______________________________________________________________________
 
 ## Future Enhancements
 
 ### Phase 2 (v0.5.0 - v1.0.0)
+
 - Redis-backed distributed rate limiting
 - Prometheus metrics export
 - OpenTelemetry integration
@@ -1377,41 +1438,45 @@ RUN pip install mcp-common
 - Retry logic with exponential backoff
 
 ### Phase 3 (v1.1.0+)
+
 - GraphQL support (if needed)
 - WebSocket utilities (for crackerjack)
 - Caching helpers (Redis, Memcached)
 - Authentication helpers (OAuth2, JWT)
 
----
+______________________________________________________________________
 
 ## Success Criteria
 
 **Library is successful if:**
+
 1. All 6 standalone servers adopt it (100%)
-2. Zero production incidents caused by mcp-common
-3. Ecosystem health improves from 74/100 to 85/100
-4. Test coverage >90%
-5. Documentation rated "excellent" by users
-6. Performance overhead <5%
+1. Zero production incidents caused by mcp-common
+1. Ecosystem health improves from 74/100 to 85/100
+1. Test coverage >90%
+1. Documentation rated "excellent" by users
+1. Performance overhead \<5%
 
 **Ready for v1.0.0 when:**
+
 - Battle-tested in production (3+ months)
 - No critical bugs
 - Comprehensive documentation
 - All planned features implemented
 - Community adoption (if open-sourced)
 
----
+______________________________________________________________________
 
 ## Conclusion
 
 mcp-common is architected as a **utility library**, not a framework. It provides battle-tested patterns extracted from real production servers while respecting different architectural styles.
 
 **Key architectural principles:**
+
 1. **Opt-in** - Use what you need
-2. **Performant** - Zero unnecessary overhead
-3. **Type-safe** - Catch errors at development time
-4. **ACB-compatible** - Complements, doesn't replace
-5. **Well-tested** - 90% coverage minimum
+1. **Performant** - Zero unnecessary overhead
+1. **Type-safe** - Catch errors at development time
+1. **ACB-compatible** - Complements, doesn't replace
+1. **Well-tested** - 90% coverage minimum
 
 The library transforms the MCP ecosystem from inconsistent implementations into a professional, maintainable system.

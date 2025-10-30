@@ -96,7 +96,9 @@ class TestAPIKeyValidator:
 
         assert not validator.validate(invalid_key, raise_on_invalid=False)
 
-        with pytest.raises(APIKeyFormatError, match="Invalid API key format for OpenAI") as exc_info:
+        with pytest.raises(
+            APIKeyFormatError, match="Invalid API key format for OpenAI"
+        ) as exc_info:
             validator.validate(invalid_key, raise_on_invalid=True)
 
         # Verify exception has rich context
