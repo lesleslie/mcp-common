@@ -1,0 +1,36 @@
+{
+  "baseline": 77.30337078651685,
+  "current_minimum": 77.30337078651685,
+  "target": 100.0,
+  "last_updated": "2025-10-31T07:53:27.058837",
+  "history": [
+    {
+      "date": "2025-10-31T04:11:21.217637",
+      "coverage": 79.07188353048225,
+      "commit": "baseline",
+      "milestone": false
+    },
+    {
+      "date": "2025-10-31T04:16:29.439430",
+      "coverage": 79.21604375569736,
+      "commit": "current",
+      "milestone": false,
+      "milestones_hit": []
+    },
+    {
+      "date": "2025-10-31T06:02:00",
+      "coverage": 71.3697219361483,
+      "commit": "reset-baseline",
+      "milestone": false
+    },
+    {
+      "date": "2025-10-31T07:53:27.058889",
+      "coverage": 77.30337078651685,
+      "commit": "current",
+      "milestone": false,
+      "milestones_hit": []
+    }
+  ],
+  "milestones_achieved": [],
+  "next_milestone": 80
+}

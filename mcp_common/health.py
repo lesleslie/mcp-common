@@ -11,11 +11,11 @@ from __future__ import annotations
 import time
 import typing as t
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 
 
-class HealthStatus(Enum):
+class HealthStatus(str, Enum):
     """Health check status values.
 
     Attributes:
@@ -30,14 +30,21 @@ class HealthStatus(Enum):
 
     def __str__(self) -> str:
         """Return string representation of status."""
-        return self.value
+        return str(self.value)
 
-    def __lt__(self, other: HealthStatus) -> bool:
+    def __lt__(self, other: object) -> bool:
         """Compare health status severity (healthy < degraded < unhealthy)."""
         if not isinstance(other, HealthStatus):
             return NotImplemented
         order = {HealthStatus.HEALTHY: 0, HealthStatus.DEGRADED: 1, HealthStatus.UNHEALTHY: 2}
         return order[self] < order[other]
+
+    def __gt__(self, other: object) -> bool:
+        """Support greater-than comparisons for max/min operations."""
+        if not isinstance(other, HealthStatus):
+            return NotImplemented
+        order = {HealthStatus.HEALTHY: 0, HealthStatus.DEGRADED: 1, HealthStatus.UNHEALTHY: 2}
+        return order[self] > order[other]
 
 
 @dataclass
@@ -143,7 +150,7 @@ class HealthCheckResponse:
 
         return cls(
             status=overall_status,
-            timestamp=datetime.now(timezone.utc).isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
             version=version,
             components=components,
             uptime_seconds=time.time() - start_time,
@@ -181,8 +188,8 @@ HealthCheckFunc = t.Callable[[], t.Awaitable[ComponentHealth]]
 
 
 __all__ = [
-    "HealthStatus",
     "ComponentHealth",
-    "HealthCheckResponse",
     "HealthCheckFunc",
+    "HealthCheckResponse",
+    "HealthStatus",
 ]

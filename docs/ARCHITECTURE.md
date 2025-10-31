@@ -16,6 +16,8 @@ mcp-common is an **ACB-native** utility library providing battle-tested patterns
 - Getting started guide
 - ACB vs mcp-common boundaries
 
+Note: mcp-common does not bundle a protocol host. If you are running an MCP server, install FastMCP (or another MCP host) separately.
+
 **Design Principles:**
 
 1. **ACB-Native** - Built on ACB's component system, not layered on top
@@ -852,7 +854,7 @@ async def call_api():
 **Architecture:**
 
 ```
-Input → @sanitize_input → Validation → Tool → @filter_output → Safe Output
+Input → sanitize_input() → Validation → Tool → Safe Output
 ```
 
 **Sanitization Pipeline:**
@@ -899,11 +901,13 @@ Filtered Result:
 **Usage:**
 
 ```python
-from mcp_common import sanitize_input, filter_output
+from acb.security.sanitization import sanitize_input
 
 
 @mcp.tool()
-@sanitize_input(["email", "domain"])
+# Example: sanitize inputs before use
+email = sanitize_input(email, max_length=320)
+domain = sanitize_input(domain, allowed_chars="A-Za-z0-9.-")
 @filter_output(exclude=["api_key", "password"])
 async def process_data(email: str): ...
 ```
@@ -961,7 +965,7 @@ register_pkg("mailgun_mcp")
 
 ```python
 # mailgun_mcp/main.py
-from fastmcp import FastMCP
+from fastmcp import FastMCP  # install separately
 from acb.depends import depends
 from acb.console import console
 
@@ -1284,7 +1288,7 @@ With rate limiting:
 
 @mcp.tool()
 @rate_limit()
-@sanitize_input()
+# sanitize inputs at function entry if desired
 @handle_errors
 @filter_output()
 - Latency: 1.3ms (+30%)

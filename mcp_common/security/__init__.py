@@ -16,8 +16,8 @@ from mcp_common.security.sanitization import sanitize_input, sanitize_output
 
 __all__ = [
     "APIKeyValidator",
-    "validate_api_key_format",
-    "validate_api_key_startup",
     "sanitize_input",
     "sanitize_output",
+    "validate_api_key_format",
+    "validate_api_key_startup",
 ]

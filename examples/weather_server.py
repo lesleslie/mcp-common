@@ -21,7 +21,15 @@ import asyncio
 import typing as t
 
 from acb.depends import depends
-from fastmcp import FastMCP
+
+try:
+    from fastmcp import FastMCP
+except ImportError as e:  # pragma: no cover - example UX improvement
+    msg = (
+        "FastMCP is not installed. Install it with 'pip install fastmcp' or "
+        "'uv add fastmcp' to run this example."
+    )
+    raise SystemExit(msg) from e
 
 from mcp_common import HTTPClientAdapter, HTTPClientSettings, MCPBaseSettings, ServerPanels
 
@@ -125,7 +133,8 @@ async def get_forecast(city: str, days: int = 3, units: str = "metric") -> list[
     settings = depends.get_sync(WeatherSettings)
     http_adapter = depends.get_sync(HTTPClientAdapter)
 
-    if not 1 <= days <= 5:
+    max_forecast_days = 5
+    if not 1 <= days <= max_forecast_days:
         ServerPanels.warning(
             title="Invalid Parameter",
             message=f"Days must be between 1 and 5, got {days}",
@@ -159,8 +168,6 @@ async def get_forecast(city: str, days: int = 3, units: str = "metric") -> list[
                 }
             )
 
-        return forecasts
-
     except Exception as e:
         ServerPanels.error(
             title="Forecast API Error",
@@ -169,6 +176,8 @@ async def get_forecast(city: str, days: int = 3, units: str = "metric") -> list[
             error_type=type(e).__name__,
         )
         raise
+    else:
+        return forecasts
 
 
 async def main() -> None:
@@ -230,7 +239,7 @@ async def main() -> None:
 
     # Run the FastMCP server
     try:
-        await mcp.run()
+        await mcp.run()  # type: ignore[func-returns-value]
     finally:
         # Cleanup: Close HTTP client connections
         await http_adapter._cleanup_resources()

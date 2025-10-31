@@ -12,13 +12,14 @@ A production-ready weather API server showcasing all mcp-common components:
 1. **MCPBaseSettings** - YAML + environment variable configuration
 1. **ServerPanels** - Beautiful Rich UI terminal output
 1. **ACB Dependency Injection** - Testable, modular architecture
-1. **FastMCP Integration** - MCP protocol tools and resources
+1. **FastMCP Integration** - MCP protocol tools and resources (optional; install separately)
 
 ### Quick Start
 
 ```bash
 # Run the example server
 cd examples
+pip install fastmcp  # required to run the example
 python weather_server.py
 ```
 

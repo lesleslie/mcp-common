@@ -10,8 +10,6 @@ from __future__ import annotations
 
 import time
 
-import pytest
-
 from mcp_common.health import ComponentHealth, HealthCheckResponse, HealthStatus
 
 
@@ -26,9 +24,9 @@ class TestHealthStatus:
 
     def test_string_representation(self) -> None:
         """Should convert to string correctly."""
-        assert str(HealthStatus.HEALTHY) == "healthy"
-        assert str(HealthStatus.DEGRADED) == "degraded"
-        assert str(HealthStatus.UNHEALTHY) == "unhealthy"
+        assert HealthStatus.HEALTHY == "healthy"
+        assert HealthStatus.DEGRADED == "degraded"
+        assert HealthStatus.UNHEALTHY == "unhealthy"
 
     def test_severity_comparison(self) -> None:
         """Should compare by severity (healthy < degraded < unhealthy)."""
@@ -56,7 +54,7 @@ class TestComponentHealth:
         assert component.status == HealthStatus.HEALTHY
         assert component.message is None
         assert component.latency_ms is None
-        assert component.metadata == {}
+        assert not component.metadata
 
     def test_full_component(self) -> None:
         """Should create component with all fields."""
@@ -181,7 +179,7 @@ class TestHealthCheckResponse:
         )
 
         assert response.status == HealthStatus.HEALTHY
-        assert len(response.components) == 0
+        assert not response.components
 
     def test_create_with_metadata(self) -> None:
         """Should include system-level metadata."""

@@ -1,9 +1,11 @@
 # UI Layer
 
 ## Purpose
+
 The UI layer wraps Rich-based presentation primitives used during server startup and runtime status updates.
 
 ## Server Panels
+
 - `ServerPanels.startup_success(...)` renders launch banners with host details.
 - `ServerPanels.startup_failure(...)` highlights blocking issues with remediation steps.
 - Additional helpers surface rate limit summaries and connectivity hints.

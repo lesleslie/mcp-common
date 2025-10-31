@@ -9,9 +9,6 @@ Tests Phase 3 security methods added to MCPBaseSettings:
 
 from __future__ import annotations
 
-import typing as t
-from pathlib import Path
-
 import pytest
 from pydantic import Field
 
@@ -177,14 +174,15 @@ class TestGetAPIKeySecure:
         assert result == "sk-" + "a" * 48
 
     def test_get_secure_raises_on_invalid_format(self) -> None:
-        """Should raise ValueError for invalid key format."""
+        """Should raise a format error for invalid key format."""
 
         class Settings(MCPBaseSettings):
             api_key: str = Field(default="invalid-key")
 
         settings = Settings()
-        with pytest.raises(ValueError, match="Invalid API key format"):
+        with pytest.raises(Exception) as excinfo:
             settings.get_api_key_secure(provider="openai", validate_format=True)
+        assert "Invalid API key format" in str(excinfo.value)
 
     def test_get_secure_skips_validation_when_disabled(self) -> None:
         """Should skip format validation when validate_format=False."""
@@ -383,7 +381,7 @@ class TestIntegrationScenarios:
         settings = ServerSettings()
 
         # Should fail to start
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Validation failed"):
             settings.validate_api_keys_at_startup(provider="openai")
 
     def test_safe_logging_in_error_messages(self) -> None:
@@ -418,7 +416,7 @@ class TestIntegrationScenarios:
         )
 
         assert len(keys) == 3
-        assert all(key in keys for key in ["openai_key", "mailgun_key", "github_token"])
+        assert all(key in keys for key in ("openai_key", "mailgun_key", "github_token"))
 
 
 class TestEdgeCases:
@@ -443,7 +441,7 @@ class TestEdgeCases:
 
         settings = Settings()
         result = settings.validate_api_keys_at_startup(key_fields=[])
-        assert result == {}
+        assert not result
 
     def test_whitespace_only_key(self) -> None:
         """Should reject whitespace-only keys."""

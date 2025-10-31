@@ -23,7 +23,7 @@ class TestMCPBaseSettings:
         assert settings.server_name == "MCP Server"
         assert settings.server_description == "Model Context Protocol Server"
         assert settings.log_level == "INFO"
-        assert settings.enable_debug_mode is False
+        assert not settings.enable_debug_mode
 
     def test_custom_settings(self) -> None:
         """Test custom settings override defaults."""
@@ -37,7 +37,7 @@ class TestMCPBaseSettings:
         assert settings.server_name == "Custom MCP"
         assert settings.server_description == "Custom description"
         assert settings.log_level == "DEBUG"
-        assert settings.enable_debug_mode is True
+        assert settings.enable_debug_mode
 
     def test_server_name_validation_strips_whitespace(self) -> None:
         """Test server name strips whitespace."""
@@ -54,7 +54,7 @@ class TestMCPBaseSettings:
     def test_log_level_validation(self) -> None:
         """Test log level accepts only valid values."""
         # Valid levels
-        for level in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
+        for level in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"):
             settings = MCPBaseSettings(log_level=level)
             assert settings.log_level == level
 
@@ -63,7 +63,7 @@ class TestMCPBaseSettings:
             MCPBaseSettings(log_level="INVALID")
 
     @given(
-        server_name=st.text(min_size=1, max_size=100).filter(lambda x: x.strip()),
+        server_name=st.text(min_size=1, max_size=100).filter(str.strip),
         log_level=st.sampled_from(["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]),
     )
     def test_settings_property_based(
@@ -78,7 +78,7 @@ class TestMCPBaseSettings:
         )
 
         assert settings.server_name.strip() != ""
-        assert settings.log_level in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+        assert settings.log_level in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
 
 
 @pytest.mark.unit
@@ -124,10 +124,8 @@ class TestMCPBaseSettingsAPIKey:
 
         settings = TestSettings()
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ValueError, match="api_key is required but not set"):
             settings.get_api_key()
-
-        assert "api_key is required but not set" in str(exc_info.value)
 
     def test_get_api_key_custom_field_name(self) -> None:
         """Test API key retrieval with custom field name."""
@@ -190,10 +188,8 @@ class TestMCPBaseSettingsDataDir:
 
         settings = TestSettings()
 
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ValueError, match="must be a Path"):
             settings.get_data_dir("not_a_path")
-
-        assert "must be a Path" in str(exc_info.value)
 
 
 @pytest.mark.unit
@@ -208,7 +204,7 @@ class TestMCPServerSettings:
         assert settings.base_url == "https://api.example.com"
         assert settings.timeout == 30
         assert settings.max_retries == 3
-        assert settings.enable_cache is False
+        assert not settings.enable_cache
         assert settings.cache_ttl_seconds == 300
 
     def test_custom_server_settings(self) -> None:
@@ -226,7 +222,7 @@ class TestMCPServerSettings:
         assert settings.base_url == "https://custom-api.com"
         assert settings.timeout == 60
         assert settings.max_retries == 5
-        assert settings.enable_cache is True
+        assert settings.enable_cache
         assert settings.cache_ttl_seconds == 600
 
     def test_base_url_validation_strips_trailing_slash(self) -> None:
@@ -308,7 +304,7 @@ class TestMCPSettingsEnvironmentVariables:
         monkeypatch.setenv("MCP_BASE_LOG_LEVEL", "DEBUG")
         monkeypatch.setenv("MCP_BASE_ENABLE_DEBUG_MODE", "true")
 
-        settings = MCPBaseSettings()
+        MCPBaseSettings()
 
         # Note: Actual behavior depends on ACB Settings implementation
         # This test documents expected behavior
@@ -322,7 +318,7 @@ class TestMCPSettingsEnvironmentVariables:
         monkeypatch.setenv("MCP_SERVER_API_KEY", "env-key-123")
         monkeypatch.setenv("MCP_SERVER_TIMEOUT", "60")
 
-        settings = MCPServerSettings()
+        MCPServerSettings()
 
         # Document expected ACB Settings behavior
         # Actual implementation may vary

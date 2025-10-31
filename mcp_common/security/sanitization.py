@@ -13,20 +13,46 @@ import re
 import typing as t
 from pathlib import Path
 
+# Type alias for Path objects (avoiding direct imports in TYPE_CHECKING blocks)
+PathType = type(Path())
 
 # Pattern to detect potential API keys in strings
 API_KEY_PATTERN = re.compile(
     r"(?i)(?:api[_-]?key|token|secret|password|bearer)\s*[:=]\s*['\"]?([a-zA-Z0-9\-_]{16,})['\"]?"
-)
+)  # REGEX OK: Safe pattern for detecting API keys in logs
 
 # Common sensitive key patterns
 SENSITIVE_PATTERNS = {
-    "openai": re.compile(r"sk-[A-Za-z0-9]{48}"),
-    "anthropic": re.compile(r"sk-ant-[A-Za-z0-9\-_]{95,}"),
-    "github": re.compile(r"gh[ps]_[A-Za-z0-9]{36,255}"),
-    "jwt": re.compile(r"eyJ[A-Za-z0-9\-_]+\.eyJ[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+"),
-    "generic_hex": re.compile(r"\b[0-9a-f]{32,}\b"),
+    "openai": re.compile(r"sk-[A-Za-z0-9]{48}"),  # REGEX OK: OpenAI API key pattern
+    "anthropic": re.compile(r"sk-ant-[A-Za-z0-9\-_]{95,}"),  # REGEX OK: Anthropic API key pattern
+    "github": re.compile(r"gh[ps]_[A-Za-z0-9]{36,255}"),  # REGEX OK: GitHub token pattern
+    "jwt": re.compile(
+        r"eyJ[A-Za-z0-9\-_]+\.eyJ[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+"
+    ),  # REGEX OK: JWT token pattern
+    "generic_hex": re.compile(r"\b[0-9a-f]{32,}\b"),  # REGEX OK: Generic hex API key pattern
 }
+
+
+def _sanitize_string(
+    data: str,
+    mask_keys: bool = True,
+    mask_patterns: list[str] | None = None,
+) -> str:
+    """Helper function to sanitize string data."""
+    # Mask based on key patterns
+    if mask_keys:
+        for pattern_name, pattern in SENSITIVE_PATTERNS.items():
+            if pattern.search(data):
+                data = pattern.sub(f"[REDACTED-{pattern_name.upper()}]", data)
+
+    # Mask custom patterns
+    if mask_patterns:
+        for custom_pattern in mask_patterns:
+            data = re.sub(
+                custom_pattern, "[REDACTED]", data
+            )  # REGEX OK: Custom pattern sanitization
+
+    return data
 
 
 def sanitize_output(
@@ -59,18 +85,7 @@ def sanitize_output(
         return [sanitize_output(item, mask_keys, mask_patterns) for item in data]
 
     if isinstance(data, str):
-        # Mask based on key patterns
-        if mask_keys:
-            for pattern_name, pattern in SENSITIVE_PATTERNS.items():
-                if pattern.search(data):
-                    data = pattern.sub(f"[REDACTED-{pattern_name.upper()}]", data)
-
-        # Mask custom patterns
-        if mask_patterns:
-            for custom_pattern in mask_patterns:
-                data = re.sub(custom_pattern, "[REDACTED]", data)
-
-        return data
+        return _sanitize_string(data, mask_keys, mask_patterns)
 
     # For other types (int, float, bool, None), return as-is
     return data
@@ -120,7 +135,7 @@ def sanitize_dict_for_logging(
     if sensitive_keys:
         default_sensitive.update(sensitive_keys)
 
-    sanitized = {}
+    sanitized: dict[str, t.Any] = {}
     for key, value in data.items():
         # Check if key name suggests sensitive data
         if any(sens in key.lower() for sens in default_sensitive):
@@ -200,7 +215,7 @@ def sanitize_path(
 
 
 def sanitize_input(
-    value: str,
+    value: t.Any,
     max_length: int | None = None,
     allowed_chars: str | None = None,
     strip_html: bool = False,
@@ -227,13 +242,14 @@ def sanitize_input(
         ... )
         >>> # Returns: "hello"
     """
+    # Validate type defensively (runtime)
     if not isinstance(value, str):
-        msg = f"Expected string, got {type(value).__name__}"
-        raise ValueError(msg)
+        msg = "Expected string"
+        raise ValueError(msg)  # noqa: TRY004
 
     # Strip HTML if requested
     if strip_html:
-        value = re.sub(r"<[^>]+>", "", value)
+        value = re.sub(r"<[^>]+>", "", value)  # REGEX OK: HTML tag stripping
 
     # Check length
     if max_length and len(value) > max_length:
@@ -241,7 +257,9 @@ def sanitize_input(
         raise ValueError(msg)
 
     # Check allowed characters
-    if allowed_chars and not re.match(f"^[{allowed_chars}]*$", value):
+    if allowed_chars and not re.match(
+        f"^[{allowed_chars}]*$", value
+    ):  # REGEX OK: Character validation
         msg = f"Input contains disallowed characters. Allowed: {allowed_chars}"
         raise ValueError(msg)
 
@@ -267,7 +285,7 @@ def mask_sensitive_data(text: str, visible_chars: int = 4) -> str:
     masked_text = text
 
     # Mask each sensitive pattern
-    for pattern_name, pattern in SENSITIVE_PATTERNS.items():
+    for pattern in SENSITIVE_PATTERNS.values():
         for match in pattern.finditer(text):
             original = match.group(0)
             if len(original) > visible_chars:

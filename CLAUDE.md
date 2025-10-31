@@ -17,7 +17,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - ✅ Exception hierarchy (MCPServerError, validation errors)
 - ✅ ValidationMixin for Pydantic models
 - ✅ Comprehensive test suite with 90%+ coverage
-- 🚧 Rate limiting adapter (in middleware/rate_limit_config.py, needs ACB migration)
 - 🚧 Complete example server (`examples/weather_server.py`)
 
 ## Critical Prerequisites
@@ -52,13 +51,12 @@ The design is extracted from these production servers (located in `../` relative
 
 **Primary Pattern Sources:**
 
-- **crackerjack** (`../crackerjack/mcp/`) - Rate limiting adapter, Rich UI panels (ServerPanels), MCP server structure, tool organization
+- **crackerjack** (`../crackerjack/mcp/`) - Rich UI panels (ServerPanels), MCP server structure, tool organization
 - **session-mgmt-mcp** (`../session-mgmt-mcp/`) - ACB Settings with YAML configuration, comprehensive DI usage, adapter lifecycle patterns
 - **fastblocks** (`../fastblocks/`) - ACB adapter organization, module structure
 
 **Key Patterns from Production Servers:**
 
-- **Rate Limiting:** `crackerjack/mcp/rate_limiter.py` - Token bucket algorithm implementation
 - **Rich UI Panels:** `crackerjack/ui/` - Professional console output with Rich library
 - **Tool Registration:** `crackerjack/mcp/` - FastMCP tool organization patterns
 - **Structured Logging:** Uses ACB logger with correlation IDs and context binding
@@ -154,9 +152,7 @@ mcp_common/
 │   ├── __init__.py          # MCPBaseSettings, ValidationMixin exports
 │   ├── base.py              # ✅ MCPBaseSettings (YAML + env vars)
 │   └── validation_mixin.py  # ✅ ValidationMixin for Pydantic models
-├── middleware/
-│   ├── __init__.py
-│   └── rate_limit_config.py # 🚧 Rate limit configuration (needs ACB migration)
+├── middleware/               # [Removed] No centralized middleware in this lib
 ├── security/
 │   ├── __init__.py          # Security utilities exports
 │   ├── api_keys.py          # ✅ APIKeyValidator (format validation)
@@ -176,7 +172,6 @@ tests/
 ├── test_health.py           # Health check system tests
 ├── test_http_client.py      # HTTPClientAdapter tests
 ├── test_http_health.py      # HTTP health check tests
-├── test_rate_limit_config.py  # Rate limit configuration tests
 ├── test_security_api_keys.py  # API key validation tests
 ├── test_security_sanitization.py  # Sanitization tests
 ├── test_ui_panels.py        # ServerPanels tests
@@ -294,9 +289,6 @@ uv run mypy mcp_common tests
 
 # 5. Run full test suite with coverage
 uv run pytest --cov=mcp_common
-
-# 6. Commit when all checks pass
-git add . && git commit -m "feat: implement rate limiter adapter"
 ```
 
 ### Settings Pattern
@@ -484,7 +476,7 @@ See `examples/weather_server.py` for a complete working MCP server demonstrating
 - MCPBaseSettings with YAML configuration
 - ServerPanels for startup UI
 - ACB dependency injection
-- FastMCP tool integration
+- FastMCP tool integration (optional)
 - Error handling and validation
 
 **Run the example:**
@@ -509,9 +501,8 @@ python weather_server.py
 - **ACB (acb>=0.19.0)** - Core framework (adapters, DI, logger, settings, console) - **editable install from ../acb**
 - **httpx>=0.27.0** - HTTP client with async support (used in HTTPClientAdapter)
 - **pydantic>=2.10.0** - Data validation (used with ACB Settings)
-- **pydantic-settings>=2.7.0** - Settings management
-- **fastmcp>=0.2.0** - MCP protocol implementation
 - **Rich** (via acb.console) - Terminal UI for ServerPanels
+- Optional: **fastmcp** - MCP protocol host to run servers and examples (install separately)
 
 ## Development Dependencies
 

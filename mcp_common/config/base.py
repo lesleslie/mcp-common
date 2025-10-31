@@ -20,7 +20,7 @@ except ImportError:
     SECURITY_AVAILABLE = False
 
 
-class MCPBaseSettings(Settings):
+class MCPBaseSettings(Settings):  # type: ignore[misc]
     """Base settings class for MCP servers using ACB configuration system.
 
     Extends ACB Settings to provide:
@@ -124,7 +124,8 @@ class MCPBaseSettings(Settings):
         key = getattr(self, key_name)
 
         if not key or (isinstance(key, str) and not key.strip()):
-            msg = f"{key_name} is required but not set. Set via environment variable or settings file."
+            msg = f"{key_name} is required but not set. "
+            msg += "Set via environment variable or settings file."
             raise ValueError(msg)
 
         return key if not isinstance(key, str) else key.strip()
@@ -160,7 +161,7 @@ class MCPBaseSettings(Settings):
 
         if not isinstance(path, Path):
             msg = f"Field '{dir_name}' must be a Path, got {type(path).__name__}"
-            raise ValueError(msg)
+            raise ValueError(msg)  # noqa: TRY004
 
         # Expand ~ and create directory
         expanded = path.expanduser()
@@ -359,7 +360,7 @@ class MCPServerSettings(MCPBaseSettings):
             raise ValueError(msg)
 
         # Ensure URL starts with http:// or https://
-        if not (v.startswith("http://") or v.startswith("https://")):
+        if not v.startswith(("http://", "https://")):
             msg = "base_url must start with http:// or https://"
             raise ValueError(msg)
 

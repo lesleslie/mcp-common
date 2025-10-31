@@ -3,13 +3,15 @@
 from __future__ import annotations
 
 import typing as t
-from pathlib import Path
+from collections.abc import AsyncGenerator
 from unittest.mock import Mock
 
 import pytest
 
-from mcp_common.adapters.http import HTTPClientAdapter, HTTPClientSettings
 from mcp_common.config import MCPBaseSettings
+
+if t.TYPE_CHECKING:
+    from pathlib import Path
 
 
 @pytest.fixture
@@ -20,34 +22,11 @@ def temp_settings_dir(tmp_path: Path) -> Path:
     return settings_dir
 
 
-@pytest.fixture
-def sample_http_settings() -> HTTPClientSettings:
-    """Create sample HTTP client settings for testing."""
-    return HTTPClientSettings(
-        timeout=10,
-        max_connections=50,
-        max_keepalive_connections=10,
-        retry_attempts=2,
-        follow_redirects=True,
-    )
+## HTTP adapter fixtures removed; this library no longer ships an HTTP adapter.
 
 
 @pytest.fixture
-async def http_adapter(
-    sample_http_settings: HTTPClientSettings,
-    mock_logger: Mock,
-) -> HTTPClientAdapter:
-    """Create HTTP adapter instance with test settings and mock logger."""
-    adapter = HTTPClientAdapter(settings=sample_http_settings)
-    # Inject mock logger (ACB would normally do this via DI)
-    adapter.logger = mock_logger
-    yield adapter
-    # Cleanup: Close client if created
-    await adapter._cleanup_resources()
-
-
-@pytest.fixture
-def sample_mcp_settings(temp_settings_dir: Path) -> MCPBaseSettings:
+def sample_mcp_settings(_temp_settings_dir: Path) -> MCPBaseSettings:
     """Create sample MCP base settings for testing."""
     return MCPBaseSettings(
         server_name="Test MCP Server",
@@ -74,7 +53,7 @@ def reset_di_container() -> t.Iterator[None]:
 
     This ensures test isolation by clearing any registered dependencies.
     """
-    return
     # Clear any test-specific dependencies
     # Note: depends.reset() doesn't exist, so we manually clear if needed
     # For now, just yield - ACB handles isolation via module registration
+    yield

@@ -1,5 +1,6 @@
 # mcp-common
 
+![Coverage](https://img.shields.io/badge/coverage-77.3%25-yellow)
 **Version:** 2.0.0 (ACB-Native)
 **Status:** Implementation Phase
 
@@ -11,7 +12,7 @@ mcp-common is an **ACB-native foundation library** for building production-grade
 
 **🎯 What This Library Provides:**
 
-- **ACB Adapters** - HTTP client, rate limiter, security with lifecycle management
+- **ACB Adapters** - HTTP client, security with lifecycle management
 - **Structured Logging** - ACB Logger with context binding and correlation IDs
 - **Rich Console UI** - Beautiful panels and notifications for server operations
 - **Settings Management** - YAML + environment variable configuration
@@ -43,7 +44,7 @@ See [`examples/`](./examples/) for a complete production-ready Weather MCP serve
 - MCPBaseSettings with YAML + environment configuration
 - ServerPanels for beautiful terminal UI
 - ACB dependency injection and lifecycle
-- FastMCP tool integration
+- FastMCP tool integration (optional; install separately)
 
 **Run the example:**
 
@@ -65,6 +66,14 @@ pip install mcp-common>=2.0.0
 ```
 
 This automatically installs ACB and all required dependencies.
+
+If you plan to run an MCP server (e.g., the examples), install a protocol host such as FastMCP separately:
+
+```bash
+pip install fastmcp
+# or
+uv add fastmcp
+```
 
 ### Minimal Example
 
@@ -95,7 +104,7 @@ class MyServerSettings(MCPBaseSettings):
 
 
 # my_server/main.py
-from fastmcp import FastMCP
+from fastmcp import FastMCP  # Optional: install fastmcp separately
 from acb.depends import depends
 from mcp_common import ServerPanels, HTTPClientAdapter
 from my_server.settings import MyServerSettings
@@ -123,7 +132,7 @@ if __name__ == "__main__":
     ServerPanels.startup_success(
         server_name="My MCP Server",
         http_endpoint="http://localhost:8000",
-        features=["HTTP Client", "Rate Limiting"],
+        features=["HTTP Client"],
     )
 
     mcp.run()
@@ -149,20 +158,7 @@ http = depends(HTTPClientAdapter)
 client = await http._create_client()
 ```
 
-**Rate Limiter Adapter:**
-
-- Token bucket algorithm
-- Per-identifier limiting (user, IP, API key)
-- Structured logging of rate limit events
-
-```python
-from mcp_common.adapters.rate_limit import RateLimiterAdapter, rate_limit
-
-
-@mcp.tool()
-@rate_limit(requests=100, window=60)  # 100 req/min
-async def expensive_operation(): ...
-```
+Note: Rate limiting is not provided by this library. If you use FastMCP, its built-in `RateLimitingMiddleware` can be enabled; otherwise, use project-specific configuration.
 
 ### ⚙️ ACB Settings with YAML Support
 
@@ -237,9 +233,8 @@ ______________________________________________________________________
 ## Documentation
 
 - **[ACB_FOUNDATION.md](./docs/ACB_FOUNDATION.md)** - **START HERE** - ACB prerequisites and concepts
-- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Technical design and ACB patterns
-- **[IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md)** - Adoption roadmap and migration guide
-- **[docs/MCP_ECOSYSTEM_CRITICAL_AUDIT.md](./docs/MCP_ECOSYSTEM_CRITICAL_AUDIT.md)** - Analysis of 9 production servers
+- **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - Technical design and ACB patterns
+- Consolidated modules live under ACB: see `acb/docs/` in the ACB repo for validation, security/sanitization, and monitoring
 
 ______________________________________________________________________
 
@@ -421,7 +416,7 @@ ______________________________________________________________________
 - Rate limiting is an adapter (not standalone decorator)
 - Settings extend `acb.config.Settings` (not raw Pydantic)
 
-**Migration Guide:** See [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) for step-by-step migration instructions.
+**Migration Guide:** The project has adopted ACB modules for validation, sanitization, and monitoring; see `acb/docs/` in ACB for current guidance.
 
 ______________________________________________________________________
 
@@ -437,7 +432,7 @@ ______________________________________________________________________
 **ACB Compatibility:**
 
 - Requires `acb>=0.19.0`
-- Compatible with FastMCP 2.0+
+- Optional: compatible with FastMCP 2.0+
 - Python 3.13+ required
 
 ______________________________________________________________________

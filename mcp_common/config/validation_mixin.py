@@ -42,8 +42,8 @@ class ValidationMixin:
         ...         self.validate_min_length("password", self.password, min_length=12)
     """
 
+    @staticmethod
     def validate_required_field(
-        self,
         field_name: str,
         value: str | None,
         context: str | None = None,
@@ -68,11 +68,10 @@ class ValidationMixin:
                     message=msg,
                     field=field_name,
                 )
-            else:
-                raise ValueError(msg)
+            raise ValueError(msg)
 
+    @staticmethod
     def validate_min_length(
-        self,
         field_name: str,
         value: str,
         min_length: int,
@@ -103,8 +102,54 @@ class ValidationMixin:
                     field=field_name,
                     value=f"{len(value)} characters",
                 )
-            else:
-                raise ValueError(msg)
+            raise ValueError(msg)
+
+    @staticmethod
+    def _validate_username(username: str | None, context: str | None) -> None:
+        """Helper to validate the username."""
+        if not username or not username.strip():
+            prefix = f"{context} " if context else ""
+            msg = f"{prefix}username is not set in configuration"
+
+            if EXCEPTIONS_AVAILABLE:
+                raise CredentialValidationError(
+                    message=msg,
+                    field="username",
+                )
+            raise ValueError(msg)
+
+    @staticmethod
+    def _validate_password(password: str | None, context: str | None) -> None:
+        """Helper to validate the password."""
+        if not password or not password.strip():
+            prefix = f"{context} " if context else ""
+            msg = f"{prefix}password is not set in configuration"
+
+            if EXCEPTIONS_AVAILABLE:
+                raise CredentialValidationError(
+                    message=msg,
+                    field="password",
+                )
+            raise ValueError(msg)
+
+    @staticmethod
+    def _validate_password_strength(
+        password: str, min_password_length: int, context: str | None
+    ) -> None:
+        """Helper to validate password strength."""
+        if len(password) < min_password_length:
+            prefix = f"{context} " if context else ""
+            msg = (
+                f"{prefix}password is too short. "
+                f"Minimum: {min_password_length} characters, got: {len(password)}"
+            )
+
+            if EXCEPTIONS_AVAILABLE:
+                raise CredentialValidationError(
+                    message=msg,
+                    field="password",
+                )
+            raise ValueError(msg)
 
     def validate_credentials(
         self,
@@ -129,49 +174,17 @@ class ValidationMixin:
             ValueError: Falls back to ValueError if exceptions unavailable
         """
         # Validate username
-        if not username or not username.strip():
-            prefix = f"{context} " if context else ""
-            msg = f"{prefix}username is not set in configuration"
-
-            if EXCEPTIONS_AVAILABLE:
-                raise CredentialValidationError(
-                    message=msg,
-                    field="username",
-                )
-            else:
-                raise ValueError(msg)
+        self._validate_username(username, context)
 
         # Validate password
-        if not password or not password.strip():
-            prefix = f"{context} " if context else ""
-            msg = f"{prefix}password is not set in configuration"
+        self._validate_password(password, context)
 
-            if EXCEPTIONS_AVAILABLE:
-                raise CredentialValidationError(
-                    message=msg,
-                    field="password",
-                )
-            else:
-                raise ValueError(msg)
+        # Only validate strength if password is provided
+        if password:
+            self._validate_password_strength(password, min_password_length, context)
 
-        # Validate password strength
-        if len(password) < min_password_length:
-            prefix = f"{context} " if context else ""
-            msg = (
-                f"{prefix}password is too short. "
-                f"Minimum: {min_password_length} characters, got: {len(password)}"
-            )
-
-            if EXCEPTIONS_AVAILABLE:
-                raise CredentialValidationError(
-                    message=msg,
-                    field="password",
-                )
-            else:
-                raise ValueError(msg)
-
+    @staticmethod
     def validate_url_parts(
-        self,
         host: str | None,
         port: int | None = None,
         context: str | None = None,
@@ -197,26 +210,24 @@ class ValidationMixin:
                     message=msg,
                     field="host",
                 )
-            else:
-                raise ValueError(msg)
+            raise ValueError(msg)
 
         # Validate port if provided
-        if port is not None:
-            if not isinstance(port, int) or port < 1 or port > 65535:
-                prefix = f"{context} " if context else ""
-                msg = f"{prefix}port must be between 1 and 65535, got: {port}"
+        max_port = 65535
+        if port is not None and (not isinstance(port, int) or port < 1 or port > max_port):
+            prefix = f"{context} " if context else ""
+            msg = f"{prefix}port must be between 1 and 65535, got: {port}"
 
-                if EXCEPTIONS_AVAILABLE:
-                    raise ServerConfigurationError(
-                        message=msg,
-                        field="port",
-                        value=str(port),
-                    )
-                else:
-                    raise ValueError(msg)
+            if EXCEPTIONS_AVAILABLE:
+                raise ServerConfigurationError(
+                    message=msg,
+                    field="port",
+                    value=str(port),
+                )
+            raise ValueError(msg)
 
+    @staticmethod
     def validate_one_of_required(
-        self,
         field_names: list[str],
         values: list[t.Any],
         context: str | None = None,
@@ -251,8 +262,7 @@ class ValidationMixin:
                     message=msg,
                     field="multiple_fields",
                 )
-            else:
-                raise ValueError(msg)
+            raise ValueError(msg)
 
 
 __all__ = ["ValidationMixin"]

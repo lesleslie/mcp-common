@@ -437,7 +437,7 @@ Understanding what comes from ACB vs mcp-common:
 |---------|-------------|-------------|
 | **`AdapterBase`** | ACB Core | Building any custom adapter |
 | **`HTTPClientAdapter`** | mcp-common | Need HTTP client with connection pooling |
-| **`RateLimiterAdapter`** | mcp-common | Need rate limiting for MCP tools |
+| | | |
 | **`Settings`** | ACB Core | Basic configuration needs |
 | **`MCPBaseSettings`** | mcp-common | MCP server configuration (extends `Settings`) |
 | **`Logger`** | ACB Core | All logging |
@@ -449,7 +449,7 @@ Understanding what comes from ACB vs mcp-common:
 **Rule of Thumb:**
 
 - **ACB** provides the **foundation** (adapters, DI, logging, settings)
-- **mcp-common** provides **MCP-specific implementations** (HTTP client, rate limiter, server panels)
+- **mcp-common** provides **MCP-specific implementations** (HTTP client, server panels)
 
 **Example - Custom Adapter:**
 
@@ -476,7 +476,7 @@ class MyCustomAdapter(AdapterBase):
 # Use mcp-common for standard patterns
 from mcp_common import (
     HTTPClientAdapter,  # Standard HTTP client
-    RateLimiterAdapter,  # Standard rate limiter
+    # Rate limiting is handled by FastMCP (not part of mcp-common)
     MCPBaseSettings,  # MCP server settings
     ServerPanels,  # Server UI
 )
@@ -590,6 +590,8 @@ ______________________________________________________________________
 
 ### Pattern 1: Creating an MCP Server
 
+Note: Running an MCP server requires a protocol host such as FastMCP, which is not bundled with mcp-common. Install it separately with `pip install fastmcp` or `uv add fastmcp`.
+
 ```python
 # my_server/__init__.py
 from acb import register_pkg
@@ -607,7 +609,7 @@ class MyServerSettings(MCPBaseSettings):
 
 
 # my_server/main.py
-from fastmcp import FastMCP
+from fastmcp import FastMCP  # install separately
 from mcp_common import ServerPanels
 from mcp_common.adapters.http import HTTPClientAdapter
 from acb.depends import depends
@@ -624,9 +626,7 @@ async def my_tool():
 
 
 if __name__ == "__main__":
-    ServerPanels.startup_success(
-        server_name="My MCP Server", features=["HTTP Client", "Rate Limiting"]
-    )
+    ServerPanels.startup_success(server_name="My MCP Server", features=["HTTP Client"])
     mcp.run()
 ```
 

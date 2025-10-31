@@ -16,8 +16,6 @@ import re
 import typing as t
 from dataclasses import dataclass
 
-from pydantic import field_validator
-
 # Import specific validation exceptions (Phase 3.3 M4)
 try:
     from mcp_common.exceptions import APIKeyFormatError, APIKeyMissingError
@@ -52,7 +50,7 @@ class APIKeyPattern:
         Returns:
             True if key matches pattern
         """
-        return bool(re.match(self.pattern, key))
+        return bool(re.match(self.pattern, key))  # REGEX OK: API key pattern validation
 
 
 # Common API key patterns for various services
@@ -113,7 +111,7 @@ class APIKeyValidator:
         provider: str | None = None,
         pattern: APIKeyPattern | None = None,
         min_length: int = 16,
-    ):
+    ) -> None:
         """Initialize API key validator.
 
         Args:
@@ -134,8 +132,46 @@ class APIKeyValidator:
                 name="Generic",
                 pattern=f"^.{{{min_length},}}$",
                 description=f"Minimum {min_length} characters",
-                example=f"{'x' * min_length}",
+                example="x" * min_length,
             )
+
+    def _validate_key_missing(self, key: str | None, raise_on_invalid: bool) -> bool | None:
+        """Helper to validate if the key is missing."""
+        if not key or not key.strip():
+            if raise_on_invalid:
+                msg = (
+                    f"API key is required but not set. "
+                    f"Expected format: {self.pattern.description}. "
+                    f"Example: {self.pattern.example}"
+                )
+                if SPECIFIC_EXCEPTIONS_AVAILABLE:
+                    raise APIKeyMissingError(
+                        message=msg,
+                        provider=self.provider,
+                    )
+                raise ValueError(msg)
+            return False
+        return None  # Key exists, continue with validation
+
+    def _validate_pattern_match(self, key: str, raise_on_invalid: bool) -> bool:
+        """Helper to validate if the key matches the pattern."""
+        if not self.pattern.matches(key.strip()):
+            if raise_on_invalid:
+                msg = (
+                    f"Invalid API key format for {self.pattern.name}. "
+                    f"Expected: {self.pattern.description}. "
+                    f"Example: {self.pattern.example}"
+                )
+                if SPECIFIC_EXCEPTIONS_AVAILABLE:
+                    raise APIKeyFormatError(
+                        message=msg,
+                        provider=self.provider,
+                        expected_format=self.pattern.description,
+                        example=self.pattern.example,
+                    )
+                raise ValueError(msg)
+            return False
+        return True
 
     def validate(self, key: str | None, raise_on_invalid: bool = True) -> bool:
         """Validate API key format.
@@ -153,42 +189,13 @@ class APIKeyValidator:
             ValueError: Falls back to ValueError if specific exceptions unavailable
         """
         # Check if key is None or empty
-        if not key or not key.strip():
-            if raise_on_invalid:
-                msg = (
-                    f"API key is required but not set. "
-                    f"Expected format: {self.pattern.description}. "
-                    f"Example: {self.pattern.example}"
-                )
-                if SPECIFIC_EXCEPTIONS_AVAILABLE:
-                    raise APIKeyMissingError(
-                        message=msg,
-                        provider=self.provider,
-                    )
-                else:
-                    raise ValueError(msg)
-            return False
+        result = self._validate_key_missing(key, raise_on_invalid)
+        if result is not None:  # Key was either invalid or validation was raised
+            return result
 
-        # Check pattern match
-        if not self.pattern.matches(key.strip()):
-            if raise_on_invalid:
-                msg = (
-                    f"Invalid API key format for {self.pattern.name}. "
-                    f"Expected: {self.pattern.description}. "
-                    f"Example: {self.pattern.example}"
-                )
-                if SPECIFIC_EXCEPTIONS_AVAILABLE:
-                    raise APIKeyFormatError(
-                        message=msg,
-                        provider=self.provider,
-                        expected_format=self.pattern.description,
-                        example=self.pattern.example,
-                    )
-                else:
-                    raise ValueError(msg)
-            return False
-
-        return True
+        # Check pattern match (key is non-None here; avoid assert for S101)
+        key_str: str = t.cast("str", key)
+        return self._validate_pattern_match(key_str, raise_on_invalid)
 
     @staticmethod
     def mask_key(key: str, visible_chars: int = 4) -> str:
@@ -247,7 +254,7 @@ def validate_api_key_format(
 
 
 def validate_api_key_startup(
-    settings: t.Any,
+    settings: t.Any,  # type: ignore[annotation-unchecked]  # Can't import Settings without circular import
     key_fields: list[str] | None = None,
     provider: str | None = None,
 ) -> dict[str, str]:
@@ -297,7 +304,7 @@ def validate_api_key_startup(
             validated_keys[field] = key.strip()
         except Exception as e:
             # Re-raise with field name for clarity
-            # Catches both ValueError (fallback mode) and specific exceptions (APIKeyMissingError, APIKeyFormatError)
+            # Catches both ValueError (fallback mode) and specific exceptions
             msg = f"Validation failed for '{field}': {e}"
             raise ValueError(msg) from e
 
@@ -306,7 +313,7 @@ def validate_api_key_startup(
 
 def create_api_key_validator(
     provider: str | None = None,
-) -> t.Callable[[t.Any, str], str]:
+) -> t.Callable[[str], str]:
     """Create a Pydantic field validator for API keys.
 
     This creates a validator that can be used with Pydantic's
@@ -334,7 +341,7 @@ def create_api_key_validator(
     """
     validator = APIKeyValidator(provider=provider)
 
-    def validate_key(cls: t.Any, v: str) -> str:
+    def validate_key(v: str) -> str:
         """Validate API key field."""
         validator.validate(v, raise_on_invalid=True)
         return v.strip()

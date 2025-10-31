@@ -24,8 +24,6 @@ class MCPServerError(Exception):
     calling code to catch all MCP-related errors with a single except clause.
     """
 
-    pass
-
 
 class ServerConfigurationError(MCPServerError):
     """Raised when server configuration is invalid or incomplete.
@@ -123,8 +121,6 @@ class CredentialValidationError(ServerConfigurationError):
 
     Inherits from ServerConfigurationError to allow catching all config errors.
     """
-
-    pass
 
 
 class APIKeyMissingError(CredentialValidationError):
@@ -229,13 +225,12 @@ class APIKeyLengthError(CredentialValidationError):
 
 
 __all__ = [
+    "APIKeyFormatError",
+    "APIKeyLengthError",
+    "APIKeyMissingError",
+    "CredentialValidationError",
+    "DependencyMissingError",
     "MCPServerError",
     "ServerConfigurationError",
     "ServerInitializationError",
-    "DependencyMissingError",
-    "CredentialValidationError",
-    # Specific validation exceptions (Phase 3.3 M4)
-    "APIKeyMissingError",
-    "APIKeyFormatError",
-    "APIKeyLengthError",
 ]

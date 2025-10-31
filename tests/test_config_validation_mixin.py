@@ -79,7 +79,7 @@ class TestValidateMinLength:
 
         with pytest.raises(
             ServerConfigurationError,
-            match="password is too short. Required: 12 characters, got: 5",
+            match=r"password is too short\. Required: 12 characters, got: 5",
         ) as exc_info:
             settings.validate_min_length("password", "short", min_length=12)
 
@@ -145,7 +145,7 @@ class TestValidateCredentials:
 
         with pytest.raises(
             CredentialValidationError,
-            match="password is too short. Minimum: 12 characters, got: 5",
+            match=r"password is too short\. Minimum: 12 characters, got: 5",
         ) as exc_info:
             settings.validate_credentials(
                 username="admin", password="short", min_password_length=12
@@ -354,6 +354,7 @@ class TestMixinIntegration:
         # Multiple validations should all pass
         settings.validate_required_field("username", settings.username)
         settings.validate_required_field("password", settings.password)
+        assert settings.password is not None  # validate_required_field ensures this
         settings.validate_min_length("password", settings.password, min_length=12)
         settings.validate_url_parts(settings.host, settings.port)
         settings.validate_credentials(settings.username, settings.password)

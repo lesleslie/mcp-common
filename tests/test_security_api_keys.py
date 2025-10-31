@@ -6,14 +6,16 @@ startup validation, and secure key masking.
 
 from __future__ import annotations
 
+import re
+
 import pytest
-from pydantic import ValidationError
+from pydantic import BaseModel, Field
 
 from mcp_common.exceptions import APIKeyFormatError, APIKeyMissingError
 from mcp_common.security.api_keys import (
+    API_KEY_PATTERNS,
     APIKeyPattern,
     APIKeyValidator,
-    API_KEY_PATTERNS,
     create_api_key_validator,
     validate_api_key_format,
     validate_api_key_startup,
@@ -242,7 +244,6 @@ class TestValidateAPIKeyStartup:
 
     def test_validate_single_api_key_field(self) -> None:
         """Should validate single api_key field by default."""
-        from pydantic import BaseModel, Field
 
         class Settings(BaseModel):
             api_key: str = Field(default="sk-" + "a" * 48)
@@ -255,7 +256,6 @@ class TestValidateAPIKeyStartup:
 
     def test_validate_multiple_key_fields(self) -> None:
         """Should validate multiple specified key fields."""
-        from pydantic import BaseModel, Field
 
         class Settings(BaseModel):
             primary_key: str = Field(default="sk-" + "a" * 48)
@@ -328,7 +328,7 @@ class TestCreateAPIKeyValidator:
         validator_func = create_api_key_validator(provider="openai")
 
         valid_key = "sk-" + "a" * 48
-        result = validator_func(None, valid_key)
+        result = validator_func(valid_key)
         assert result == valid_key
 
     def test_created_validator_raises_on_invalid(self) -> None:
@@ -336,14 +336,14 @@ class TestCreateAPIKeyValidator:
         validator_func = create_api_key_validator(provider="openai")
 
         with pytest.raises(APIKeyFormatError):
-            validator_func(None, "invalid")
+            validator_func("invalid")
 
     def test_created_validator_strips_whitespace(self) -> None:
         """Created validator should strip whitespace."""
         validator_func = create_api_key_validator(provider="openai")
 
         valid_key = "sk-" + "a" * 48
-        result = validator_func(None, f"  {valid_key}  ")
+        result = validator_func(f"  {valid_key}  ")
         assert result == valid_key
 
 
@@ -372,7 +372,6 @@ class TestProviderPatternCoverage:
 
     def test_patterns_have_valid_regex(self) -> None:
         """All patterns should have valid regex that compiles."""
-        import re
 
         for provider, pattern in API_KEY_PATTERNS.items():
             try:

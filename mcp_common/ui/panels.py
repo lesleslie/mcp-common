@@ -6,7 +6,7 @@ Provides beautiful terminal UI components using ACB console and Rich library.
 from __future__ import annotations
 
 import typing as t
-from datetime import datetime
+from datetime import UTC, datetime
 
 from acb.console import console
 from rich.panel import Panel
@@ -46,7 +46,7 @@ class ServerPanels:
         version: str | None = None,
         features: list[str] | None = None,
         endpoint: str | None = None,
-        **metadata: t.Any,
+        **metadata: t.Any,  # type: ignore[annotation-unchecked]
     ) -> None:
         """Display successful server startup panel.
 
@@ -76,21 +76,19 @@ class ServerPanels:
             lines.append(f"[dim]Endpoint:[/dim] {endpoint}")
 
         if features:
-            lines.append("")
-            lines.append("[bold]Available Features:[/bold]")
-            for feature in features:
-                lines.append(f"  • {feature}")
+            lines.extend(("", "[bold]Available Features:[/bold]"))
+            lines.extend(f"  • {feature}" for feature in features)
 
         if metadata:
-            lines.append("")
-            lines.append("[bold]Configuration:[/bold]")
+            lines.extend(("", "[bold]Configuration:[/bold]"))
             for key, value in metadata.items():
                 # Format key nicely (snake_case -> Title Case)
                 display_key = key.replace("_", " ").title()
                 lines.append(f"  • {display_key}: {value}")
 
         lines.append("")
-        lines.append(f"[dim]Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}[/dim]")
+        start_time = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
+        lines.append(f"[dim]Started at: {start_time}[/dim]")
 
         # Create and print panel
         panel = Panel(
@@ -130,8 +128,7 @@ class ServerPanels:
             lines.append(f"[dim]Type:[/dim] {error_type}")
 
         if suggestion:
-            lines.append("")
-            lines.append("[bold yellow]💡 Suggestion:[/bold yellow]")
+            lines.extend(("", "[bold yellow]💡 Suggestion:[/bold yellow]"))
             lines.append(f"   {suggestion}")
 
         panel = Panel(
@@ -166,8 +163,7 @@ class ServerPanels:
 
         if details:
             lines.append("")
-            for detail in details:
-                lines.append(f"  • {detail}")
+            lines.extend(f"  • {detail}" for detail in details)
 
         panel = Panel(
             "\n".join(lines),
@@ -201,7 +197,7 @@ class ServerPanels:
             ...     }
             ... )
         """
-        lines = [f"[bold cyan]ℹ️  {message}[/bold cyan]"]
+        lines = [f"[bold cyan]i  {message}[/bold cyan]"]
 
         if items:
             lines.append("")
@@ -300,6 +296,222 @@ class ServerPanels:
             table.add_row(feature, description)
 
         console.print(table)
+
+    # --- Generic helpers for reusable tables/panels ----------------------
+
+    @staticmethod
+    def config_table(title: str, items: dict[str, t.Any]) -> None:
+        """Display a simple key/value configuration table."""
+        table = Table(title=title, show_header=True, header_style="bold cyan")
+        table.add_column("Setting", style="cyan", no_wrap=True)
+        table.add_column("Value", style="white")
+        for key, value in items.items():
+            table.add_row(key, str(value))
+        console.print(table)
+
+    @staticmethod
+    def simple_table(
+        title: str,
+        headers: list[str],
+        rows: t.Sequence[t.Iterable[t.Any]],
+        border_style: str = "cyan",
+    ) -> None:
+        """Display a generic table with provided headers and rows."""
+        table = Table(title=title, show_header=True, header_style=f"bold {border_style}")
+        for header in headers:
+            table.add_column(header)
+        for row in rows:
+            table.add_row(*[str(col) for col in row])
+        console.print(table)
+
+    @staticmethod
+    def process_list(
+        processes: list[t.Mapping[str, t.Any]] | list[t.Iterable[t.Any]],
+        *,
+        title: str = "Running Processes",
+        headers: tuple[str, str, str] = ("PID", "Memory (MB)", "CPU %"),
+    ) -> None:
+        """Display a standardized process list table.
+
+        Accepts either a list of dict-like objects with keys 'pid', 'memory_mb',
+        'cpu_percent', or a list of iterables ordered as (pid, memory_mb, cpu_percent).
+        """
+        rows: list[list[str]] = []
+        for p in processes:
+            if isinstance(p, dict):
+                rows.append(
+                    [
+                        str(p.get("pid", "-")),
+                        f"{p.get('memory_mb', 0):.1f}",
+                        f"{p.get('cpu_percent', 0):.1f}",
+                    ]
+                )
+            else:
+                pid, mem, cpu = list(p)[:3]
+                rows.append([str(pid), f"{float(mem):.1f}", f"{float(cpu):.1f}"])
+
+        ServerPanels.simple_table(title=title, headers=list(headers), rows=rows)
+
+    @staticmethod
+    def status_panel(
+        title: str,
+        status_text: str,
+        *,
+        description: str | None = None,
+        items: dict[str, t.Any] | None = None,
+        severity: str = "info",
+    ) -> None:
+        """Display a standardized status panel with optional details.
+
+        - severity: one of "success", "warning", "error", "info" controls border color
+        - items: key/value lines to render under a Details section
+        """
+        color_map = {
+            "success": "green",
+            "warning": "yellow",
+            "error": "red",
+            "info": "cyan",
+        }
+        lines: list[str] = [status_text]
+        if description:
+            lines.extend(("", description))
+        if items:
+            lines.extend(("", "[bold]Details:[/bold]"))
+            for k, v in items.items():
+                lines.append(f"  • [dim]{k}:[/dim] {v}")
+
+        panel = Panel(
+            "\n".join(lines),
+            title=title,
+            border_style=color_map.get(severity, "cyan"),
+            padding=(1, 2),
+        )
+        console.print(panel)
+
+    @staticmethod
+    def backups_table(
+        backups: list[t.Any],
+        *,
+        title: str = "Configuration Backups",
+    ) -> None:
+        """Display a backups table from a list of backup objects or dicts.
+
+        Expects attributes/keys: id, name, profile, created_at, description.
+        """
+        if not backups:
+            ServerPanels.info(title=title, message="No backups found")
+            return
+
+        def _get(obj: t.Any, key: str, default: t.Any = "") -> t.Any:
+            if isinstance(obj, dict):
+                return obj.get(key, default)
+            return getattr(obj, key, default)
+
+        rows: list[list[str]] = []
+        for b in backups:
+            bid = str(_get(b, "id", ""))[:8]
+            name = str(_get(b, "name", ""))
+            profile = _get(b, "profile", "")
+            if hasattr(profile, "value"):
+                profile = profile.value
+            created = _get(b, "created_at", None)
+            if isinstance(created, (datetime,)):
+                created_str = created.strftime("%Y-%m-%d %H:%M")
+            else:
+                created_str = str(created) if created is not None else ""
+            description = str(_get(b, "description", ""))
+            rows.append([bid, name, str(profile), created_str, description])
+
+        ServerPanels.simple_table(
+            title=title,
+            headers=["ID", "Name", "Profile", "Created", "Description"],
+            rows=rows,
+        )
+
+    @staticmethod
+    def server_status_table(
+        rows: t.Sequence[t.Iterable[t.Any]],
+        *,
+        title: str = "Server Status",
+        headers: tuple[str, ...] = ("Component", "Status", "PID", "Details"),
+    ) -> None:
+        """Display a server status table with best-effort colorization.
+
+        If the status cell (second column) does not include Rich markup, simple
+        keywords like 'Running', 'Stopped', 'Healthy', 'Unhealthy', 'Warning'
+        will be colorized automatically.
+        """
+        table = Table(title=title, show_header=True, header_style="bold cyan")
+        for h in headers:
+            table.add_column(h)
+
+        def style_status(val: str) -> Text:
+            txt = val
+            # If already contains Rich markup, keep as-is
+            if "[" in txt and "]" in txt:
+                return Text.from_markup(txt)
+            lv = txt.lower()
+            if any(k in lv for k in ("running", "healthy", "ok", "success")):
+                return Text(txt, style="green")
+            if any(k in lv for k in ("stopped", "failed", "error", "down", "unhealthy")):
+                return Text(txt, style="red")
+            if "warn" in lv or "degrad" in lv:
+                return Text(txt, style="yellow")
+            return Text(txt)
+
+        status_col_index = 1
+        min_status_cols = 2
+
+        for row in rows:
+            cells = list(row)
+            if len(cells) >= min_status_cols:
+                cells[status_col_index] = style_status(str(cells[status_col_index]))
+            table.add_row(*[c if isinstance(c, Text) else str(c) for c in cells])
+
+        console.print(table)
+
+    # --- Additional convenience wrappers -----------------------------------
+
+    @staticmethod
+    def endpoint_panel(
+        *,
+        title: str = "Server Endpoints",
+        http_endpoint: str | None = None,
+        websocket_monitor: str | None = None,
+        extra: dict[str, t.Any] | None = None,
+        severity: str = "info",
+    ) -> None:
+        """Display a panel summarizing endpoints with optional extras."""
+        items: dict[str, t.Any] = {}
+        if http_endpoint:
+            items["HTTP Endpoint"] = http_endpoint
+        if websocket_monitor:
+            items["WebSocket Monitor"] = websocket_monitor
+        if extra:
+            items.update(extra)
+        ServerPanels.status_panel(
+            title=title,
+            status_text="[cyan]Endpoints[/cyan]",
+            items=items,
+            severity=severity,
+        )
+
+    @staticmethod
+    def warning_panel(
+        title: str,
+        message: str,
+        *,
+        description: str | None = None,
+        items: dict[str, t.Any] | None = None,
+    ) -> None:
+        """Shortcut for a warning-styled status panel."""
+        ServerPanels.status_panel(
+            title=title,
+            status_text=message,
+            description=description,
+            items=items,
+            severity="warning",
+        )
 
     @staticmethod
     def simple_message(

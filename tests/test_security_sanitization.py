@@ -9,10 +9,10 @@ Tests comprehensive sanitization to prevent:
 
 from __future__ import annotations
 
-import typing as t
 from pathlib import Path
 
 import pytest
+import math
 
 from mcp_common.security.sanitization import (
     API_KEY_PATTERN,
@@ -51,7 +51,10 @@ class TestSanitizeOutput:
 
     def test_sanitize_jwt_token_in_string(self) -> None:
         """Should mask JWT tokens in strings."""
-        jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U"
+        jwt = (
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0."
+            "dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U"
+        )
         data = f"Authorization: Bearer {jwt}"
         result = sanitize_output(data)
         assert "[REDACTED-JWT]" in result
@@ -96,7 +99,7 @@ class TestSanitizeOutput:
         """Should handle mixed types (int, float, bool, None)."""
         data = {
             "number": 42,
-            "decimal": 3.14,
+            "decimal": math.pi,
             "flag": True,
             "nothing": None,
             "text": "sk-" + "a" * 48,
@@ -104,7 +107,7 @@ class TestSanitizeOutput:
         result = sanitize_output(data)
 
         assert result["number"] == 42
-        assert result["decimal"] == 3.14
+        assert result["decimal"] == math.pi
         assert result["flag"] is True
         assert result["nothing"] is None
         assert "[REDACTED-OPENAI]" in result["text"]
@@ -404,7 +407,10 @@ class TestSensitivePatterns:
     def test_jwt_pattern_matches(self) -> None:
         """JWT pattern should match valid tokens."""
         pattern = SENSITIVE_PATTERNS["jwt"]
-        jwt = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U"
+        jwt = (
+            "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0."
+            "dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U"
+        )
         assert pattern.search(jwt)
 
     def test_generic_hex_pattern_matches(self) -> None:
