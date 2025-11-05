@@ -4,14 +4,20 @@ This package provides battle-tested patterns extracted from production MCP serve
 including HTTP clients, configuration management, and Rich UI components.
 
 ACB-Native Design:
-    - Dependency injection via ACB's `depends` system
+    - Dependency injection via ACB's `Inject[]` pattern with `@depends.inject`
     - Structured logging via ACB Logger
     - YAML + environment variable configuration via ACB Settings
     - Lifecycle management via ACB adapters
 
 Usage:
-    >>> from acb.depends import depends
+    >>> from acb.depends import Inject, depends
     >>> from mcp_common.ui import ServerPanels
+    >>> from mcp_common.adapters.http import HTTPClientAdapter
+    >>>
+    >>> @depends.inject
+    >>> async def my_tool(http: Inject[HTTPClientAdapter] = None):
+    ...     response = await http.get("https://api.example.com")
+    ...     return response.json()
 """
 
 from __future__ import annotations

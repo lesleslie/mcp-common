@@ -20,7 +20,7 @@ from __future__ import annotations
 import asyncio
 import typing as t
 
-from acb.depends import depends
+from acb.depends import Inject, depends
 
 try:
     from fastmcp import FastMCP
@@ -62,7 +62,13 @@ class WeatherSettings(MCPBaseSettings):
 
 
 @mcp.tool()
-async def get_current_weather(city: str, units: str = "metric") -> dict[str, t.Any]:
+@depends.inject
+async def get_current_weather(
+    city: str,
+    units: str = "metric",
+    settings: Inject[WeatherSettings] = None,  # type: ignore[assignment]
+    http_adapter: Inject[HTTPClientAdapter] = None,  # type: ignore[assignment]
+) -> dict[str, t.Any]:
     """Get current weather for a city.
 
     Args:
@@ -76,11 +82,6 @@ async def get_current_weather(city: str, units: str = "metric") -> dict[str, t.A
         >>> await get_current_weather("London")
         {"temp": 15.2, "description": "cloudy", "humidity": 72, ...}
     """
-    # Get configuration from DI container
-    settings = depends.get_sync(WeatherSettings)
-
-    # Get HTTP client adapter from DI container (connection pooling!)
-    http_adapter = depends.get_sync(HTTPClientAdapter)
 
     try:
         # Make API request using connection-pooled client
@@ -119,7 +120,14 @@ async def get_current_weather(city: str, units: str = "metric") -> dict[str, t.A
 
 
 @mcp.tool()
-async def get_forecast(city: str, days: int = 3, units: str = "metric") -> list[dict[str, t.Any]]:
+@depends.inject
+async def get_forecast(
+    city: str,
+    days: int = 3,
+    units: str = "metric",
+    settings: Inject[WeatherSettings] = None,  # type: ignore[assignment]
+    http_adapter: Inject[HTTPClientAdapter] = None,  # type: ignore[assignment]
+) -> list[dict[str, t.Any]]:
     """Get weather forecast for a city.
 
     Args:
@@ -130,8 +138,6 @@ async def get_forecast(city: str, days: int = 3, units: str = "metric") -> list[
     Returns:
         List of daily forecasts
     """
-    settings = depends.get_sync(WeatherSettings)
-    http_adapter = depends.get_sync(HTTPClientAdapter)
 
     max_forecast_days = 5
     if not 1 <= days <= max_forecast_days:

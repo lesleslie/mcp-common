@@ -207,21 +207,21 @@ ServerPanels.status_table(
 ### 4. Dependency Injection
 
 ```python
-from acb.depends import depends
+from acb.depends import Inject, depends
 
 # Register components
 depends.set(settings)
 depends.set(http_adapter)
 
 
-# Use in MCP tools
+# Use in MCP tools with new Inject[] pattern
 @mcp.tool()
-async def my_tool() -> dict:
-    # Get from DI container (no global state!)
-    settings = depends.get_sync(WeatherSettings)
-    http = depends.get_sync(HTTPClientAdapter)
-
-    # Use components
+@depends.inject
+async def my_tool(
+    settings: Inject[WeatherSettings] = None,  # type: ignore[assignment]
+    http: Inject[HTTPClientAdapter] = None,  # type: ignore[assignment]
+) -> dict:
+    # Dependencies automatically injected by ACB (no manual get!)
     response = await http.get(settings.base_url)
     return response.json()
 ```
@@ -232,6 +232,7 @@ async def my_tool() -> dict:
 - Easy testing with mock dependencies
 - Modular, testable architecture
 - Automatic lifecycle management
+- Clean function signatures with type-safe dependency injection
 
 ## Testing Your Server
 

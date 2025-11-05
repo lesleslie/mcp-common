@@ -627,20 +627,33 @@ class MyAdapter(AdapterBase):
         request_logger.info("Request completed")
 ```
 
-**In Non-Adapter Code (when needed):**
+**In Non-Adapter Code (New Pattern):**
 
 ```python
-# Get logger from DI container
+from acb.depends import Inject, depends
+from acb.adapters.logger import LoggerProtocol
+
+
+@depends.inject
+async def standalone_function(
+    logger: Inject[LoggerProtocol] = None,  # type: ignore[assignment]
+):
+    # Logger automatically injected by ACB
+    logger.info("Standalone function called", function="standalone_function", context="value")
+```
+
+**Old Pattern (Deprecated):**
+
+```python
+# ❌ Don't use this anymore
 from acb.depends import depends
 from acb.adapters import import_adapter
 
 
 async def standalone_function():
-    # Get logger from DI
     Logger = import_adapter("logger")
     logger = depends.get_sync(Logger)
-
-    logger.info("Standalone function called", function="standalone_function", context="value")
+    logger.info("Message", context="value")
 ```
 
 **Log Output (JSON format):**

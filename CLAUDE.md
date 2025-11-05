@@ -316,20 +316,37 @@ class MyServerSettings(MCPBaseSettings):
 
 ### Dependency Injection Usage
 
-All adapters use ACB's dependency injection:
+All adapters use ACB's dependency injection with the `Inject[]` pattern:
 
 ```python
-from acb.depends import depends
+from acb.depends import Inject, depends
 from mcp_common.adapters.http import HTTPClientAdapter
 
 
 @mcp.tool()
-async def my_tool():
-    # Get adapter from DI container (singleton)
-    http = depends(HTTPClientAdapter)
+@depends.inject
+async def my_tool(
+    http: Inject[HTTPClientAdapter] = None,  # type: ignore[assignment]
+):
+    # Adapter is automatically injected by ACB (singleton)
     client = await http._create_client()
     response = await client.get("https://api.example.com")
     return response.json()
+```
+
+**Old pattern (deprecated):**
+
+```python
+# ❌ Don't use this anymore
+http = depends.get_sync(HTTPClientAdapter)
+```
+
+**New pattern (recommended):**
+
+```python
+# ✅ Use Inject[] with @depends.inject decorator
+@depends.inject
+async def my_tool(http: Inject[HTTPClientAdapter] = None): ...
 ```
 
 ### Testing with DI
