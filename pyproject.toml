@@ -34,35 +34,12 @@ classifiers = [
 dependencies = [
     "pydantic>=2.10.0",
     "acb",
+    "rich>=14.2.0",
 ]
 
 [project.license]
 text = "BSD-3-Clause"
 
-[project.optional-dependencies]
-redis = [
-    "redis[hiredis]>=5.0.0",
-]
-metrics = [
-    "prometheus-client>=0.21.0",
-]
-dev = [
-    "pytest>=8.3.0",
-    "pytest-asyncio>=0.24.0",
-    "pytest-cov>=6.0.0",
-    "pytest-mock>=3.14.0",
-    "hypothesis>=6.122.0",
-    "ruff>=0.8.0",
-    "mypy>=1.13.0",
-    "bandit>=1.8.0",
-    "safety>=3.2.0",
-    "respx>=0.21.0",
-    "crackerjack",
-    "session-mgmt-mcp",
-]
-all = [
-    "mcp-common[redis,metrics,dev]",
-]
 
 [project.urls]
 Homepage = "https://github.com/lesleslie/mcp-common"
@@ -286,18 +263,3 @@ paths = [
     "mcp_common",
 ]
 
-[dependency-groups]
-dev = [
-    "pytest>=8.3.0",
-    "pytest-asyncio>=0.24.0",
-    "pytest-cov>=6.0.0",
-    "pytest-mock>=3.14.0",
-    "hypothesis>=6.122.0",
-    "ruff>=0.8.0",
-    "mypy>=1.13.0",
-    "bandit>=1.8.0",
-    "safety>=3.2.0",
-    "respx>=0.21.0",
-    "crackerjack",
-    "session-mgmt-mcp",
-]
