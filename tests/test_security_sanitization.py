@@ -9,10 +9,10 @@ Tests comprehensive sanitization to prevent:
 
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 import pytest
-import math
 
 from mcp_common.security.sanitization import (
     API_KEY_PATTERN,

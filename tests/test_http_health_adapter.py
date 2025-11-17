@@ -4,7 +4,6 @@ import types
 from typing import Any
 
 import pytest
-
 from acb.monitoring.http import check_http_client_health, check_http_connectivity
 
 
@@ -17,7 +16,7 @@ class DummyResponse:
 
 
 class DummyRequests:
-    async def get(self, url: str, timeout: int = 5, **_: Any) -> DummyResponse:  # noqa: ANN401
+    async def get(self, url: str, timeout: int = 5, **_: Any) -> DummyResponse:
         # Simple deterministic success
         return DummyResponse(status_code=200)
 
@@ -32,7 +31,7 @@ def _install_dummy_adapter(monkeypatch: pytest.MonkeyPatch) -> None:
     # Patch depends.get_sync to return a DummyRequests instance
     monkeypatch.setattr(
         "acb.monitoring.http.depends.get_sync",
-        lambda _adapter: DummyRequests(),  # noqa: ARG005
+        lambda _adapter: DummyRequests(),
         raising=True,
     )
 

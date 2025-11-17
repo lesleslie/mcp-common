@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import typing as t
-from collections.abc import AsyncGenerator
 from unittest.mock import Mock
 
 import pytest
@@ -56,4 +55,4 @@ def reset_di_container() -> t.Iterator[None]:
     # Clear any test-specific dependencies
     # Note: depends.reset() doesn't exist, so we manually clear if needed
     # For now, just yield - ACB handles isolation via module registration
-    yield
+    return

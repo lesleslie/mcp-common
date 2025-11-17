@@ -1,6 +1,6 @@
 # mcp-common
 
-![Coverage](https://img.shields.io/badge/coverage-77.3%25-yellow)
+![Coverage](https://img.shields.io/badge/coverage-91.1%25-brightgreen)
 **Version:** 2.0.0 (ACB-Native)
 **Status:** Implementation Phase
 
