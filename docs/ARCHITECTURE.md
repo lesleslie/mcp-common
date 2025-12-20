@@ -9,7 +9,7 @@ ______________________________________________________________________
 
 mcp-common is an **ACB-native** utility library providing battle-tested patterns for MCP (Model Context Protocol) servers. Built on the Asynchronous Component Base (ACB) framework, it provides a comprehensive foundation for building production-grade MCP servers with consistent logging, configuration, rich UI, and modular architecture.
 
-**Prerequisites:** Understanding of ACB is required. See [`docs/ACB_FOUNDATION.md`](./docs/ACB_FOUNDATION.md) for:
+**Prerequisites:** Understanding of ACB is required. See [`ACB_FOUNDATION.md`](./ACB_FOUNDATION.md) for:
 
 - What ACB is and why it's required
 - Core ACB concepts (adapters, DI, logger, settings)

@@ -240,7 +240,7 @@ ______________________________________________________________________
 
 ## Complete Example
 
-See [`examples/complete_server/`](./examples/complete_server/) for a full working MCP server using mcp-common v2.0 patterns.
+See [`examples/`](./examples/) for a complete production-ready Weather MCP server demonstrating mcp-common v2.0 patterns.
 
 ### Key Patterns Demonstrated:
 
@@ -492,12 +492,14 @@ Special thanks to the ACB framework for providing the foundation that makes this
 
 ______________________________________________________________________
 
-## Support
-
 - **Documentation:** [`docs/`](./docs/)
-- **Issues:** [GitHub Issues](https://github.com/lesaker/mcp-common/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/lesaker/mcp-common/discussions)
 
 ______________________________________________________________________
 
-**Ready to get started?** Read [`docs/ACB_FOUNDATION.md`](./docs/ACB_FOUNDATION.md) to understand ACB fundamentals, then check out [`examples/complete_server/`](./examples/complete_server/) for a working example!
+## Support
+
+For support, please check the documentation in the `docs/` directory or create an issue in the repository.
+
+______________________________________________________________________
+
+**Ready to get started?** Read [`docs/ACB_FOUNDATION.md`](./docs/ACB_FOUNDATION.md) to understand ACB fundamentals, then check out [`examples/`](./examples/) for a working example!
