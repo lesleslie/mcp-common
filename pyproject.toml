@@ -35,6 +35,7 @@ dependencies = [
     "pydantic>=2.12.4",
     "acb",
     "rich>=14.2.0",
+    "ty>=0.0.5",
 ]
 
 [project.license]
