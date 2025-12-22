@@ -5,22 +5,22 @@
 **Date:** 2025-12-20
 **Supersedes:** ONEIRIC_CLI_FACTORY_PLAN.md (addresses audit findings)
 
----
+______________________________________________________________________
 
 ## Table of Contents
 
 1. [Executive Summary](#executive-summary)
-2. [CLI Factory API Architecture](#cli-factory-api-architecture)
-3. [Error Handling & Recovery](#error-handling--recovery)
-4. [Security Specifications](#security-specifications)
-5. [Signal Handling](#signal-handling)
-6. [Configuration Hierarchy](#configuration-hierarchy)
-7. [Logging & Verbosity](#logging--verbosity)
-8. [Test Requirements](#test-requirements)
-9. [Implementation Steps](#implementation-steps)
-10. [Migration Guide](#migration-guide)
+1. [CLI Factory API Architecture](#cli-factory-api-architecture)
+1. [Error Handling & Recovery](#error-handling--recovery)
+1. [Security Specifications](#security-specifications)
+1. [Signal Handling](#signal-handling)
+1. [Configuration Hierarchy](#configuration-hierarchy)
+1. [Logging & Verbosity](#logging--verbosity)
+1. [Test Requirements](#test-requirements)
+1. [Implementation Steps](#implementation-steps)
+1. [Migration Guide](#migration-guide)
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
@@ -36,12 +36,12 @@ This specification defines a **production-ready CLI factory** for MCP servers mi
 **Key Architectural Decisions:**
 
 1. **No ACB Dependencies** - Clean break from ACB, pure Oneiric-native implementation
-2. **Typer-based CLI** - Following Oneiric's `typer.Typer()` pattern for consistency
-3. **Settings-driven paths** - All paths resolved via `MCPServerSettings` (Pydantic BaseModel)
-4. **Atomic operations** - All file writes use `tmp.write() → tmp.replace()` for crash-safety
-5. **JSON-first output** - All commands support `--json` for machine-readable output
+1. **Typer-based CLI** - Following Oneiric's `typer.Typer()` pattern for consistency
+1. **Settings-driven paths** - All paths resolved via `MCPServerSettings` (Pydantic BaseModel)
+1. **Atomic operations** - All file writes use `tmp.write() → tmp.replace()` for crash-safety
+1. **JSON-first output** - All commands support `--json` for machine-readable output
 
----
+______________________________________________________________________
 
 ## CLI Factory API Architecture
 
@@ -67,21 +67,16 @@ class MCPServerSettings(BaseModel):
 
     server_name: str = Field(description="Server identifier (e.g., 'session-buddy')")
     cache_root: Path = Field(
-        default=Path(".oneiric_cache"),
-        description="Cache directory for PID and snapshots"
+        default=Path(".oneiric_cache"), description="Cache directory for PID and snapshots"
     )
     health_ttl_seconds: float = Field(
-        default=60.0,
-        ge=1.0,
-        description="Snapshot freshness threshold (seconds)"
+        default=60.0, ge=1.0, description="Snapshot freshness threshold (seconds)"
     )
     log_level: str = Field(
-        default="INFO",
-        description="Logging level (DEBUG, INFO, WARNING, ERROR)"
+        default="INFO", description="Logging level (DEBUG, INFO, WARNING, ERROR)"
     )
     log_file: Path | None = Field(
-        default=None,
-        description="Optional log file path (None = stdout only)"
+        default=None, description="Optional log file path (None = stdout only)"
     )
 
     def pid_path(self) -> Path:
@@ -183,60 +178,44 @@ def _cmd_start(
     force: bool = typer.Option(
         False, "--force", help="Force start (kill existing process if stale)"
     ),
-    json_output: bool = typer.Option(
-        False, "--json", help="Output JSON instead of human-readable"
-    ),
+    json_output: bool = typer.Option(False, "--json", help="Output JSON instead of human-readable"),
 ) -> None:
     """Start the MCP server."""
     ...
 
+
 def _cmd_stop(
     self,
-    timeout: int = typer.Option(
-        10, "--timeout", help="Seconds to wait for graceful shutdown"
-    ),
-    force: bool = typer.Option(
-        False, "--force", help="Force kill (SIGKILL) if timeout exceeded"
-    ),
-    json_output: bool = typer.Option(
-        False, "--json", help="Output JSON instead of human-readable"
-    ),
+    timeout: int = typer.Option(10, "--timeout", help="Seconds to wait for graceful shutdown"),
+    force: bool = typer.Option(False, "--force", help="Force kill (SIGKILL) if timeout exceeded"),
+    json_output: bool = typer.Option(False, "--json", help="Output JSON instead of human-readable"),
 ) -> None:
     """Stop the MCP server."""
     ...
 
+
 def _cmd_restart(
     self,
-    timeout: int = typer.Option(
-        10, "--timeout", help="Stop timeout (seconds)"
-    ),
-    force: bool = typer.Option(
-        False, "--force", help="Force restart even if server not running"
-    ),
-    json_output: bool = typer.Option(
-        False, "--json", help="Output JSON instead of human-readable"
-    ),
+    timeout: int = typer.Option(10, "--timeout", help="Stop timeout (seconds)"),
+    force: bool = typer.Option(False, "--force", help="Force restart even if server not running"),
+    json_output: bool = typer.Option(False, "--json", help="Output JSON instead of human-readable"),
 ) -> None:
     """Restart the MCP server (stop + start)."""
     ...
 
+
 def _cmd_status(
     self,
-    json_output: bool = typer.Option(
-        False, "--json", help="Output JSON instead of human-readable"
-    ),
+    json_output: bool = typer.Option(False, "--json", help="Output JSON instead of human-readable"),
 ) -> None:
     """Check if server is running (lightweight PID + snapshot freshness check)."""
     ...
 
+
 def _cmd_health(
     self,
-    probe: bool = typer.Option(
-        False, "--probe", help="Run live health probes (updates snapshot)"
-    ),
-    json_output: bool = typer.Option(
-        False, "--json", help="Output JSON instead of human-readable"
-    ),
+    probe: bool = typer.Option(False, "--probe", help="Run live health probes (updates snapshot)"),
+    json_output: bool = typer.Option(False, "--json", help="Output JSON instead of human-readable"),
 ) -> None:
     """Display server health (reads runtime snapshot or runs probes)."""
     ...
@@ -249,18 +228,18 @@ def _cmd_health(
 factory = MCPServerCLIFactory("my-server")
 app = factory.create_app()
 
+
 @app.command()
-def migrate_db(
-    dry_run: bool = typer.Option(False, "--dry-run", help="Preview changes only")
-):
+def migrate_db(dry_run: bool = typer.Option(False, "--dry-run", help="Preview changes only")):
     """Custom server-specific command."""
     print("Running database migration...")
+
 
 if __name__ == "__main__":
     app()
 ```
 
----
+______________________________________________________________________
 
 ## Error Handling & Recovery
 
@@ -274,6 +253,7 @@ if __name__ == "__main__":
 import os
 import signal
 import psutil  # Only for process validation, not core logic
+
 
 def _is_process_alive(pid: int, server_name: str) -> bool:
     """Check if PID is alive and matches expected server.
@@ -363,6 +343,7 @@ from typing import Any
 @dataclass
 class RuntimeHealthSnapshot:
     """Runtime health snapshot (matches Oneiric schema)."""
+
     orchestrator_pid: int | None = None
     updated_at: str | None = None
     watchers_running: bool = False
@@ -510,21 +491,23 @@ All commands use standardized exit codes for scripting/CI integration:
 ```python
 class ExitCode:
     """Standard exit codes for MCP server CLI."""
-    SUCCESS = 0                  # Operation succeeded
-    GENERAL_ERROR = 1            # General failure (unspecified)
-    SERVER_NOT_RUNNING = 2       # Server not running (status/stop)
-    SERVER_ALREADY_RUNNING = 3   # Server already running (start)
-    HEALTH_CHECK_FAILED = 4      # Health check failed
-    CONFIGURATION_ERROR = 5      # Invalid configuration
-    PERMISSION_ERROR = 6         # Insufficient permissions
-    TIMEOUT = 7                  # Operation timeout
-    STALE_PID = 8               # Stale PID file (use --force)
+
+    SUCCESS = 0  # Operation succeeded
+    GENERAL_ERROR = 1  # General failure (unspecified)
+    SERVER_NOT_RUNNING = 2  # Server not running (status/stop)
+    SERVER_ALREADY_RUNNING = 3  # Server already running (start)
+    HEALTH_CHECK_FAILED = 4  # Health check failed
+    CONFIGURATION_ERROR = 5  # Invalid configuration
+    PERMISSION_ERROR = 6  # Insufficient permissions
+    TIMEOUT = 7  # Operation timeout
+    STALE_PID = 8  # Stale PID file (use --force)
 ```
 
 **Usage Example:**
 
 ```python
 import sys
+
 
 def _cmd_start(self, force: bool = False, json_output: bool = False) -> None:
     # Check for existing process
@@ -535,13 +518,15 @@ def _cmd_start(self, force: bool = False, json_output: bool = False) -> None:
             print(json.dumps({"status": "error", "message": message}))
         else:
             print(f"Error: {message}")
-        sys.exit(ExitCode.SERVER_ALREADY_RUNNING if "already running" in message else ExitCode.STALE_PID)
+        sys.exit(
+            ExitCode.SERVER_ALREADY_RUNNING if "already running" in message else ExitCode.STALE_PID
+        )
 
     # Start server...
     sys.exit(ExitCode.SUCCESS)
 ```
 
----
+______________________________________________________________________
 
 ## Security Specifications
 
@@ -649,7 +634,7 @@ def _validate_pid_integrity(
         if server_slug not in cmdline and server_name not in cmdline:
             return (
                 False,
-                f"Process {pid} command line does not match server '{server_name}': {cmdline}"
+                f"Process {pid} command line does not match server '{server_name}': {cmdline}",
             )
     except (psutil.AccessDenied, psutil.NoSuchProcess):
         # Can't read cmdline, conservative: assume invalid
@@ -663,10 +648,7 @@ def _validate_pid_integrity(
         # PID file should be created AFTER process started
         # Allow 1 second tolerance for clock skew
         if process_create_time > pid_file_mtime + 1.0:
-            return (
-                False,
-                f"Process {pid} started after PID file created (possible impersonation)"
-            )
+            return (False, f"Process {pid} started after PID file created (possible impersonation)")
     except (OSError, psutil.NoSuchProcess):
         # Can't validate timing, fail safe
         return (False, f"Cannot validate process {pid} timing")
@@ -709,7 +691,7 @@ def _atomic_write_json(path: Path, data: dict[str, Any], mode: int = 0o600) -> N
         raise
 ```
 
----
+______________________________________________________________________
 
 ## Signal Handling
 
@@ -839,31 +821,34 @@ def _start_server(
 ### Signal Handling Requirements
 
 1. **SIGTERM/SIGINT** - Must trigger graceful shutdown:
+
    - Update health snapshot (`watchers_running = False`)
    - Remove PID file
    - Flush logs
    - Exit with code 0
 
-2. **SIGHUP** - (Optional) Configuration reload:
+1. **SIGHUP** - (Optional) Configuration reload:
+
    - Reload settings from YAML
    - Reinitialize adapters if needed
    - Do NOT restart server process
 
-3. **SIGKILL** - Cannot be caught (immediate termination):
+1. **SIGKILL** - Cannot be caught (immediate termination):
+
    - Server should handle stale PID on next start
    - Health snapshot will be stale (detected via TTL)
 
----
+______________________________________________________________________
 
 ## Configuration Hierarchy
 
 ### Priority Order (Highest to Lowest)
 
 1. **CLI Flags** - Explicit command-line arguments (`--cache-root=/tmp/cache`)
-2. **Environment Variables** - Prefixed with server name (`MCP_SERVER_CACHE_ROOT`)
-3. **Local Settings** - `settings/local.yaml` (gitignored, developer overrides)
-4. **Server Settings** - `settings/{server_name}.yaml` (checked into repo)
-5. **Defaults** - Hardcoded in `MCPServerSettings` Pydantic model
+1. **Environment Variables** - Prefixed with server name (`MCP_SERVER_CACHE_ROOT`)
+1. **Local Settings** - `settings/local.yaml` (gitignored, developer overrides)
+1. **Server Settings** - `settings/{server_name}.yaml` (checked into repo)
+1. **Defaults** - Hardcoded in `MCPServerSettings` Pydantic model
 
 ### Environment Variable Naming
 
@@ -971,7 +956,7 @@ class MCPServerSettings(BaseModel):
         return cls(**data)
 ```
 
----
+______________________________________________________________________
 
 ## Logging & Verbosity
 
@@ -1055,9 +1040,7 @@ def _cmd_health(
     self,
     probe: bool = False,
     json_output: bool = False,
-    verbose: bool = typer.Option(
-        False, "--verbose", "-v", help="Enable verbose output"
-    ),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose output"),
 ) -> None:
     """Health command with verbosity control."""
 
@@ -1095,7 +1078,7 @@ def _cmd_health(
 {"timestamp": "2025-12-20 10:30:46", "level": "INFO", "logger": "mcp_server", "message": "Health snapshot written"}
 ```
 
----
+______________________________________________________________________
 
 ## Test Requirements
 
@@ -1257,6 +1240,7 @@ def test_signal_handling_graceful_shutdown(tmp_path: Path):
 
     # Verify health snapshot marked as stopped
     from mcp_common.cli.health import load_runtime_health
+
     snapshot = load_runtime_health(tmp_path / "runtime_health.json")
     assert not snapshot.watchers_running
 ```
@@ -1381,7 +1365,7 @@ jobs:
           file: ./coverage.xml
 ```
 
----
+______________________________________________________________________
 
 ## Implementation Steps
 
@@ -1390,6 +1374,7 @@ jobs:
 **Goal:** Working CLI factory with basic lifecycle commands
 
 1. **Create `mcp_common/cli/` package**
+
    ```
    mcp_common/cli/
    ├── __init__.py          # Exports MCPServerCLIFactory, MCPServerSettings
@@ -1399,45 +1384,52 @@ jobs:
    └── signals.py           # SignalHandler implementation
    ```
 
-2. **Implement MCPServerSettings**
+1. **Implement MCPServerSettings**
+
    - Pydantic BaseModel with path helpers
    - YAML loading with environment overrides
    - Validation for cache_root, health_ttl_seconds
 
-3. **Implement RuntimeHealthSnapshot**
+1. **Implement RuntimeHealthSnapshot**
+
    - Dataclass matching Oneiric schema
    - `load_runtime_health()` with graceful degradation
    - `write_runtime_health()` with atomic writes
 
-4. **Implement MCPServerCLIFactory**
+1. **Implement MCPServerCLIFactory**
+
    - `create_app()` returns Typer app
    - `_cmd_start()` with PID file creation
    - `_cmd_stop()` with PID validation
    - `_cmd_status()` with snapshot freshness check
    - `_cmd_health()` with snapshot reading
 
-5. **Write unit tests** (target 90% coverage)
+1. **Write unit tests** (target 90% coverage)
 
 ### Phase 2: Error Handling & Security (Week 2)
 
 **Goal:** Production-ready error handling and security
 
 1. **Implement error recovery**
+
    - Stale PID detection with process validation
    - Corrupted snapshot handling
    - Exit code standardization
 
-2. **Implement security features**
+1. **Implement security features**
+
    - File permission enforcement (0o600/0o700)
    - Cache ownership validation
    - Process impersonation prevention
 
-3. **Implement signal handling**
+1. **Implement signal handling**
+
    - SignalHandler class
    - SIGTERM/SIGINT → graceful shutdown
    - Optional SIGHUP → config reload
 
-4. **Write security tests**
+1. **Write security tests**
+
    - Permission validation
    - Process validation
    - Atomic write crash safety
@@ -1447,16 +1439,19 @@ jobs:
 **Goal:** Complete configuration system and logging
 
 1. **Enhance MCPServerSettings**
+
    - Multi-layer YAML loading (server → local → env)
    - Environment variable parsing
    - CLI flag overrides
 
-2. **Implement logging system**
+1. **Implement logging system**
+
    - `configure_logging()` with file support
    - JSON structured logging option
    - Verbosity control (`--verbose` flag)
 
-3. **Write integration tests**
+1. **Write integration tests**
+
    - Full lifecycle tests (start → status → stop)
    - Configuration override tests
    - Logging output validation
@@ -1466,16 +1461,19 @@ jobs:
 **Goal:** Complete documentation and example server
 
 1. **Write API documentation**
+
    - Google-style docstrings for all public APIs
    - Usage examples in docstrings
    - Type hints for all functions
 
-2. **Create example MCP server**
+1. **Create example MCP server**
+
    - `examples/weather_cli_server.py`
    - Demonstrates factory usage
    - Shows custom command integration
 
-3. **Update README**
+1. **Update README**
+
    - CLI factory quickstart
    - Configuration guide
    - Migration guide from ACB
@@ -1485,19 +1483,22 @@ jobs:
 **Goal:** Roll out to production servers
 
 1. **Migrate session-buddy** (first adopter)
+
    - Remove ACB dependencies
    - Implement CLI using factory
    - Test thoroughly
 
-2. **Migrate raindropio-mcp and mailgun-mcp**
+1. **Migrate raindropio-mcp and mailgun-mcp**
+
    - Apply lessons from session-buddy
    - Document common issues
 
-3. **Migrate remaining servers**
+1. **Migrate remaining servers**
+
    - Batch migration of remaining projects
    - Update mcp-common to v3.0.0
 
----
+______________________________________________________________________
 
 ## Migration Guide
 
@@ -1506,9 +1507,9 @@ jobs:
 **Breaking Changes:**
 
 1. **No ACB imports** - All `acb.*` imports must be removed
-2. **Settings class** - Extend `MCPServerSettings` instead of `acb.config.Settings`
-3. **Logger** - Use standard `logging.Logger` instead of ACB logger
-4. **CLI** - Use `MCPServerCLIFactory` instead of custom CLI
+1. **Settings class** - Extend `MCPServerSettings` instead of `acb.config.Settings`
+1. **Logger** - Use standard `logging.Logger` instead of ACB logger
+1. **CLI** - Use `MCPServerCLIFactory` instead of custom CLI
 
 **Migration Checklist:**
 
@@ -1528,8 +1529,10 @@ from acb.config import Settings
 from acb.adapters.logger import LoggerProtocol
 from acb.depends import Inject, depends
 
+
 class MyServerSettings(Settings):
     api_key: str
+
 
 @depends.inject
 async def my_tool(
@@ -1547,14 +1550,18 @@ import logging
 from mcp_common.cli import MCPServerCLIFactory, MCPServerSettings
 from pydantic import Field
 
+
 class MyServerSettings(MCPServerSettings):
     api_key: str = Field(description="API key")
 
+
 logger = logging.getLogger("my_server")
+
 
 async def my_tool():
     settings = MyServerSettings.load("my-server")
     logger.info("Tool called")
+
 
 # CLI factory
 factory = MCPServerCLIFactory("my-server")
@@ -1564,7 +1571,7 @@ if __name__ == "__main__":
     app()
 ```
 
----
+______________________________________________________________________
 
 ## Appendix: Complete Example
 
@@ -1598,6 +1605,7 @@ from mcp_common.cli import (
 # Settings
 # ============================================================================
 
+
 class WeatherServerSettings(MCPServerSettings):
     """Weather server configuration."""
 
@@ -1609,6 +1617,7 @@ class WeatherServerSettings(MCPServerSettings):
 # ============================================================================
 # Server Logic
 # ============================================================================
+
 
 class WeatherServer:
     """Weather MCP server."""
@@ -1648,6 +1657,7 @@ class WeatherServer:
 # ============================================================================
 # CLI
 # ============================================================================
+
 
 def main():
     """CLI entry point."""
@@ -1716,7 +1726,7 @@ python weather_server.py forecast --city "New York"
 python weather_server.py stop
 ```
 
----
+______________________________________________________________________
 
 ## Revision History
 
@@ -1724,6 +1734,6 @@ python weather_server.py stop
 |---------|------|---------|
 | 1.0.0 | 2025-12-20 | Initial specification addressing audit findings |
 
----
+______________________________________________________________________
 
 **End of Specification**

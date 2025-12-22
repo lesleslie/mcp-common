@@ -267,5 +267,6 @@ paths = [
 [dependency-groups]
 dev = [
     "crackerjack>=0.44.28",
+    "skylos<2.7.0",
     "session-buddy>=0.9.3",
 ]

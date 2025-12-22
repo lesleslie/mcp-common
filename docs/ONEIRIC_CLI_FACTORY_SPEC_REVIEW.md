@@ -3,11 +3,12 @@
 **Date:** 2025-12-20
 **Reviewer:** Architecture Specialist + Critical Audit Specialist
 **Documents Reviewed:**
+
 - `ONEIRIC_CLI_FACTORY_IMPLEMENTATION.md`
 - `ONEIRIC_CLI_AUDIT_RESPONSE.md`
 - `../crackerjack/ONEIRIC_CUTOVER_PLAN.md`
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
@@ -18,13 +19,14 @@ The specification successfully addresses all 19 audit findings and aligns well w
 **Confidence Level:** HIGH (95%)
 
 **Key Validation:**
+
 - ✅ Meets crackerjack's CLI factory requirements (§4 of cutover plan)
 - ✅ Supports minimal status tool pattern (reads Oneiric snapshots)
 - ✅ No dependencies on ACB (pure Oneiric-native)
 - ✅ Extensible for server-specific needs (crackerjack QA, session-buddy features)
 - ✅ Standard flags align with Oneiric MCP Server CLI Standard
 
----
+______________________________________________________________________
 
 ## Alignment with Grand Migration Strategy
 
@@ -42,68 +44,79 @@ The specification successfully addresses all 19 audit findings and aligns well w
 
 **Conclusion:** Spec fully supports crackerjack cutover requirements.
 
----
+______________________________________________________________________
 
 ### Multi-Server Rollout Compatibility
 
 **Tested Against 3 Server Profiles:**
 
 #### 1. Crackerjack (Complex - QA Tooling)
+
 **Unique Needs:**
+
 - Custom QA commands (health checks, test execution)
 - Monitoring replacement (need snapshot access)
 - WebSocket server removal (CLI factory replaces it)
 
 **Spec Support:**
+
 - ✅ Custom commands via `@app.command()` decorator
 - ✅ Health snapshots accessible via factory
 - ✅ No WebSocket dependencies
 
 **Validation:** PASS
 
----
+______________________________________________________________________
 
 #### 2. Session-Buddy (Feature-Rich MCP Server)
+
 **Unique Needs:**
+
 - Auto-store features (session management)
 - Crackerjack integration (test execution)
 - Knowledge graph operations
 
 **Spec Support:**
+
 - ✅ Custom commands for features
 - ✅ Settings extension for feature flags
 - ✅ Standard lifecycle for MCP server
 
 **Validation:** PASS
 
----
+______________________________________________________________________
 
 #### 3. Simple MCP Servers (raindropio-mcp, mailgun-mcp)
+
 **Unique Needs:**
+
 - Minimal CLI (just start/stop/status)
 - No custom commands
 - Standard settings only
 
 **Spec Support:**
+
 - ✅ Factory provides all standard commands
 - ✅ Zero custom code needed
 - ✅ Default settings work out-of-box
 
 **Validation:** PASS
 
----
+______________________________________________________________________
 
 ## Specification Strengths
 
 ### 1. Comprehensive Error Handling ⭐⭐⭐⭐⭐
 
 **What's Great:**
+
 - Stale PID detection with process validation (prevents false positives)
 - Graceful snapshot corruption handling (never crashes)
 - Clear exit codes for scripting/CI integration
 - Atomic writes prevent corruption during crashes
 
 **Evidence:**
+
 ```python
 def _handle_stale_pid(pid_path: Path, force: bool = False):
     # Multi-level validation:
@@ -116,17 +129,19 @@ def _handle_stale_pid(pid_path: Path, force: bool = False):
 
 **Assessment:** Industry best practices, production-ready.
 
----
+______________________________________________________________________
 
 ### 2. Security-First Design ⭐⭐⭐⭐⭐
 
 **What's Great:**
+
 - File permissions enforced (0o600/0o700)
 - Cache ownership validation (prevents injection)
 - Process impersonation prevention (2-layer validation)
 - Atomic operations for crash-safety
 
 **Evidence:**
+
 ```python
 def _validate_pid_integrity(pid, pid_path, server_name):
     # Defense 1: Command line validation
@@ -140,21 +155,24 @@ def _validate_pid_integrity(pid, pid_path, server_name):
 
 **Assessment:** Security researcher would approve, multiple defense layers.
 
----
+______________________________________________________________________
 
 ### 3. Extensibility Without Complexity ⭐⭐⭐⭐⭐
 
 **What's Great:**
+
 - Factory returns `typer.Typer` (standard interface)
 - Custom commands via simple decorator pattern
 - Settings extension via Pydantic inheritance
 - Lifecycle hooks via callbacks (no inheritance needed)
 
 **Evidence:**
+
 ```python
 # Simple extension pattern
 factory = MCPServerCLIFactory("my-server")
 app = factory.create_app()
+
 
 @app.command()
 def custom():
@@ -164,17 +182,19 @@ def custom():
 
 **Assessment:** Perfect balance - extensible without over-engineering.
 
----
+______________________________________________________________________
 
 ### 4. Configuration Hierarchy ⭐⭐⭐⭐
 
 **What's Great:**
+
 - 5-layer priority (CLI → env → local → server → defaults)
 - Environment variable naming convention clear
 - YAML schema well-defined
 - Pydantic validation ensures correctness
 
 **Evidence:**
+
 ```python
 # Priority order is explicit and documented
 1. CLI flags (highest)
@@ -188,17 +208,19 @@ def custom():
 
 **Recommendation:** Add CLI flag override example in §6.
 
----
+______________________________________________________________________
 
 ### 5. Test Strategy ⭐⭐⭐⭐⭐
 
 **What's Great:**
+
 - 90% coverage enforced (pytest --cov-fail-under)
 - Multiple test categories (unit/integration/security/property)
 - Hypothesis for property-based testing
 - CI/CD integration template provided
 
 **Evidence:**
+
 ```python
 @given(st.floats(min_value=1.0, max_value=3600.0))
 def test_ttl_freshness_property(ttl_seconds: float):
@@ -208,7 +230,7 @@ def test_ttl_freshness_property(ttl_seconds: float):
 
 **Assessment:** Professional-grade test strategy, rare to see property-based tests.
 
----
+______________________________________________________________________
 
 ## Areas for Refinement
 
@@ -217,6 +239,7 @@ def test_ttl_freshness_property(ttl_seconds: float):
 **Issue:** Configuration hierarchy mentions CLI flags as highest priority, but factory implementation doesn't show how CLI flags override settings.
 
 **Current Spec:**
+
 ```python
 class MCPServerCLIFactory:
     def __init__(self, server_name: str, settings: MCPServerSettings | None = None):
@@ -230,9 +253,7 @@ class MCPServerCLIFactory:
 ```python
 def _cmd_start(
     self,
-    cache_root: Path | None = typer.Option(
-        None, "--cache-root", help="Override cache directory"
-    ),
+    cache_root: Path | None = typer.Option(None, "--cache-root", help="Override cache directory"),
     force: bool = typer.Option(False, "--force", help="Force start"),
     json_output: bool = typer.Option(False, "--json", help="JSON output"),
 ) -> None:
@@ -248,13 +269,14 @@ def _cmd_start(
 
 **Action:** Add to implementation, document pattern.
 
----
+______________________________________________________________________
 
 ### REFINEMENT 2: Health Probe Handler Interface (Minor)
 
 **Issue:** Health command mentions `--probe` flag but doesn't define the interface for server-specific probe logic.
 
 **Current Spec:**
+
 ```python
 def _cmd_health(self, probe: bool = False, ...):
     if probe:
@@ -292,13 +314,14 @@ def _cmd_health(self, probe: bool = False, ...):
 
 **Action:** Add `health_probe_handler` parameter to factory constructor.
 
----
+______________________________________________________________________
 
 ### REFINEMENT 3: Restart Command Race Condition (Low)
 
 **Issue:** Restart command does `stop() → start()`, but there's a race window where PID file might not be fully removed before start attempts to create it.
 
 **Current Spec:**
+
 ```python
 def _cmd_restart(self, ...):
     """Restart the MCP server (stop + start)."""
@@ -336,13 +359,14 @@ def _cmd_restart(self, timeout: int = 10, force: bool = False, ...):
 
 **Action:** Add to implementation as defensive programming.
 
----
+______________________________________________________________________
 
 ### REFINEMENT 4: Logging Configuration in Factory (Minor)
 
 **Issue:** Logging configuration shown in §7, but factory doesn't show where/how logging is initialized.
 
 **Current Spec:**
+
 - `configure_logging()` function exists
 - Factory uses `logging.getLogger()` internally
 - Not clear when `configure_logging()` is called
@@ -367,13 +391,14 @@ class MCPServerCLIFactory:
 
 **Action:** Document logging initialization point.
 
----
+______________________________________________________________________
 
 ### REFINEMENT 5: Example Server Missing Probe Logic (Minor)
 
 **Issue:** Appendix weather server example doesn't demonstrate `--health --probe` integration.
 
 **Current Example:**
+
 - Shows start/stop handlers
 - Shows custom commands
 - Missing: health probe handler
@@ -397,6 +422,7 @@ class WeatherServer:
             },
         )
 
+
 # In main():
 factory = MCPServerCLIFactory(
     "weather-server",
@@ -411,7 +437,7 @@ factory = MCPServerCLIFactory(
 
 **Action:** Add to example server.
 
----
+______________________________________________________________________
 
 ## Missing Considerations (Optional Enhancements)
 
@@ -422,12 +448,14 @@ factory = MCPServerCLIFactory(
 **Current Spec:** Assumes foreground execution (signal handling for graceful shutdown)
 
 **Potential Need:**
+
 - Crackerjack might want `--daemon` flag for background execution
 - session-buddy might want server running as daemon
 
 **Options:**
 
 **Option A: Add to Factory**
+
 ```python
 def _cmd_start(
     self,
@@ -441,6 +469,7 @@ def _cmd_start(
 ```
 
 **Option B: Let Servers Handle It**
+
 - Factory stays simple (foreground only)
 - Servers wanting daemon mode implement it themselves
 - Use external tools (systemd, supervisord) for production
@@ -448,13 +477,14 @@ def _cmd_start(
 **Recommendation:** **Option B** - Keep factory simple, use systemd for production deployment.
 
 **Rationale:**
+
 - Modern best practice is systemd/supervisord for daemon management
 - Daemon mode is complex (pid files, signal handling, stdio redirection)
 - Not all servers need it (many run in containers)
 
 **Action:** Document systemd integration pattern in migration guide.
 
----
+______________________________________________________________________
 
 ### CONSIDERATION 2: Multiple Server Instances
 
@@ -463,12 +493,14 @@ def _cmd_start(
 **Current Spec:** Single instance assumed (one PID file, one cache directory)
 
 **Potential Need:**
+
 - Run crackerjack with different configs for different projects
 - Run session-buddy for different session contexts
 
 **Options:**
 
 **Option A: Instance ID Support**
+
 ```python
 class MCPServerSettings(BaseModel):
     server_name: str
@@ -481,6 +513,7 @@ class MCPServerSettings(BaseModel):
 ```
 
 **Option B: Separate Cache Roots**
+
 ```bash
 # Run two instances with different cache roots
 mcp-server start --cache-root=.cache/instance1
@@ -490,13 +523,14 @@ mcp-server start --cache-root=.cache/instance2
 **Recommendation:** **Option B** - Cache root override is sufficient.
 
 **Rationale:**
+
 - Simpler (no new concept of "instance ID")
 - Already supported by current spec (cache_root configurable)
 - Clear separation (each instance has own directory)
 
 **Action:** Document multi-instance pattern in §6 configuration examples.
 
----
+______________________________________________________________________
 
 ### CONSIDERATION 3: Graceful Reload (SIGHUP)
 
@@ -505,6 +539,7 @@ mcp-server start --cache-root=.cache/instance2
 **Current Spec:** SIGHUP mentioned as optional, implementation delegated to server.
 
 **Potential Need:**
+
 - Change log level without restart
 - Reload API keys after rotation
 - Update feature flags
@@ -512,6 +547,7 @@ mcp-server start --cache-root=.cache/instance2
 **Options:**
 
 **Option A: Factory Implements Reload**
+
 ```python
 class SignalHandler:
     def _handle_reload(self, signum, frame):
@@ -523,11 +559,13 @@ class SignalHandler:
 ```
 
 **Option B: Server Implements Reload**
+
 ```python
 # Server provides reload handler
 def reload_handler():
     new_settings = MyServerSettings.load("my-server")
     server.reconfigure(new_settings)
+
 
 factory = MCPServerCLIFactory(
     ...,
@@ -538,13 +576,14 @@ factory = MCPServerCLIFactory(
 **Recommendation:** **Option B** - Server implements reload logic.
 
 **Rationale:**
+
 - Server knows what's safe to reload (cache_root isn't!)
 - Some settings require adapter reinitialization (server-specific)
 - Factory can't know what to do with new settings
 
 **Action:** Add `reload_handler` parameter to factory (similar to `start_handler`).
 
----
+______________________________________________________________________
 
 ## Validation Against Real-World Usage
 
@@ -553,17 +592,21 @@ factory = MCPServerCLIFactory(
 **Task:** Replace ACB-based CLI with factory-based CLI
 
 **Factory Usage:**
+
 ```python
 from mcp_common.cli import MCPServerCLIFactory, MCPServerSettings
+
 
 # Crackerjack settings
 class CrackerjackSettings(MCPServerSettings):
     qa_mode: bool = Field(default=False)
     test_suite_path: Path = Field(default=Path("tests"))
 
+
 # CLI factory
 factory = MCPServerCLIFactory("crackerjack")
 app = factory.create_app()
+
 
 # Custom QA commands
 @app.command()
@@ -572,11 +615,13 @@ def qa_health():
     # Crackerjack-specific QA logic
     ...
 
+
 @app.command()
 def run_tests():
     """Execute test suite."""
     # Crackerjack-specific test logic
     ...
+
 
 if __name__ == "__main__":
     app()
@@ -585,25 +630,29 @@ if __name__ == "__main__":
 **Validation:** ✅ PASS
 
 **Notes:**
+
 - Factory provides standard lifecycle commands
 - Custom QA commands added easily
 - Settings extended for QA-specific config
 - No ACB dependencies needed
 
----
+______________________________________________________________________
 
 ### Scenario 2: Session-Buddy Migration
 
 **Task:** Replace psutil-based CLI with factory-based CLI
 
 **Factory Usage:**
+
 ```python
 from mcp_common.cli import MCPServerCLIFactory, MCPServerSettings
+
 
 # Session-buddy settings
 class SessionBuddySettings(MCPServerSettings):
     auto_store_enabled: bool = Field(default=True)
     crackerjack_integration: bool = Field(default=True)
+
 
 # Server instance
 server = SessionBuddyServer()
@@ -617,11 +666,13 @@ factory = MCPServerCLIFactory(
 
 app = factory.create_app()
 
+
 # Custom session commands
 @app.command()
 def checkpoint():
     """Create session checkpoint."""
     ...
+
 
 if __name__ == "__main__":
     app()
@@ -630,17 +681,19 @@ if __name__ == "__main__":
 **Validation:** ✅ PASS
 
 **Notes:**
+
 - Replaces psutil process detection with factory's PID management
 - Custom session commands integrate cleanly
 - Async server.start() wrapped in handler
 
----
+______________________________________________________________________
 
 ### Scenario 3: Simple MCP Server (raindropio-mcp)
 
 **Task:** Add minimal CLI for basic lifecycle management
 
 **Factory Usage:**
+
 ```python
 from mcp_common.cli import MCPServerCLIFactory
 
@@ -655,11 +708,12 @@ if __name__ == "__main__":
 **Validation:** ✅ PASS
 
 **Notes:**
+
 - 3 lines of code for full CLI
 - All standard commands work out-of-box
 - Default settings sufficient
 
----
+______________________________________________________________________
 
 ## Specification Quality Assessment
 
@@ -687,7 +741,7 @@ if __name__ == "__main__":
 
 **Overall Architecture Grade:** A+ (Excellent)
 
----
+______________________________________________________________________
 
 ## Recommended Next Steps
 
@@ -696,10 +750,10 @@ if __name__ == "__main__":
 **Priority:** LOW (spec is usable as-is)
 
 1. **Add CLI flag override example** (§6) - 15 minutes
-2. **Add health_probe_handler parameter** (§2) - 30 minutes
-3. **Add restart race condition handling** (§3) - 20 minutes
-4. **Document logging initialization** (§2) - 10 minutes
-5. **Enhance weather example with probe** (Appendix) - 20 minutes
+1. **Add health_probe_handler parameter** (§2) - 30 minutes
+1. **Add restart race condition handling** (§3) - 20 minutes
+1. **Document logging initialization** (§2) - 10 minutes
+1. **Enhance weather example with probe** (Appendix) - 20 minutes
 
 **Total Time:** ~2 hours
 
@@ -707,7 +761,7 @@ if __name__ == "__main__":
 
 **Recommendation:** Address during Phase 1 (as implementation questions arise).
 
----
+______________________________________________________________________
 
 ### Phase 1: Build Factory in Isolation (Week 1)
 
@@ -716,6 +770,7 @@ if __name__ == "__main__":
 **Tasks:**
 
 1. **Create package structure** (1 hour)
+
    ```
    mcp_common/cli/
    ├── __init__.py
@@ -726,34 +781,40 @@ if __name__ == "__main__":
    └── security.py        # File permissions, process validation
    ```
 
-2. **Implement MCPServerSettings** (2 hours)
+1. **Implement MCPServerSettings** (2 hours)
+
    - Pydantic model with path helpers
    - YAML loading (use Oneiric's `load_settings` pattern)
    - Environment variable overrides
 
-3. **Implement RuntimeHealthSnapshot** (2 hours)
+1. **Implement RuntimeHealthSnapshot** (2 hours)
+
    - Dataclass matching Oneiric schema
    - `load_runtime_health()` with graceful degradation
    - `write_runtime_health()` with atomic writes
 
-4. **Implement MCPServerCLIFactory** (6 hours)
+1. **Implement MCPServerCLIFactory** (6 hours)
+
    - Core factory class
    - All 5 command implementations
    - Error handling and exit codes
    - Security validations
 
-5. **Implement SignalHandler** (2 hours)
+1. **Implement SignalHandler** (2 hours)
+
    - SIGTERM/SIGINT handling
    - Optional SIGHUP support
    - Integration with snapshot updates
 
-6. **Write tests** (8 hours)
+1. **Write tests** (8 hours)
+
    - Unit tests for all functions (target 90%)
    - Integration tests for lifecycle
    - Security tests for permissions
    - Property-based tests with Hypothesis
 
-7. **Documentation** (2 hours)
+1. **Documentation** (2 hours)
+
    - Docstrings (Google style)
    - Usage examples in docstrings
    - README update
@@ -762,11 +823,12 @@ if __name__ == "__main__":
 
 **Deliverable:** `mcp-common` v3.0.0-alpha1 with CLI factory ready for integration
 
----
+______________________________________________________________________
 
 ### Phase 2: Crackerjack Integration (Week 2)
 
 **Why Crackerjack First:**
+
 - More complex requirements (stress tests factory)
 - QA tooling migration validates Oneiric integration
 - Removes most ACB dependencies (good test case)
@@ -774,21 +836,22 @@ if __name__ == "__main__":
 **Tasks:**
 
 1. **Remove WebSocket/Dashboard** (4 hours)
-2. **Remove ACB dependencies** (6 hours)
-3. **Integrate CLI factory** (4 hours)
-4. **Port QA tools to Oneiric** (8 hours)
-5. **Update tests** (4 hours)
-6. **Documentation** (2 hours)
+1. **Remove ACB dependencies** (6 hours)
+1. **Integrate CLI factory** (4 hours)
+1. **Port QA tools to Oneiric** (8 hours)
+1. **Update tests** (4 hours)
+1. **Documentation** (2 hours)
 
 **Total:** ~28 hours (≈ 4 days)
 
 **Deliverable:** Crackerjack running with mcp-common CLI factory
 
----
+______________________________________________________________________
 
 ### Phase 3: Session-Buddy Integration (Week 3)
 
 **After Crackerjack Lessons:**
+
 - Apply lessons learned from crackerjack
 - Simpler migration (no monitoring removal)
 - Focus on feature preservation
@@ -796,16 +859,16 @@ if __name__ == "__main__":
 **Tasks:**
 
 1. **Replace psutil CLI** (3 hours)
-2. **Integrate CLI factory** (3 hours)
-3. **Preserve custom commands** (4 hours)
-4. **Update tests** (3 hours)
-5. **Documentation** (2 hours)
+1. **Integrate CLI factory** (3 hours)
+1. **Preserve custom commands** (4 hours)
+1. **Update tests** (3 hours)
+1. **Documentation** (2 hours)
 
 **Total:** ~15 hours (≈ 2 days)
 
 **Deliverable:** Session-buddy running with mcp-common CLI factory
 
----
+______________________________________________________________________
 
 ### Phase 4: Rollout to Remaining Servers (Week 4+)
 
@@ -813,7 +876,7 @@ if __name__ == "__main__":
 
 **Estimated:** 4-8 hours per server (most are simple)
 
----
+______________________________________________________________________
 
 ## Final Recommendations
 
@@ -822,6 +885,7 @@ if __name__ == "__main__":
 **Verdict:** Specification is **READY FOR IMPLEMENTATION** with optional refinements.
 
 **Strengths:**
+
 - Comprehensive error handling
 - Security-first design
 - Extensible without complexity
@@ -829,73 +893,79 @@ if __name__ == "__main__":
 - Aligns with grand migration plan
 
 **Suggested Refinements (Optional):**
+
 1. CLI flag overrides (minor)
-2. Health probe handler (medium)
-3. Restart race handling (low)
-4. Logging initialization (minor)
-5. Example enhancements (minor)
+1. Health probe handler (medium)
+1. Restart race handling (low)
+1. Logging initialization (minor)
+1. Example enhancements (minor)
 
 **Recommendation:** Proceed with Phase 1 (build factory in isolation), address refinements during implementation as needed.
 
----
+______________________________________________________________________
 
 ### 🎯 Crackerjack First Strategy
 
 **Recommendation:** ✅ **Migrate Crackerjack First** (not session-buddy)
 
 **Rationale:**
+
 1. **Stress Test:** More complex requirements validate factory design
-2. **Oneiric Integration:** QA tools migration tests Oneiric adapter patterns
-3. **ACB Removal:** Largest ACB codebase to remove (good validation)
-4. **Lessons Learned:** Issues discovered here benefit all other migrations
+1. **Oneiric Integration:** QA tools migration tests Oneiric adapter patterns
+1. **ACB Removal:** Largest ACB codebase to remove (good validation)
+1. **Lessons Learned:** Issues discovered here benefit all other migrations
 
 **Risk Mitigation:**
+
 - Build factory in isolation first (de-risks crackerjack migration)
 - Factory has 90% test coverage (confident it works)
 - Crackerjack has comprehensive tests (validates migration success)
 
----
+______________________________________________________________________
 
 ### 📋 Parallel Work Streams
 
 **While Factory is Being Built:**
 
 1. **Draft Crackerjack Migration Plan** (this week)
+
    - Map current CLI to factory commands
    - Identify QA tools → Oneiric adapter mappings
    - Document WebSocket/dashboard removal steps
 
-2. **Review Oneiric Adapter Patterns** (this week)
+1. **Review Oneiric Adapter Patterns** (this week)
+
    - Study Oneiric's resolver/lifecycle/adapter APIs
    - Understand how to port Crackerjack QA tools
    - Identify any Oneiric gaps for QA tooling
 
-3. **Prototype Minimal Status Tool** (optional)
+1. **Prototype Minimal Status Tool** (optional)
+
    - Generic snapshot reader (not server-specific)
    - Can be used across all MCP servers
    - Validates snapshot schema compatibility
 
----
+______________________________________________________________________
 
 ## Open Questions for Discussion
 
 1. **Refinement Priority:** Should we implement the 5 optional refinements before Phase 1, or during Phase 1 as needed?
 
-2. **Crackerjack Timeline:** Is Week 2 (after factory complete) acceptable for crackerjack migration, or do we need more buffer?
+1. **Crackerjack Timeline:** Is Week 2 (after factory complete) acceptable for crackerjack migration, or do we need more buffer?
 
-3. **Daemon Mode:** Do we need factory support for `--daemon`, or is systemd/supervisord sufficient for production?
+1. **Daemon Mode:** Do we need factory support for `--daemon`, or is systemd/supervisord sufficient for production?
 
-4. **Multiple Instances:** Should we document multi-instance patterns explicitly, or is cache-root override documentation sufficient?
+1. **Multiple Instances:** Should we document multi-instance patterns explicitly, or is cache-root override documentation sufficient?
 
-5. **SIGHUP Reload:** Should factory provide `reload_handler` parameter, or is this YAGNI for now?
+1. **SIGHUP Reload:** Should factory provide `reload_handler` parameter, or is this YAGNI for now?
 
----
+______________________________________________________________________
 
 **Review Status:** ✅ COMPLETE
 
 **Next Action:** Discuss questions above, then proceed with Phase 1 implementation.
 
----
+______________________________________________________________________
 
 **Document Version:** 1.0.0
 **Reviewed By:** Architecture Specialist + Critical Audit Specialist
