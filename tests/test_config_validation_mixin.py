@@ -8,10 +8,14 @@ Phase 3.3 M5: Shared validation mixin tests
 
 from __future__ import annotations
 
+import builtins
+import importlib
+
 import pytest
 from pydantic import BaseModel
 
 from mcp_common.config import ValidationMixin
+from mcp_common.config import validation_mixin as mixin_module
 from mcp_common.exceptions import CredentialValidationError, ServerConfigurationError
 
 
@@ -325,6 +329,85 @@ class TestValidateOneOfRequired:
                 field_names=["field1", "field2"],
                 values=["value1"],  # Only one value
             )
+
+
+class TestValidationMixinFallback:
+    """Test fallback paths when specific exceptions are unavailable."""
+
+    def test_required_field_valueerror(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(mixin_module, "EXCEPTIONS_AVAILABLE", False)
+        settings = SampleSettings()
+
+        with pytest.raises(ValueError, match="field is not set"):
+            settings.validate_required_field("field", None)
+
+    def test_min_length_valueerror(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(mixin_module, "EXCEPTIONS_AVAILABLE", False)
+        settings = SampleSettings()
+
+        with pytest.raises(ValueError, match="too short"):
+            settings.validate_min_length("password", "short", min_length=10)
+
+    def test_credentials_valueerror(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(mixin_module, "EXCEPTIONS_AVAILABLE", False)
+        settings = SampleSettings()
+
+        with pytest.raises(ValueError, match="username is not set"):
+            settings.validate_credentials(username=None, password="password123456")
+
+    def test_password_missing_valueerror(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(mixin_module, "EXCEPTIONS_AVAILABLE", False)
+        settings = SampleSettings()
+
+        with pytest.raises(ValueError, match="password is not set"):
+            settings.validate_credentials(username="admin", password=None)
+
+    def test_password_strength_valueerror(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(mixin_module, "EXCEPTIONS_AVAILABLE", False)
+        settings = SampleSettings()
+
+        with pytest.raises(ValueError, match="password is too short"):
+            settings.validate_credentials(username="admin", password="short", min_password_length=8)
+
+    def test_url_parts_invalid_port_type(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(mixin_module, "EXCEPTIONS_AVAILABLE", False)
+        settings = SampleSettings()
+
+        with pytest.raises(ValueError, match="port must be between 1 and 65535"):
+            settings.validate_url_parts(host="example.com", port="bad")  # type: ignore[arg-type]
+
+    def test_url_parts_missing_host_valueerror(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(mixin_module, "EXCEPTIONS_AVAILABLE", False)
+        settings = SampleSettings()
+
+        with pytest.raises(ValueError, match="host is not set"):
+            settings.validate_url_parts(host=None)
+
+    def test_one_of_required_valueerror(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(mixin_module, "EXCEPTIONS_AVAILABLE", False)
+        settings = SampleSettings()
+
+        with pytest.raises(ValueError, match="At least one of"):
+            settings.validate_one_of_required(field_names=["a", "b"], values=[None, None])
+
+
+def test_validation_mixin_import_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Reload module with missing exceptions to hit fallback import path."""
+    original_import = builtins.__import__
+
+    def fake_import(name: str, *args, **kwargs):
+        if name == "mcp_common.exceptions":
+            msg = "boom"
+            raise ImportError(msg)
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+    reloaded = importlib.reload(mixin_module)
+
+    assert reloaded.EXCEPTIONS_AVAILABLE is False
+
+    monkeypatch.setattr(builtins, "__import__", original_import)
+    importlib.reload(reloaded)
 
 
 class TestMixinIntegration:

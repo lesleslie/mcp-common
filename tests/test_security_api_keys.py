@@ -6,12 +6,15 @@ startup validation, and secure key masking.
 
 from __future__ import annotations
 
+import builtins
+import importlib
 import re
 
 import pytest
 from pydantic import BaseModel, Field
 
 from mcp_common.exceptions import APIKeyFormatError, APIKeyMissingError
+from mcp_common.security import api_keys as api_keys_module
 from mcp_common.security.api_keys import (
     API_KEY_PATTERNS,
     APIKeyPattern,
@@ -162,6 +165,26 @@ class TestAPIKeyValidator:
 
         assert not validator.validate("", raise_on_invalid=False)
         assert not validator.validate("   ", raise_on_invalid=False)
+
+    def test_validator_missing_key_fallback_valueerror(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Validator should raise ValueError when specific exceptions are disabled."""
+        monkeypatch.setattr(api_keys_module, "SPECIFIC_EXCEPTIONS_AVAILABLE", False)
+        validator = APIKeyValidator(provider="openai")
+
+        with pytest.raises(ValueError, match="API key is required but not set"):
+            validator.validate(None, raise_on_invalid=True)
+
+    def test_validator_invalid_format_fallback_valueerror(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Validator should raise ValueError when specific exceptions are disabled."""
+        monkeypatch.setattr(api_keys_module, "SPECIFIC_EXCEPTIONS_AVAILABLE", False)
+        validator = APIKeyValidator(provider="openai")
+
+        with pytest.raises(ValueError, match="Invalid API key format"):
+            validator.validate("invalid", raise_on_invalid=True)
 
     def test_validator_strips_whitespace(self) -> None:
         """Validator should strip whitespace before validation."""
@@ -319,6 +342,17 @@ class TestValidateAPIKeyStartup:
         with pytest.raises(ValueError, match="Validation failed for 'api_key'"):
             validate_api_key_startup(settings, provider="openai")
 
+    def test_validate_default_fields_strips_key(self) -> None:
+        """Should strip keys when using default field list."""
+
+        class Settings(BaseModel):
+            api_key: str = Field(default="  " + "a" * 16 + "  ")
+
+        settings = Settings()
+        result = validate_api_key_startup(settings, provider="generic")
+
+        assert result["api_key"] == "a" * 16
+
 
 class TestCreateAPIKeyValidator:
     """Test create_api_key_validator factory for Pydantic validators."""
@@ -345,6 +379,25 @@ class TestCreateAPIKeyValidator:
         valid_key = "sk-" + "a" * 48
         result = validator_func(f"  {valid_key}  ")
         assert result == valid_key
+
+
+def test_specific_exceptions_import_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Reload module with missing exceptions to hit fallback import path."""
+    original_import = builtins.__import__
+
+    def fake_import(name: str, *args, **kwargs):
+        if name == "mcp_common.exceptions":
+            msg = "boom"
+            raise ImportError(msg)
+        return original_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", fake_import)
+    reloaded = importlib.reload(api_keys_module)
+
+    assert reloaded.SPECIFIC_EXCEPTIONS_AVAILABLE is False
+
+    monkeypatch.setattr(builtins, "__import__", original_import)
+    importlib.reload(reloaded)
 
 
 class TestProviderPatternCoverage:

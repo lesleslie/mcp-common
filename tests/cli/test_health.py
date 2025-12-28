@@ -5,6 +5,8 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
+
 from mcp_common.cli.health import (
     RuntimeHealthSnapshot,
     get_snapshot_age_seconds,
@@ -191,6 +193,25 @@ class TestWriteRuntimeHealth:
         tmp_files = list(tmp_path.glob("*.tmp"))
         assert len(tmp_files) == 0
 
+    def test_write_cleanup_on_error(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+        """Test tmp cleanup if replace fails."""
+        snapshot_path = tmp_path / "health.json"
+        snapshot = RuntimeHealthSnapshot(orchestrator_pid=12345)
+        original_replace = Path.replace
+
+        def fake_replace(self: Path, target: Path) -> Path:
+            if self.name.endswith(".tmp"):
+                msg = "boom"
+                raise OSError(msg)
+            return original_replace(self, target)
+
+        monkeypatch.setattr(Path, "replace", fake_replace)
+
+        with pytest.raises(OSError, match="boom"):
+            write_runtime_health(snapshot_path, snapshot)
+
+        assert not snapshot_path.with_suffix(".tmp").exists()
+
     def test_write_overwrites_existing(self, tmp_path: Path):
         """Test writing to existing file overwrites it."""
         snapshot_path = tmp_path / "health.json"
@@ -280,6 +301,16 @@ class TestLoadRuntimeHealth:
 
         # Should gracefully degrade
         assert snapshot.orchestrator_pid is None
+
+    def test_load_non_dict_data(self, tmp_path: Path):
+        """Test loading non-dict JSON returns empty snapshot."""
+        snapshot_path = tmp_path / "list.json"
+        snapshot_path.write_text(json.dumps([1, 2, 3]))
+
+        snapshot = load_runtime_health(snapshot_path)
+
+        assert snapshot.orchestrator_pid is None
+        assert snapshot.watchers_running is False
 
     def test_load_preserves_all_fields(self, tmp_path: Path):
         """Test load preserves all fields from written snapshot."""
@@ -390,6 +421,14 @@ class TestIsSnapshotFresh:
         is_fresh = is_snapshot_fresh(snapshot, ttl_seconds=60.0)
 
         # No timestamp = stale (cannot verify freshness)
+        assert is_fresh is False
+
+    def test_fresh_invalid_timestamp(self):
+        """Test invalid timestamp is considered stale."""
+        snapshot = RuntimeHealthSnapshot(updated_at="not-a-time")
+
+        is_fresh = is_snapshot_fresh(snapshot, ttl_seconds=60.0)
+
         assert is_fresh is False
 
     def test_fresh_boundary_condition(self):

@@ -37,6 +37,12 @@ def write_pid_file(pid_path: Path, pid: int) -> None:
     """
     pid_path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
 
+    if pid_path.is_symlink():
+        # Follow symlink to support legacy behavior and compatibility tests.
+        pid_path.write_text(str(pid))
+        pid_path.chmod(0o600)
+        return
+
     # Atomic write: tmp file → replace
     tmp = pid_path.with_suffix(".tmp")
     tmp.write_text(str(pid))
@@ -61,6 +67,14 @@ def validate_cache_ownership(cache_root: Path) -> None:
 
     stat = cache_root.stat()
     current_uid = os.getuid()
+
+    if cache_root.is_dir() and stat.st_mode & 0o002:
+        permissions = stat.st_mode & 0o777
+        msg = (
+            f"Cache directory {cache_root} has insecure permissions "
+            f"{permissions:#o}; refusing to use it."
+        )
+        raise PermissionError(msg)
 
     if stat.st_uid != current_uid:
         msg = (

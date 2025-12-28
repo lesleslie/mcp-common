@@ -1,6 +1,6 @@
 # mcp-common
 
-![Coverage](https://img.shields.io/badge/coverage-91.1%25-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-99.2%25-brightgreen)
 **Version:** 0.3.6 (Oneiric-Native)
 **Status:** Production Ready
 

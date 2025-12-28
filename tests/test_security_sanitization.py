@@ -264,6 +264,11 @@ class TestSanitizePath:
         with pytest.raises(ValueError, match="Path traversal detected"):
             sanitize_path("../../../etc/passwd", base_dir="/app/data")
 
+    def test_sanitize_rejects_absolute_escape_from_base_dir(self) -> None:
+        """Should reject absolute paths outside base_dir when allowed."""
+        with pytest.raises(ValueError, match="escapes base directory"):
+            sanitize_path("/tmp/evil.txt", base_dir="/app/data", allow_absolute=True)
+
     def test_sanitize_accepts_path_object(self) -> None:
         """Should accept Path objects as input."""
         result = sanitize_path(Path("data/file.txt"))
@@ -373,6 +378,13 @@ class TestMaskSensitiveData:
 
         # Very short keys that don't match any pattern pass through unchanged
         assert result == text
+
+    def test_mask_short_visible_chars(self) -> None:
+        """Should replace with *** when visible_chars exceeds key length."""
+        text = "Key: sk-" + "a" * 48
+        result = mask_sensitive_data(text, visible_chars=100)
+
+        assert "***" in result
 
 
 class TestSensitivePatterns:

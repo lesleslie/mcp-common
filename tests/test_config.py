@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import builtins
+import importlib
 from pathlib import Path
 
 import pytest
@@ -10,6 +12,7 @@ from hypothesis import strategies as st
 from pydantic import ValidationError
 
 from mcp_common.config import MCPBaseSettings, MCPServerSettings
+from mcp_common.config import base as base_module
 
 
 @pytest.mark.unit
@@ -79,6 +82,24 @@ class TestMCPBaseSettings:
 
         assert settings.server_name.strip() != ""
         assert settings.log_level in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
+
+    def test_security_import_error_sets_flag(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Test fallback path when security import fails."""
+        original_import = builtins.__import__
+
+        def fake_import(name: str, *args, **kwargs):
+            if name == "mcp_common.security":
+                msg = "boom"
+                raise ImportError(msg)
+            return original_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(builtins, "__import__", fake_import)
+        reloaded = importlib.reload(base_module)
+
+        assert reloaded.SECURITY_AVAILABLE is False
+
+        monkeypatch.setattr(builtins, "__import__", original_import)
+        importlib.reload(reloaded)
 
 
 @pytest.mark.unit
@@ -190,6 +211,20 @@ class TestMCPBaseSettingsDataDir:
 
         with pytest.raises(ValueError, match="must be a Path"):
             settings.get_data_dir("not_a_path")
+
+
+def test_load_optional_path_from_env_empty(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test optional Path env var empty string maps to None."""
+
+    class OptionalPathSettings(MCPBaseSettings):
+        data_dir: Path | None = None
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("TEST_DATA_DIR", "")
+
+    settings = OptionalPathSettings.load("test", env_prefix="TEST")
+
+    assert settings.data_dir is None
 
 
 @pytest.mark.unit

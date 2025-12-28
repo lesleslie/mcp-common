@@ -4,6 +4,7 @@ Provides a production-ready factory for creating standardized MCP server
 CLIs with lifecycle management, health monitoring, and graceful shutdown.
 """
 
+import json
 import os
 import sys
 import time
@@ -160,11 +161,19 @@ class MCPServerCLIFactory:
         # Validate cache ownership
         try:
             validate_cache_ownership(self.settings.cache_root)
-        except PermissionError:
+        except PermissionError as exc:
             if json_output:
-                pass
+                typer.echo(
+                    json.dumps(
+                        {
+                            "status": "error",
+                            "error": "permission",
+                            "message": str(exc),
+                        }
+                    )
+                )
             else:
-                pass
+                typer.echo(f"Permission error: {exc}")
             sys.exit(ExitCode.PERMISSION_ERROR)
 
         # Check for existing process
@@ -172,9 +181,18 @@ class MCPServerCLIFactory:
 
         if not can_continue:
             if json_output:
-                pass
+                error_type = "stale_pid" if "stale" in message.lower() else "already_running"
+                typer.echo(
+                    json.dumps(
+                        {
+                            "status": "error",
+                            "error": error_type,
+                            "message": message,
+                        }
+                    )
+                )
             else:
-                pass
+                typer.echo(message)
 
             exit_code = (
                 ExitCode.SERVER_ALREADY_RUNNING
@@ -211,7 +229,7 @@ class MCPServerCLIFactory:
             self.settings.pid_path().unlink(missing_ok=True)
 
             if not json_output:
-                pass
+                typer.echo("Server stopped")
 
         signal_handler = SignalHandler(on_shutdown=shutdown)
         signal_handler.register()
@@ -220,14 +238,14 @@ class MCPServerCLIFactory:
         """Execute the custom start handler if provided."""
         if self.start_handler is not None:
             if json_output:
-                pass
+                typer.echo(json.dumps({"status": "starting", "message": "Starting server"}))
             else:
-                pass
+                typer.echo("Starting server")
             self.start_handler()
         elif json_output:
-            pass
+            typer.echo(json.dumps({"status": "ready", "message": "Server started"}))
         else:
-            pass
+            typer.echo("Server started")
 
     def _cmd_stop(
         self,
@@ -245,27 +263,43 @@ class MCPServerCLIFactory:
 
         if not pid_path.exists():
             if json_output:
-                pass
+                typer.echo(json.dumps({"status": "not_running", "message": "Server not running"}))
             else:
-                pass
+                typer.echo("Server not running")
             sys.exit(ExitCode.SERVER_NOT_RUNNING)
 
         try:
             pid = int(pid_path.read_text().strip())
         except (ValueError, OSError):
             if json_output:
-                pass
+                typer.echo(
+                    json.dumps(
+                        {
+                            "status": "error",
+                            "error": "corrupted_pid",
+                            "message": "Corrupted PID file",
+                        }
+                    )
+                )
             else:
-                pass
+                typer.echo("Corrupted PID file")
             sys.exit(ExitCode.GENERAL_ERROR)
 
         # Validate PID integrity
         is_valid, _reason = validate_pid_integrity(pid, pid_path, self.server_name)
         if not is_valid:
             if json_output:
-                pass
+                typer.echo(
+                    json.dumps(
+                        {
+                            "status": "error",
+                            "error": "invalid_pid",
+                            "message": "PID file failed integrity checks",
+                        }
+                    )
+                )
             else:
-                pass
+                typer.echo("PID file failed integrity checks")
             sys.exit(ExitCode.GENERAL_ERROR)
 
         return pid
@@ -283,9 +317,9 @@ class MCPServerCLIFactory:
             os.kill(pid, 15)  # SIGTERM
         except ProcessLookupError:
             if json_output:
-                pass
+                typer.echo(json.dumps({"status": "not_running", "message": "Process not found"}))
             else:
-                pass
+                typer.echo("Process not found; removing stale PID file")
             self.settings.pid_path().unlink(missing_ok=True)
             sys.exit(ExitCode.SUCCESS)
 
@@ -302,9 +336,9 @@ class MCPServerCLIFactory:
         for _ in range(timeout * 10):  # Check every 0.1s
             if not pid_path.exists():
                 if json_output:
-                    pass
+                    typer.echo(json.dumps({"status": "stopped", "message": "Server stopped"}))
                 else:
-                    pass
+                    typer.echo("Server stopped")
                 return True
             time.sleep(0.1)
         return False
@@ -315,9 +349,16 @@ class MCPServerCLIFactory:
             self._force_kill_server(pid, json_output)
         else:
             if json_output:
-                pass
+                typer.echo(
+                    json.dumps(
+                        {
+                            "status": "timeout",
+                            "message": "Shutdown timed out",
+                        }
+                    )
+                )
             else:
-                pass
+                typer.echo("Shutdown timed out")
             sys.exit(ExitCode.TIMEOUT)
 
     def _force_kill_server(self, pid: int, json_output: bool) -> None:
@@ -326,15 +367,15 @@ class MCPServerCLIFactory:
             os.kill(pid, 9)  # SIGKILL
             self.settings.pid_path().unlink(missing_ok=True)
             if json_output:
-                pass
+                typer.echo(json.dumps({"status": "killed", "message": "Server killed"}))
             else:
-                pass
+                typer.echo("Server killed")
         except ProcessLookupError:
             self.settings.pid_path().unlink(missing_ok=True)
             if json_output:
-                pass
+                typer.echo(json.dumps({"status": "not_running", "message": "Process not found"}))
             else:
-                pass
+                typer.echo("Process not found; removed PID file")
         sys.exit(ExitCode.SUCCESS)
 
     def _cmd_restart(
@@ -347,65 +388,168 @@ class MCPServerCLIFactory:
         # Stop server
         self._cmd_stop(timeout=timeout, force=force, json_output=json_output)
 
-        # Wait for PID file removal (max 5 seconds)
-        pid_path = self.settings.pid_path()
-        for _ in range(50):  # 50 * 0.1s = 5s
-            if not pid_path.exists():
-                break
-            time.sleep(0.1)
-        else:
-            if force:
-                pid_path.unlink(missing_ok=True)
-            else:
-                if json_output:
-                    pass
-                else:
-                    pass
-                sys.exit(ExitCode.GENERAL_ERROR)
+        if not self._wait_for_pid_removal(json_output, force):
+            sys.exit(ExitCode.GENERAL_ERROR)
 
         # Start server
         self._cmd_start(force=force, json_output=json_output)
+
+    def _wait_for_pid_removal(self, json_output: bool, force: bool) -> bool:
+        """Wait for PID file removal after stop."""
+        pid_path = self.settings.pid_path()
+        for _ in range(50):  # 50 * 0.1s = 5s
+            if not pid_path.exists():
+                return True
+            time.sleep(0.1)
+
+        if force:
+            pid_path.unlink(missing_ok=True)
+            return True
+
+        if json_output:
+            typer.echo(
+                json.dumps(
+                    {
+                        "status": "error",
+                        "error": "restart_failed",
+                        "message": "PID file still present after stop",
+                    }
+                )
+            )
+        else:
+            typer.echo("PID file still present after stop")
+        return False
+
+    def _emit_not_running(self, json_output: bool) -> None:
+        """Emit not-running output and exit."""
+        if json_output:
+            typer.echo(json.dumps({"status": "not_running", "message": "Server not running"}))
+        else:
+            typer.echo("Server not running")
+        sys.exit(ExitCode.SERVER_NOT_RUNNING)
+
+    def _emit_corrupted_pid(self, json_output: bool) -> None:
+        """Emit corrupted PID output and exit."""
+        if json_output:
+            typer.echo(
+                json.dumps(
+                    {
+                        "status": "error",
+                        "error": "corrupted_pid",
+                        "message": "Corrupted PID file",
+                    }
+                )
+            )
+        else:
+            typer.echo("Corrupted PID file")
+        sys.exit(ExitCode.GENERAL_ERROR)
+
+    def _emit_stale_pid(self, pid: int, json_output: bool) -> None:
+        """Emit stale PID output and exit."""
+        if json_output:
+            typer.echo(
+                json.dumps(
+                    {
+                        "status": "stale_pid",
+                        "pid": pid,
+                        "message": "Stale PID file; process not found",
+                    }
+                )
+            )
+        else:
+            typer.echo(f"Stale PID file; process {pid} not found")
+        sys.exit(ExitCode.STALE_PID)
+
+    def _read_pid_or_exit(self, json_output: bool) -> int:
+        """Read PID from file or exit with message."""
+        pid_path = self.settings.pid_path()
+
+        if not pid_path.exists():
+            self._emit_not_running(json_output)
+
+        try:
+            return int(pid_path.read_text().strip())
+        except (ValueError, OSError):
+            self._emit_corrupted_pid(json_output)
+
+        msg = "Unreachable: PID read should exit or return"
+        raise AssertionError(msg)
+
+    def _ensure_process_alive_or_exit(self, pid: int, json_output: bool) -> None:
+        """Ensure PID is alive or exit with stale PID response."""
+        if not is_process_alive(pid, self.server_name):
+            self._emit_stale_pid(pid, json_output)
+
+    def _emit_status_output(
+        self,
+        pid: int,
+        snapshot: RuntimeHealthSnapshot,
+        json_output: bool,
+    ) -> None:
+        """Emit status output for running server."""
+        age = get_snapshot_age_seconds(snapshot)
+        snapshot_fresh = is_snapshot_fresh(snapshot, self.settings.health_ttl_seconds)
+
+        if json_output:
+            typer.echo(
+                json.dumps(
+                    {
+                        "status": "running",
+                        "pid": pid,
+                        "snapshot_age_seconds": age,
+                        "snapshot_fresh": snapshot_fresh,
+                    }
+                )
+            )
+            return
+
+        typer.echo(f"Server running (PID {pid})")
+        if age is not None:
+            typer.echo(f"Snapshot age: {age:.1f}s")
+        else:
+            typer.echo("Snapshot age: N/A")
+
+    def _get_health_snapshot(self, probe: bool) -> RuntimeHealthSnapshot:
+        """Return latest health snapshot, optionally running probe."""
+        if probe and self.health_probe_handler is not None:
+            snapshot = self.health_probe_handler()
+            write_runtime_health(self.settings.health_snapshot_path(), snapshot)
+            return snapshot
+
+        return load_runtime_health(self.settings.health_snapshot_path())
+
+    def _emit_health_snapshot(self, snapshot: RuntimeHealthSnapshot, json_output: bool) -> None:
+        """Emit health snapshot output."""
+        if json_output:
+            typer.echo(json.dumps(snapshot.as_dict()))
+            return
+
+        pid_value = snapshot.orchestrator_pid
+        pid_display = str(pid_value) if pid_value is not None else "N/A"
+        typer.echo(f"Orchestrator PID: {pid_display}")
+        watchers_display = "running" if snapshot.watchers_running else "stopped"
+        if pid_value is None:
+            watchers_display = "N/A"
+        typer.echo(f"Watchers: {watchers_display}")
+        typer.echo(f"Remote enabled: {snapshot.remote_enabled}")
+        age = get_snapshot_age_seconds(snapshot)
+        if age is not None:
+            typer.echo(f"Snapshot age: {age:.1f}s")
+        else:
+            typer.echo("Snapshot age: N/A")
+
+        if snapshot.last_remote_error:
+            typer.echo(f"Last remote error: {snapshot.last_remote_error}")
 
     def _cmd_status(
         self,
         json_output: bool = typer.Option(False, "--json", help="Output JSON instead of text"),
     ) -> None:
         """Check if server is running (lightweight check)."""
-        pid_path = self.settings.pid_path()
-
-        if not pid_path.exists():
-            if json_output:
-                pass
-            else:
-                pass
-            sys.exit(ExitCode.SERVER_NOT_RUNNING)
-
-        try:
-            pid = int(pid_path.read_text().strip())
-        except (ValueError, OSError):
-            if json_output:
-                pass
-            else:
-                pass
-            sys.exit(ExitCode.GENERAL_ERROR)
-
-        # Check if process alive
-        if not is_process_alive(pid, self.server_name):
-            if json_output:
-                pass
-            else:
-                pass
-            sys.exit(ExitCode.STALE_PID)
-
-        # Check snapshot freshness
+        pid = self._read_pid_or_exit(json_output)
+        self._ensure_process_alive_or_exit(pid, json_output)
         snapshot = load_runtime_health(self.settings.health_snapshot_path())
-        age = get_snapshot_age_seconds(snapshot)
-        is_snapshot_fresh(snapshot, self.settings.health_ttl_seconds)
-
-        if json_output or age is not None:
-            pass
-        else:
-            pass
+        self._emit_status_output(pid, snapshot, json_output)
 
         sys.exit(ExitCode.SUCCESS)
 
@@ -415,26 +559,7 @@ class MCPServerCLIFactory:
         json_output: bool = typer.Option(False, "--json", help="Output JSON instead of text"),
     ) -> None:
         """Display server health (snapshot or live probe)."""
-        if probe and self.health_probe_handler is not None:
-            # Run live health probe
-            snapshot = self.health_probe_handler()
-            write_runtime_health(self.settings.health_snapshot_path(), snapshot)
-        else:
-            # Read existing snapshot
-            snapshot = load_runtime_health(self.settings.health_snapshot_path())
-
-        if json_output:
-            pass
-        else:
-            # Human-readable output
-
-            age = get_snapshot_age_seconds(snapshot)
-            if age is not None:
-                pass
-            else:
-                pass
-
-            if snapshot.last_remote_error:
-                pass
+        snapshot = self._get_health_snapshot(probe)
+        self._emit_health_snapshot(snapshot, json_output)
 
         sys.exit(ExitCode.SUCCESS)

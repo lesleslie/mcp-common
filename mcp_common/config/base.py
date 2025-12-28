@@ -360,8 +360,9 @@ class MCPBaseSettings(BaseModel):
         server_yaml = Path("settings") / f"{server_name}.yaml"
         if server_yaml.exists():
             with server_yaml.open() as f:
-                yaml_data: dict[str, Any] = yaml.safe_load(f) or {}
-                data.update(yaml_data)
+                yaml_data = yaml.safe_load(f)
+                if isinstance(yaml_data, dict):
+                    data.update(yaml_data)
 
     @classmethod
     def _load_local_yaml_layer(cls, data: dict[str, Any]) -> None:
@@ -369,8 +370,9 @@ class MCPBaseSettings(BaseModel):
         local_yaml = Path("settings") / "local.yaml"
         if local_yaml.exists():
             with local_yaml.open() as f:
-                local_data: dict[str, Any] = yaml.safe_load(f) or {}
-                data.update(local_data)
+                local_data = yaml.safe_load(f)
+                if isinstance(local_data, dict):
+                    data.update(local_data)
 
     @classmethod
     def _load_environment_layer(cls, data: dict[str, Any], env_prefix: str) -> None:
@@ -381,10 +383,8 @@ class MCPBaseSettings(BaseModel):
                 env_value: str | Path | None = os.environ[env_var]
                 # Type coercion for Path types
                 field_type = cls.model_fields[field_name].annotation
-                if field_type is Path or (
-                    hasattr(field_type, "__origin__")
-                    and Path in getattr(field_type, "__args__", ())
-                ):
+                field_args = t.get_args(field_type)
+                if field_type is Path or (field_args and Path in field_args):
                     env_value = Path(env_value) if env_value else None
                 data[field_name] = env_value
 
@@ -393,8 +393,9 @@ class MCPBaseSettings(BaseModel):
         """Load Layer 4: Explicit config path (highest priority)."""
         if config_path is not None and config_path.exists():
             with config_path.open() as f:
-                explicit_data: dict[str, Any] = yaml.safe_load(f) or {}
-                data.update(explicit_data)
+                explicit_data = yaml.safe_load(f)
+                if isinstance(explicit_data, dict):
+                    data.update(explicit_data)
 
 
 class MCPServerSettings(MCPBaseSettings):

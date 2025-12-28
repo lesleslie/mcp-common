@@ -126,8 +126,9 @@ class MCPServerSettings(BaseModel):
         server_yaml = Path("settings") / f"{server_name}.yaml"
         if server_yaml.exists():
             with server_yaml.open() as f:
-                yaml_data: dict[str, Any] = yaml.safe_load(f) or {}
-                data.update(yaml_data)
+                yaml_data = yaml.safe_load(f)
+                if isinstance(yaml_data, dict):
+                    data.update(yaml_data)
 
     @classmethod
     def _load_local_yaml_layer(cls, data: dict[str, Any]) -> None:
@@ -135,8 +136,9 @@ class MCPServerSettings(BaseModel):
         local_yaml = Path("settings") / "local.yaml"
         if local_yaml.exists():
             with local_yaml.open() as f:
-                local_data: dict[str, Any] = yaml.safe_load(f) or {}
-                data.update(local_data)
+                local_data = yaml.safe_load(f)
+                if isinstance(local_data, dict):
+                    data.update(local_data)
 
     @classmethod
     def _load_environment_layer(cls, data: dict[str, Any], env_prefix: str) -> None:
@@ -158,5 +160,6 @@ class MCPServerSettings(BaseModel):
         """Load Layer 4: Explicit config path (highest priority)."""
         if config_path is not None and config_path.exists():
             with config_path.open() as f:
-                explicit_data: dict[str, Any] = yaml.safe_load(f) or {}
-                data.update(explicit_data)
+                explicit_data = yaml.safe_load(f)
+                if isinstance(explicit_data, dict):
+                    data.update(explicit_data)

@@ -27,6 +27,12 @@ class TestHealthStatus:
         assert HealthStatus.HEALTHY == "healthy"
         assert HealthStatus.DEGRADED == "degraded"
         assert HealthStatus.UNHEALTHY == "unhealthy"
+        assert str(HealthStatus.HEALTHY) == "healthy"
+
+    def test_comparison_with_non_status(self) -> None:
+        """Should return NotImplemented for non-status comparisons."""
+        assert HealthStatus.HEALTHY.__lt__("healthy") is NotImplemented
+        assert HealthStatus.HEALTHY.__gt__("healthy") is NotImplemented
 
     def test_severity_comparison(self) -> None:
         """Should compare by severity (healthy < degraded < unhealthy)."""
@@ -223,6 +229,36 @@ class TestHealthCheckResponse:
         assert len(result["components"]) == 1
         assert result["components"][0]["name"] == "database"
         assert result["metadata"] == {"foo": "bar"}
+
+    def test_to_dict_with_metadata_direct(self) -> None:
+        """Should include metadata when set directly."""
+        response = HealthCheckResponse(
+            status=HealthStatus.HEALTHY,
+            timestamp="2025-01-01T00:00:00+00:00",
+            version="1.0.0",
+            components=[],
+            uptime_seconds=0.0,
+            metadata={"env": "test"},
+        )
+
+        result = response.to_dict()
+
+        assert result["metadata"] == {"env": "test"}
+
+    def test_to_dict_without_metadata(self) -> None:
+        """Should omit metadata when empty."""
+        response = HealthCheckResponse(
+            status=HealthStatus.HEALTHY,
+            timestamp="2025-01-01T00:00:00+00:00",
+            version="1.0.0",
+            components=[],
+            uptime_seconds=0.0,
+            metadata={},
+        )
+
+        result = response.to_dict()
+
+        assert "metadata" not in result
 
     def test_is_healthy(self) -> None:
         """Should check if overall health is HEALTHY."""

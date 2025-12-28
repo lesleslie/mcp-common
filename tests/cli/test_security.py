@@ -2,7 +2,10 @@
 
 import os
 from pathlib import Path
+from typing import Never
+from unittest.mock import Mock, patch
 
+import psutil
 import pytest
 
 from mcp_common.cli.security import (
@@ -158,6 +161,17 @@ class TestValidateCacheOwnership:
         # Should not raise - only checks ownership, not whether it's a directory
         validate_cache_ownership(cache_file)
 
+    def test_uid_mismatch_fails(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+        """Test validation fails when UID does not match."""
+        cache_dir = tmp_path / "cache"
+        create_secure_cache_directory(cache_dir)
+
+        current_uid = os.getuid()
+        monkeypatch.setattr(os, "getuid", lambda: current_uid + 1)
+
+        with pytest.raises(PermissionError, match="owned by UID"):
+            validate_cache_ownership(cache_dir)
+
 
 class TestIsProcessAlive:
     """Test is_process_alive function."""
@@ -205,6 +219,17 @@ class TestIsProcessAlive:
         is_alive = is_process_alive(current_pid, "PYTHON")
 
         # Should fail - case doesn't match
+        assert is_alive is False
+
+    def test_access_denied_in_cmdline(self):
+        """Test access denied during cmdline inspection returns False."""
+        current_pid = os.getpid()
+
+        with patch("mcp_common.cli.security.os.kill"):
+            with patch("mcp_common.cli.security.psutil.Process") as process_mock:
+                process_mock.side_effect = psutil.AccessDenied(pid=current_pid)
+                is_alive = is_process_alive(current_pid, "python")
+
         assert is_alive is False
 
 
@@ -256,6 +281,58 @@ class TestValidatePidIntegrity:
 
         # Should pass - normal case where process started before PID file created
         assert is_valid is True
+
+    def test_cmdline_access_denied(self, tmp_path: Path):
+        """Test validation fails when cmdline cannot be read."""
+        current_pid = os.getpid()
+        pid_path = tmp_path / "test.pid"
+        write_pid_file(pid_path, current_pid)
+
+        process = Mock()
+        process.cmdline.side_effect = psutil.AccessDenied(pid=current_pid)
+
+        with patch("mcp_common.cli.security.psutil.Process", return_value=process):
+            is_valid, reason = validate_pid_integrity(current_pid, pid_path, "python")
+
+        assert is_valid is False
+        assert "access denied" in reason
+
+    def test_timing_validation_error(self):
+        """Test validation fails when timing cannot be checked."""
+        current_pid = os.getpid()
+
+        class DummyPath:
+            def stat(self) -> Never:
+                msg = "nope"
+                raise OSError(msg)
+
+        process = Mock()
+        process.cmdline.return_value = ["python"]
+        process.create_time.return_value = 0.0
+
+        with patch("mcp_common.cli.security.psutil.Process", return_value=process):
+            is_valid, reason = validate_pid_integrity(current_pid, DummyPath(), "python")
+
+        assert is_valid is False
+        assert "timing" in reason
+
+    def test_timing_validation_rejects_future_process(self):
+        """Test validation fails when process starts after PID file."""
+        current_pid = os.getpid()
+
+        class DummyPath:
+            def stat(self):
+                return Mock(st_mtime=10.0)
+
+        process = Mock()
+        process.cmdline.return_value = ["python"]
+        process.create_time.return_value = 20.5
+
+        with patch("mcp_common.cli.security.psutil.Process", return_value=process):
+            is_valid, reason = validate_pid_integrity(current_pid, DummyPath(), "python")
+
+        assert is_valid is False
+        assert "possible impersonation" in reason
 
 
 class TestSecurityEdgeCases:
@@ -332,7 +409,8 @@ class TestSecurityRegressions:
     def test_permission_escalation_prevention(self, tmp_path: Path):
         """Test cache directory can't be created with wrong permissions."""
         cache_dir = tmp_path / "cache"
-        cache_dir.mkdir(mode=0o777)  # World-writable (bad!)
+        cache_dir.mkdir()
+        cache_dir.chmod(0o777)  # World-writable (bad!)
 
         # Should reject insecure permissions
         with pytest.raises(PermissionError):
