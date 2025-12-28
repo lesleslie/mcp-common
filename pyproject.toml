@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-common"
-version = "0.4.0"
+version = "0.4.1"
 description = "ACB-native foundation library providing battle-tested patterns for MCP (Model Context Protocol) servers, with dependency injection, structured logging, and lifecycle management"
 readme = "README.md"
 requires-python = ">=3.13"
