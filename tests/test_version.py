@@ -5,4 +5,4 @@ from mcp_common import __version__
 
 def test_version() -> None:
     """Test that package version is defined."""
-    assert __version__ == "2.0.0"
+    assert __version__ == "0.3.6"

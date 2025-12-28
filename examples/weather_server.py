@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Example ACB-native MCP server using mcp-common foundation library.
+"""Example Oneiric-native MCP server using mcp-common foundation library.
 
 This weather API server demonstrates:
 - HTTPClientAdapter for connection pooling (11x performance improvement)
 - MCPBaseSettings for YAML + environment variable configuration
 - ServerPanels for beautiful Rich UI output
-- ACB dependency injection and lifecycle management
+- Oneiric configuration patterns (direct instantiation)
 - FastMCP for MCP protocol implementation
 
 Run this example:
@@ -20,11 +20,12 @@ from __future__ import annotations
 import asyncio
 import typing as t
 
-from acb.depends import Inject, depends
-
 try:
     from fastmcp import FastMCP
+
+    _FASTMCP_AVAILABLE = True
 except ImportError as e:  # pragma: no cover - example UX improvement
+    _FASTMCP_AVAILABLE = False
     msg = (
         "FastMCP is not installed. Install it with 'pip install fastmcp' or "
         "'uv add fastmcp' to run this example."
@@ -32,9 +33,6 @@ except ImportError as e:  # pragma: no cover - example UX improvement
     raise SystemExit(msg) from e
 
 from mcp_common import HTTPClientAdapter, HTTPClientSettings, MCPBaseSettings, ServerPanels
-
-# Initialize FastMCP server
-mcp = FastMCP("Weather MCP Server")
 
 
 class WeatherSettings(MCPBaseSettings):
@@ -61,140 +59,143 @@ class WeatherSettings(MCPBaseSettings):
     http_max_keepalive: int = 10
 
 
-@mcp.tool()
-@depends.inject
-async def get_current_weather(
-    city: str,
-    units: str = "metric",
-    settings: Inject[WeatherSettings] = None,  # type: ignore[assignment]
-    http_adapter: Inject[HTTPClientAdapter] = None,  # type: ignore[assignment]
-) -> dict[str, t.Any]:
-    """Get current weather for a city.
+def create_weather_tools(
+    mcp: FastMCP, settings: WeatherSettings, http_adapter: HTTPClientAdapter
+) -> tuple:
+    """Create weather tools with access to settings and http_adapter."""
 
-    Args:
-        city: City name (e.g., "London", "New York")
-        units: Temperature units - "metric" (Celsius) or "imperial" (Fahrenheit)
+    @mcp.tool()
+    async def get_current_weather(
+        city: str,
+        units: str = "metric",
+    ) -> dict[str, t.Any]:
+        """Get current weather for a city.
 
-    Returns:
-        Weather data including temperature, description, humidity, wind speed
+        Args:
+            city: City name (e.g., "London", "New York")
+            units: Temperature units - "metric" (Celsius) or "imperial" (Fahrenheit)
 
-    Example:
-        >>> await get_current_weather("London")
-        {"temp": 15.2, "description": "cloudy", "humidity": 72, ...}
-    """
+        Returns:
+            Weather data including temperature, description, humidity, wind speed
 
-    try:
-        # Make API request using connection-pooled client
-        response = await http_adapter.get(
-            f"{settings.base_url}/weather",
-            params={
-                "q": city,
-                "units": units,
-                "appid": settings.api_key,
-            },
-        )
+        Example:
+            >>> await get_current_weather("London")
+            {"temp": 15.2, "description": "cloudy", "humidity": 72, ...}
+        """
 
-        data = response.json()
-
-        # Return clean weather data
-        return {
-            "city": data["name"],
-            "country": data["sys"]["country"],
-            "temperature": data["main"]["temp"],
-            "feels_like": data["main"]["feels_like"],
-            "description": data["weather"][0]["description"],
-            "humidity": data["main"]["humidity"],
-            "wind_speed": data["wind"]["speed"],
-            "units": units,
-        }
-
-    except Exception as e:
-        # Show error using ServerPanels
-        ServerPanels.error(
-            title="Weather API Error",
-            message=f"Failed to fetch weather for {city}",
-            suggestion=f"Check API key and city name. Error: {e}",
-            error_type=type(e).__name__,
-        )
-        raise
-
-
-@mcp.tool()
-@depends.inject
-async def get_forecast(
-    city: str,
-    days: int = 3,
-    units: str = "metric",
-    settings: Inject[WeatherSettings] = None,  # type: ignore[assignment]
-    http_adapter: Inject[HTTPClientAdapter] = None,  # type: ignore[assignment]
-) -> list[dict[str, t.Any]]:
-    """Get weather forecast for a city.
-
-    Args:
-        city: City name
-        days: Number of days to forecast (1-5)
-        units: Temperature units - "metric" or "imperial"
-
-    Returns:
-        List of daily forecasts
-    """
-
-    max_forecast_days = 5
-    if not 1 <= days <= max_forecast_days:
-        ServerPanels.warning(
-            title="Invalid Parameter",
-            message=f"Days must be between 1 and 5, got {days}",
-            details=["Using maximum of 5 days"],
-        )
-        days = min(5, max(1, days))
-
-    try:
-        response = await http_adapter.get(
-            f"{settings.base_url}/forecast",
-            params={
-                "q": city,
-                "units": units,
-                "appid": settings.api_key,
-                "cnt": days * 8,  # 8 forecasts per day (3-hour intervals)
-            },
-        )
-
-        data = response.json()
-        forecasts = []
-
-        # Group by day and take midday forecast
-        for i in range(0, min(len(data["list"]), days * 8), 8):
-            forecast = data["list"][i]
-            forecasts.append(
-                {
-                    "date": forecast["dt_txt"].split()[0],
-                    "temperature": forecast["main"]["temp"],
-                    "description": forecast["weather"][0]["description"],
-                    "humidity": forecast["main"]["humidity"],
-                }
+        try:
+            # Make API request using connection-pooled client
+            response = await http_adapter.get(
+                f"{settings.base_url}/weather",
+                params={
+                    "q": city,
+                    "units": units,
+                    "appid": settings.api_key,
+                },
             )
 
-    except Exception as e:
-        ServerPanels.error(
-            title="Forecast API Error",
-            message=f"Failed to fetch forecast for {city}",
-            suggestion=f"Error: {e}",
-            error_type=type(e).__name__,
-        )
-        raise
-    else:
-        return forecasts
+            data = response.json()
+
+            # Return clean weather data
+            return {
+                "city": data["name"],
+                "country": data["sys"]["country"],
+                "temperature": data["main"]["temp"],
+                "feels_like": data["main"]["feels_like"],
+                "description": data["weather"][0]["description"],
+                "humidity": data["main"]["humidity"],
+                "wind_speed": data["wind"]["speed"],
+                "units": units,
+            }
+
+        except Exception as e:
+            # Show error using ServerPanels
+            ServerPanels.error(
+                title="Weather API Error",
+                message=f"Failed to fetch weather for {city}",
+                suggestion=f"Check API key and city name. Error: {e}",
+                error_type=type(e).__name__,
+            )
+            raise
+
+    @mcp.tool()
+    async def get_forecast(
+        city: str,
+        days: int = 3,
+        units: str = "metric",
+    ) -> list[dict[str, t.Any]]:
+        """Get weather forecast for a city.
+
+        Args:
+            city: City name
+            days: Number of days to forecast (1-5)
+            units: Temperature units - "metric" or "imperial"
+
+        Returns:
+            List of daily forecasts
+        """
+
+        max_forecast_days = 5
+        if not 1 <= days <= max_forecast_days:
+            ServerPanels.warning(
+                title="Invalid Parameter",
+                message=f"Days must be between 1 and 5, got {days}",
+                details=["Using maximum of 5 days"],
+            )
+            days = min(5, max(1, days))
+
+        try:
+            response = await http_adapter.get(
+                f"{settings.base_url}/forecast",
+                params={
+                    "q": city,
+                    "units": units,
+                    "appid": settings.api_key,
+                    "cnt": days * 8,  # 8 forecasts per day (3-hour intervals)
+                },
+            )
+
+            data = response.json()
+            forecasts = []
+
+            # Group by day and take midday forecast
+            for i in range(0, min(len(data["list"]), days * 8), 8):
+                forecast = data["list"][i]
+                forecasts.append(
+                    {
+                        "date": forecast["dt_txt"].split()[0],
+                        "temperature": forecast["main"]["temp"],
+                        "description": forecast["weather"][0]["description"],
+                        "humidity": forecast["main"]["humidity"],
+                    }
+                )
+
+        except Exception as e:
+            ServerPanels.error(
+                title="Forecast API Error",
+                message=f"Failed to fetch forecast for {city}",
+                suggestion=f"Error: {e}",
+                error_type=type(e).__name__,
+            )
+            raise
+        else:
+            return forecasts
+
+    return get_current_weather, get_forecast
 
 
 async def main() -> None:
     """Main server initialization and startup."""
+    # Initialize FastMCP server
+    mcp = FastMCP("Weather MCP Server")
+
     # Initialize settings
     settings = WeatherSettings()
 
     # Display startup panel
     ServerPanels.startup_success(
         server_name=settings.server_name,
-        version="2.0.0",
+        version="0.3.6",
         features=[
             "Current weather by city",
             "5-day weather forecast",
@@ -213,10 +214,11 @@ async def main() -> None:
         retry_attempts=settings.max_retries,
     )
 
-    # Register adapters in DI container
+    # Initialize HTTP adapter (Oneiric pattern - direct instantiation)
     http_adapter = HTTPClientAdapter(settings=http_settings)
-    depends.set(http_adapter)
-    depends.set(settings)
+
+    # Create weather tools with access to settings and http_adapter
+    create_weather_tools(mcp, settings, http_adapter)
 
     # Show server status
     ServerPanels.status_table(

@@ -263,7 +263,7 @@ def sanitize_input(
         msg = f"Input contains disallowed characters. Allowed: {allowed_chars}"
         raise ValueError(msg)
 
-    return value.strip()
+    return value.strip()  # type: ignore[no-any-return]
 
 
 def mask_sensitive_data(text: str, visible_chars: int = 4) -> str:

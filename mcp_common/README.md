@@ -2,28 +2,35 @@
 
 ## Purpose
 
-`mcp_common` provides the ACB-native primitives used by Model Context Protocol servers: adapters with lifecycle management, strongly-typed settings, security helpers, and Rich-based console UI. Importing the package automatically registers it with ACB via `register_pkg("mcp_common")`, unlocking dependency injection and settings discovery.
+`mcp_common` provides Oneiric-native primitives for Model Context Protocol servers: HTTP client with connection pooling, strongly-typed settings with YAML + environment variables, security helpers, and Rich-based console UI.
 
 ## Layout
 
-- `adapters/` — Adapter stubs. Use ACB adapters (e.g., requests) in projects.
-- `config/` — `MCPBaseSettings` and mixins for YAML + environment configuration.
-- `middleware/` — [Removed] Use project-specific middleware. If you use FastMCP, it provides rate limiting.
-- `security/` — API key validation and payload sanitization helpers.
-- `ui/` — Rich panel components surfaced via `ServerPanels`.
-- `health.py` / `http_health.py` — Health check orchestration and HTTP probes.
-- `exceptions.py` — Canonical exception taxonomy for downstream servers.
+- `adapters/` — HTTP client adapter with connection pooling (HTTPClientAdapter)
+- `cli/` — CLI factory for standardized server lifecycle (MCPServerCLIFactory)
+- `config/` — `MCPBaseSettings` for YAML + environment configuration
+- `security/` — API key validation and input sanitization helpers
+- `ui/` — Rich panel components via `ServerPanels`
+- `health.py` / `http_health.py` — Health check models and HTTP probes
+- `exceptions.py` — Canonical exception hierarchy for MCP servers
 
 ## Usage
 
-Typical servers pull adapters and settings through ACB's DI container:
+Typical servers use direct instantiation with global instances:
 
 ```python
-from mcp_common.ui import ServerPanels
+from mcp_common import MCPBaseSettings, HTTPClientAdapter, ServerPanels
 
-ServerPanels.startup_success(server_name="Weather MCP", http_endpoint="http://localhost:8000")
+# Load settings
+settings = MCPBaseSettings.load("my-server")
+
+# Create HTTP adapter
+http_adapter = HTTPClientAdapter(settings=HTTPClientSettings())
+
+# Display startup panel
+ServerPanels.startup_success(server_name="My MCP Server", features=["Feature 1", "Feature 2"])
 ```
 
 ## Development Notes
 
-Keep new modules aligned with the directory structure above. Prefer ACB-provided adapters in consuming projects rather than bundling them here.
+Keep new modules aligned with the directory structure above. This library provides foundation components - avoid framework dependencies to maintain simplicity.

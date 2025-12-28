@@ -1,0 +1,17 @@
+# Example Server Configuration
+# This file demonstrates YAML configuration for Oneiric-native MCP servers
+
+# Standard MCPServerSettings fields
+server_name: "Example MCP Server"
+cache_root: .oneiric_cache
+health_ttl_seconds: 60.0
+log_level: INFO
+# log_file: logs/server.log  # Uncomment to enable file logging
+
+# Custom server-specific fields
+custom_port: 8080
+custom_feature_enabled: true
+
+# Note: Environment variables override these settings
+# Example: MCP_SERVER_LOG_LEVEL=DEBUG
+# Example: MCP_SERVER_CUSTOM_PORT=9090

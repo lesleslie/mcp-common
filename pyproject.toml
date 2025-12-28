@@ -33,9 +33,11 @@ classifiers = [
 ]
 dependencies = [
     "pydantic>=2.12.4",
-    "acb",
     "rich>=14.2.0",
     "ty>=0.0.5",
+    "typer>=0.15.0",
+    "psutil>=6.1.0",
+    "pyyaml>=6.0.2",
 ]
 
 [project.license]
@@ -253,10 +255,6 @@ all = [
     "test-cov",
     "security",
 ]
-
-[tool.uv.sources.acb]
-path = "../acb"
-editable = true
 
 [tool.creosote]
 exclude-deps = []

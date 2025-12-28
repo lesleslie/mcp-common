@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-The production code lives under `mcp_common/` with subpackages for `adapters`, `config`, `security`, `ui`, and `middleware`. Shared type hints ship via `py.typed`. Tests sit in `tests/`, mixing unit coverage (`test_http_client.py`, `test_config_*`) with scenario suites such as `tests/performance/`. Example servers for manual validation are under `examples/`, while architecture notes and ACB primers live in `docs/`. Build artifacts (`dist/`, `htmlcov/`) should stay out of PRs.
+The production code lives under `mcp_common/` with subpackages for `adapters`, `config`, `security`, `ui`, and `cli`. Shared type hints ship via `py.typed`. Tests sit in `tests/`, mixing unit coverage (`test_http_client.py`, `test_config_*`) with scenario suites such as `tests/performance/`. Example servers for manual validation are under `examples/`, while architecture notes and implementation guides live in `docs/`. Build artifacts (`dist/`, `htmlcov/`) should stay out of PRs.
 
 ## Build, Test, and Development Commands
 
@@ -16,7 +16,7 @@ Install dev tooling with `uv pip install -e ".[dev]"` to match the lockfile. Key
 
 ## Coding Style & Naming Conventions
 
-Follow PEP 8 with 4-space indents and 100-character line limits (configured in Ruff). Prefer explicit type hints and async-first patterns; new adapters should mirror the existing `AdapterBase` subclasses. Modules and packages use snake_case; classes stick to PascalCase; async tools keep `*_tool` or `_adapter` suffixes for clarity. Do not bypass dependency injection helpers (`depends`) in new code.
+Follow PEP 8 with 4-space indents and 100-character line limits (configured in Ruff). Prefer explicit type hints and async-first patterns; new adapters should follow the Oneiric pattern with direct instantiation and lifecycle methods. Modules and packages use snake_case; classes stick to PascalCase; async tools keep `*_tool` or `_adapter` suffixes for clarity. Use global instance patterns with proper initialization in `main()`.
 
 ## Testing Guidelines
 
@@ -28,4 +28,4 @@ Commit history follows Conventional Commits (e.g., `feat: add redis adapter`, `f
 
 ## Security & Configuration Notes
 
-Guard secrets by relying on ACB settings—never hard-code keys. Validate new regexes with `uv run python -m crackerjack.tools.validate_regex_patterns`. Update `docs/` when configuration surfaces change so downstream MCP servers stay in sync.
+Guard secrets by using MCPBaseSettings with YAML + environment variables—never hard-code keys. Validate new regexes with `uv run python -m crackerjack.tools.validate_regex_patterns`. Update `docs/` when configuration surfaces change so downstream MCP servers stay in sync.

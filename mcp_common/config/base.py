@@ -1,15 +1,18 @@
 """Base settings class for MCP servers.
 
-Provides common configuration patterns with YAML + environment variable support.
+Provides common configuration patterns with YAML + environment variable support
+following the Oneiric pattern.
 """
 
 from __future__ import annotations
 
+import os
 import typing as t
 from pathlib import Path
+from typing import Any
 
-from acb.config import Settings
-from pydantic import Field, field_validator
+import yaml
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # Import security utilities (with fallback for backward compatibility)
 try:
@@ -20,10 +23,10 @@ except ImportError:
     SECURITY_AVAILABLE = False
 
 
-class MCPBaseSettings(Settings):  # type: ignore[misc]
-    """Base settings class for MCP servers using ACB configuration system.
+class MCPBaseSettings(BaseModel):
+    """Base settings class for MCP servers following Oneiric configuration pattern.
 
-    Extends ACB Settings to provide:
+    Provides layered configuration with YAML + environment variable support:
     - YAML file loading from settings/{name}.yaml
     - Environment variable overrides
     - Path expansion (~/ → home directory)
@@ -32,8 +35,8 @@ class MCPBaseSettings(Settings):  # type: ignore[misc]
 
     Configuration loading order (later overrides earlier):
     1. Default values in field definitions
-    2. settings/local.yaml (gitignored, for development)
-    3. settings/{server_name}.yaml (committed, for production defaults)
+    2. settings/{server_name}.yaml (committed, for production defaults)
+    3. settings/local.yaml (gitignored, for development)
     4. Environment variables {SERVER_NAME}_{FIELD}
 
     Example:
@@ -42,11 +45,12 @@ class MCPBaseSettings(Settings):  # type: ignore[misc]
         ...     domain: str = Field(description="Mailgun domain")
         ...     timeout: int = Field(default=30, description="Request timeout")
         ...
+        >>> # Load with layered configuration
+        >>> settings = MailgunSettings.load("mailgun")
         >>> # Loads from:
-        >>> # - settings/local.yaml (if exists)
         >>> # - settings/mailgun.yaml (if exists)
+        >>> # - settings/local.yaml (if exists)
         >>> # - Environment variables MAILGUN_API_KEY, MAILGUN_DOMAIN, MAILGUN_TIMEOUT
-        >>> settings = MailgunSettings()
 
     Attributes:
         server_name: Display name for the MCP server (e.g., "Mailgun MCP")
@@ -74,6 +78,8 @@ class MCPBaseSettings(Settings):  # type: ignore[misc]
         default=False,
         description="Enable debug features (verbose logging, additional validation)",
     )
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @field_validator("server_name", mode="after")
     @classmethod
@@ -294,6 +300,101 @@ class MCPBaseSettings(Settings):  # type: ignore[misc]
         if len(key) <= visible_chars:
             return "***"
         return f"...{key[-visible_chars:]}"
+
+    @classmethod
+    def load(
+        cls,
+        server_name: str,
+        config_path: Path | None = None,
+        env_prefix: str | None = None,
+    ) -> MCPBaseSettings:
+        """Load settings with layered configuration (Oneiric pattern).
+
+        Priority (highest to lowest):
+        1. Explicit config_path (if provided)
+        2. Environment variables ({env_prefix}_{FIELD})
+        3. settings/local.yaml (gitignored)
+        4. settings/{server_name}.yaml
+        5. Defaults
+
+        Args:
+            server_name: Server identifier (e.g., 'mailgun')
+            config_path: Optional explicit config file path
+            env_prefix: Environment variable prefix (default: server_name.upper())
+
+        Returns:
+            Loaded settings instance with all layers applied
+
+        Example:
+            >>> # Load with defaults
+            >>> settings = MCPBaseSettings.load("my-server")
+            >>>
+            >>> # Override with environment
+            >>> os.environ["MY_SERVER_LOG_LEVEL"] = "DEBUG"
+            >>> settings = MCPBaseSettings.load("my-server")
+            >>> assert settings.log_level == "DEBUG"
+            >>>
+            >>> # Override with explicit config
+            >>> settings = MCPBaseSettings.load(
+            ...     "my-server",
+            ...     config_path=Path("custom_config.yaml")
+            ... )
+        """
+        data: dict[str, Any] = {"server_name": server_name}
+
+        # Default env prefix is server name uppercased with underscores
+        if env_prefix is None:
+            env_prefix = server_name.upper().replace("-", "_")
+
+        # Load all configuration layers
+        cls._load_server_yaml_layer(data, server_name)
+        cls._load_local_yaml_layer(data)
+        cls._load_environment_layer(data, env_prefix)
+        cls._load_explicit_config_layer(data, config_path)
+
+        return cls(**data)
+
+    @classmethod
+    def _load_server_yaml_layer(cls, data: dict[str, Any], server_name: str) -> None:
+        """Load Layer 1: Server defaults (settings/{server_name}.yaml)."""
+        server_yaml = Path("settings") / f"{server_name}.yaml"
+        if server_yaml.exists():
+            with server_yaml.open() as f:
+                yaml_data: dict[str, Any] = yaml.safe_load(f) or {}
+                data.update(yaml_data)
+
+    @classmethod
+    def _load_local_yaml_layer(cls, data: dict[str, Any]) -> None:
+        """Load Layer 2: Local overrides (settings/local.yaml)."""
+        local_yaml = Path("settings") / "local.yaml"
+        if local_yaml.exists():
+            with local_yaml.open() as f:
+                local_data: dict[str, Any] = yaml.safe_load(f) or {}
+                data.update(local_data)
+
+    @classmethod
+    def _load_environment_layer(cls, data: dict[str, Any], env_prefix: str) -> None:
+        """Load Layer 3: Environment variables."""
+        for field_name in cls.model_fields:
+            env_var = f"{env_prefix}_{field_name.upper()}"
+            if env_var in os.environ:
+                env_value: str | Path | None = os.environ[env_var]
+                # Type coercion for Path types
+                field_type = cls.model_fields[field_name].annotation
+                if field_type is Path or (
+                    hasattr(field_type, "__origin__")
+                    and Path in getattr(field_type, "__args__", ())
+                ):
+                    env_value = Path(env_value) if env_value else None
+                data[field_name] = env_value
+
+    @classmethod
+    def _load_explicit_config_layer(cls, data: dict[str, Any], config_path: Path | None) -> None:
+        """Load Layer 4: Explicit config path (highest priority)."""
+        if config_path is not None and config_path.exists():
+            with config_path.open() as f:
+                explicit_data: dict[str, Any] = yaml.safe_load(f) or {}
+                data.update(explicit_data)
 
 
 class MCPServerSettings(MCPBaseSettings):

@@ -182,7 +182,7 @@ safe_response = sanitize_output(response)
 **Prevent path traversal attacks:**
 
 ```python
-from acb.security.sanitization import sanitize_path
+from mcp_common.security.sanitization import sanitize_path
 from pathlib import Path
 
 # Safe path handling
@@ -209,7 +209,7 @@ safe_path = sanitize_path("/tmp/cache/file.txt", allow_absolute=True)
 **Sanitize user-provided strings:**
 
 ```python
-from acb.security.sanitization import sanitize_input
+from mcp_common.security.sanitization import sanitize_input
 
 # Basic sanitization
 user_input = sanitize_input(
@@ -330,7 +330,7 @@ print(f"Using API key: {settings.get_masked_key()}")  # ✅ Safe: "sk-...abc1"
 **For servers that accept file paths or user input:**
 
 ```python
-from acb.security.sanitization import sanitize_path, sanitize_input
+from mcp_common.security.sanitization import sanitize_path, sanitize_input
 
 # Sanitize file paths
 safe_path = sanitize_path(user_provided_path, base_dir="/app/data")

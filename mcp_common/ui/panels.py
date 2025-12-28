@@ -1,6 +1,6 @@
 """Rich UI panels for MCP servers.
 
-Provides beautiful terminal UI components using ACB console and Rich library.
+Provides beautiful terminal UI components using Rich library.
 """
 
 from __future__ import annotations
@@ -8,19 +8,22 @@ from __future__ import annotations
 import typing as t
 from datetime import UTC, datetime
 
-from acb.console import console
+from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
+
+# Create console instance (Oneiric pattern - direct Rich usage)
+console = Console()
 
 
 class ServerPanels:
     """Rich UI panel components for MCP servers.
 
     Provides consistent, beautiful terminal output for common MCP server scenarios
-    using ACB's console and Rich library.
+    using Rich library.
 
-    All methods are static and use ACB's pre-configured console singleton.
+    All methods are static and use a shared console instance.
 
     Example:
         >>> from mcp_common.ui import ServerPanels
@@ -46,7 +49,7 @@ class ServerPanels:
         version: str | None = None,
         features: list[str] | None = None,
         endpoint: str | None = None,
-        **metadata: t.Any,  # type: ignore[annotation-unchecked]
+        **metadata: t.Any,
     ) -> None:
         """Display successful server startup panel.
 

@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**mcp-common** is an ACB-native foundation library for building production-grade MCP (Model Context Protocol) servers. It provides battle-tested patterns extracted from 9 production servers including crackerjack, session-mgmt-mcp, and fastblocks.
+**mcp-common** is an Oneiric-native foundation library for building production-grade MCP (Model Context Protocol) servers. It provides battle-tested patterns extracted from 9 production servers including crackerjack, session-mgmt-mcp, and fastblocks.
 
-**Current Status:** v2.0.0 - **Partially Implemented**
+**Current Status:** v0.3.6 - **Oneiric-Native (Production Ready)**
 
 - ✅ Core package structure complete
 - ✅ MCPBaseSettings with YAML + environment variable support
@@ -17,33 +17,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - ✅ Exception hierarchy (MCPServerError, validation errors)
 - ✅ ValidationMixin for Pydantic models
 - ✅ Comprehensive test suite with 90%+ coverage
-- 🚧 Complete example server (`examples/weather_server.py`)
+- ✅ Complete example server (`examples/weather_server.py`)
+- ✅ Oneiric CLI Factory with lifecycle management (NEW in v0.3.3)
+- ✅ CLI example server (`examples/cli_server.py`)
 
-## Critical Prerequisites
+## Architecture
 
-### ACB Framework Dependency
+### Oneiric Design Patterns
 
-This library is **ACB-native**, meaning it is built **on top of ACB**, not as a standalone utility:
+This library follows **Oneiric patterns**, using standard Python libraries directly:
 
-- **ACB (Asynchronous Component Base)** provides: adapters, dependency injection, structured logging, settings, console
-- **mcp-common** provides: MCP-specific adapters built using ACB patterns
-- **Relationship:** mcp-common extends ACB for MCP server use cases
+- **Pydantic BaseModel** for settings validation
+- **Rich Console** for terminal UI
+- **httpx** for HTTP with connection pooling
+- **YAML + env vars** for layered configuration
+- **Standard Python logging** (no custom wrappers)
 
-**ACB is installed as an editable dependency** from `../acb`:
+**No framework dependencies** - just clean Python with Pydantic and Rich.
 
-```toml
-[tool.uv.sources]
-acb = { path = "../acb", editable = true }
-```
+**Key Benefits:**
 
-This means changes to the ACB project at `../acb` are immediately reflected in mcp-common.
-
-**IMPORTANT:** Before implementing any adapter, read `docs/ACB_FOUNDATION.md` to understand:
-
-- ACB adapter lifecycle (MODULE_ID, MODULE_STATUS, MODULE_METADATA)
-- Dependency injection with `acb.depends`
-- Logger injection via `LoggerProtocol`
-- Settings extending `acb.config.Settings`
+- Zero framework lock-in
+- Direct library usage (easier to understand)
+- Standard Python patterns
+- Minimal dependency tree
 
 ### Reference Implementations
 
@@ -52,17 +49,17 @@ The design is extracted from these production servers (located in `../` relative
 **Primary Pattern Sources:**
 
 - **crackerjack** (`../crackerjack/mcp/`) - Rich UI panels (ServerPanels), MCP server structure, tool organization
-- **session-mgmt-mcp** (`../session-mgmt-mcp/`) - ACB Settings with YAML configuration, comprehensive DI usage, adapter lifecycle patterns
-- **fastblocks** (`../fastblocks/`) - ACB adapter organization, module structure
+- **session-mgmt-mcp** (`../session-mgmt-mcp/`) - YAML configuration patterns, settings management
+- **fastblocks** (`../fastblocks/`) - Adapter organization, module structure
 
 **Key Patterns from Production Servers:**
 
 - **Rich UI Panels:** `crackerjack/ui/` - Professional console output with Rich library
 - **Tool Registration:** `crackerjack/mcp/` - FastMCP tool organization patterns
-- **Structured Logging:** Uses ACB logger with correlation IDs and context binding
+- **Configuration Layering:** YAML + environment variables with clear priority
 - **MCP Server Structure:** Clean separation of concerns (tools, adapters, settings)
 
-When implementing adapters, **always reference these codebases** for proven ACB patterns. Don't guess at ACB patterns - look at working production code.
+When implementing features, **always reference these codebases** for proven patterns. Look at working production code for guidance.
 
 ## Development Commands
 
@@ -186,101 +183,74 @@ examples/
 └── weather_server.py        # ✅ Complete working Weather MCP server
 ```
 
-**Note:** There is NO `logging/` directory - ACB logger is used directly via `LoggerProtocol` injection.
+**Note:** This library uses standard Python logging - configure as needed for your server.
 
-## Architecture Overview
+## Usage Patterns
 
-### ACB-Native Adapter Pattern
+### Oneiric Adapter Pattern
 
-All adapters in this library follow the ACB adapter pattern:
+Adapters in this library follow simple, direct patterns with no framework overhead:
 
 ```python
-from acb.config import AdapterBase, Settings
-from acb.adapters.logger import LoggerProtocol
-from acb.adapters import AdapterStatus, AdapterMetadata, AdapterCapability
-from uuid import UUID
-from contextlib import suppress
+from mcp_common.adapters.http import HTTPClientSettings, HTTPClientAdapter
+import logging
 
-# Static UUID7 - generated once, hardcoded forever (NEVER use uuid4())
-MODULE_ID = UUID("01947e12-3b4c-7d8e-9f0a-1b2c3d4e5f6a")
-MODULE_STATUS = AdapterStatus.STABLE  # Enum, not string
-
-MODULE_METADATA = AdapterMetadata(
-    module_id=MODULE_ID,
-    name="Example Adapter",
-    category="category",
-    provider="provider",
-    version="1.0.0",
-    acb_min_version="0.19.0",
-    status=MODULE_STATUS,
-    capabilities=[AdapterCapability.ASYNC_OPERATIONS],
-    required_packages=["package>=1.0.0"],
-    description="Adapter description",
-)
+logger = logging.getLogger(__name__)
 
 
-class ExampleAdapter(AdapterBase):
-    settings: ExampleSettings | None = None
-    logger: LoggerProtocol  # Injected by ACB - NEVER create Logger()
+class MyAdapter:
+    """Example adapter using Oneiric patterns."""
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)  # REQUIRED: Call parent constructor
-        if self.settings is None:
-            self.settings = ExampleSettings()
+    def __init__(self, settings: MySettings):
+        self.settings = settings
+        self._client = None
 
-    async def _create_client(self):
-        """Lazy initialization lifecycle method."""
-        # Initialize resources
-        self.logger.info("Resource initialized")
+    async def initialize(self):
+        """Initialize resources."""
+        # Create client/connections
+        logger.info("Resource initialized")
 
-    async def _cleanup_resources(self):
-        """Cleanup on shutdown lifecycle method."""
+    async def cleanup(self):
+        """Cleanup on shutdown."""
         # Close resources
-        self.logger.info("Resource closed")
-
-
-# Auto-register with DI container at module level
-with suppress(Exception):
-    depends.set(ExampleAdapter)
+        if self._client:
+            await self._client.aclose()
+        logger.info("Resource closed")
 ```
 
-### Critical Pattern Rules
+### Key Principles
 
-1. **MODULE_ID must be static UUID7** - Generated once during implementation, then hardcoded forever (NOT `uuid4()`)
-1. **MODULE_STATUS is enum** - Use `AdapterStatus.STABLE`, not string `"stable"`
-1. **Logger is injected** - Type hint `logger: LoggerProtocol`, ACB injects automatically
-1. \*\*Always call super().__init__(**kwargs)** - Required for ACB lifecycle
-1. **Implement lifecycle methods** - `_create_client()` and `_cleanup_resources()`
-1. **DI registration at module level** - Use `with suppress(Exception): depends.set()`
+1. **Direct instantiation** - No dependency injection required, use direct object creation
+1. **Standard Python logging** - Use `logging.getLogger(__name__)` for logging
+1. **Simple lifecycle** - Implement `initialize()` and `cleanup()` as needed
+1. **Type hints everywhere** - Full type coverage for clarity
+1. **Settings via constructor** - Pass settings directly during initialization
 
 ## Implementation Guidelines
 
-### When Implementing a New Adapter
+### When Implementing a New Feature
 
-1. **Read `docs/ACB_FOUNDATION.md`** for ACB fundamentals (adapters, DI, lifecycle)
-1. **Read relevant documentation** in `docs/` for the specific feature
-1. **Generate static UUID7** for MODULE_ID (use `uuidv7` CLI or Python uuid7 library)
-1. **Create MODULE_METADATA** with all required fields
+1. **Read relevant documentation** in `docs/` or `README.md` for the specific feature
 1. **Reference production code** in `../crackerjack`, `../session-mgmt-mcp`, or `../fastblocks`
-   - For rate limiting: Study `crackerjack/mcp/rate_limiter.py`
    - For Rich UI: Study `crackerjack/ui/panels.py`
-   - For ACB patterns: Study `session-mgmt-mcp/adapters/`
-1. **Implement lifecycle methods** (`_create_client()`, `_cleanup_resources()`)
+   - For configuration: Study `session-mgmt-mcp` settings patterns
+   - For HTTP clients: Study `examples/weather_server.py`
+1. **Implement with type safety** - Full type hints required
 1. **Write tests first** (TDD approach, target 90%+ coverage)
-1. **Register at module level** with `suppress(Exception): depends.set()`
+1. **Use direct instantiation** - No dependency injection needed
 1. **Run quality checks** with `uv run pytest` and linting
 
 **Development Cycle:**
 
 ```bash
 # 1. Implement feature
-vim mcp_common/adapters/rate_limit/limiter.py
+vim mcp_common/adapters/my_feature.py
 
 # 2. Write tests
-vim tests/test_rate_limiter.py
+vim tests/test_my_feature.py
 
 # 3. Run tests
-uv run pytest tests/test_rate_limiter.py -v
+uv run pytest tests/test_my_feature.py -v
 
 # 4. Run quality checks
 uv run ruff format
@@ -293,7 +263,7 @@ uv run pytest --cov=mcp_common
 
 ### Settings Pattern
 
-All settings extend ACB's `acb.config.Settings`, not raw Pydantic:
+All settings extend `MCPBaseSettings` (which extends Pydantic BaseModel):
 
 ```python
 from mcp_common.config import MCPBaseSettings
@@ -301,75 +271,102 @@ from pydantic import Field
 
 
 class MyServerSettings(MCPBaseSettings):
-    """Server configuration using ACB Settings.
+    """Server configuration using Oneiric pattern.
 
-    Loads from (in order):
-    1. settings/local.yaml (gitignored)
-    2. settings/my-server.yaml
+    Loads from (priority order):
+    1. settings/my-server.yaml
+    2. settings/local.yaml (gitignored)
     3. Environment variables MY_SERVER_*
     4. Defaults below
     """
 
     api_key: str = Field(description="API key")
     timeout: int = Field(default=30, description="Timeout in seconds")
+
+
+# Load configuration
+settings = MyServerSettings.load("my-server")
 ```
 
-### Dependency Injection Usage
+### HTTP Client Usage
 
-All adapters use ACB's dependency injection with the `Inject[]` pattern:
+Use HTTP client adapters via direct instantiation:
 
 ```python
-from acb.depends import Inject, depends
-from mcp_common.adapters.http import HTTPClientAdapter
+from mcp_common.adapters.http import HTTPClientAdapter, HTTPClientSettings
+
+# Create HTTP client with settings
+http_settings = HTTPClientSettings(
+    timeout=30,
+    max_connections=50,
+    retry_attempts=3,
+)
+http_adapter = HTTPClientAdapter(settings=http_settings)
 
 
+# Use in tools
 @mcp.tool()
-@depends.inject
-async def my_tool(
-    http: Inject[HTTPClientAdapter] = None,  # type: ignore[assignment]
-):
-    # Adapter is automatically injected by ACB (singleton)
-    client = await http._create_client()
-    response = await client.get("https://api.example.com")
+async def my_tool():
+    # Use the adapter directly
+    response = await http_adapter.get("https://api.example.com")
     return response.json()
+
+
+# Cleanup on shutdown
+await http_adapter._cleanup_resources()
 ```
 
-**Old pattern (deprecated):**
+**Global Instance Pattern:**
 
 ```python
-# ❌ Don't use this anymore
-http = depends.get_sync(HTTPClientAdapter)
+# Global instances (initialized in main())
+settings: MySettings
+http_adapter: HTTPClientAdapter
+
+
+async def main():
+    global settings, http_adapter
+
+    # Initialize settings
+    settings = MySettings.load("my-server")
+
+    # Create HTTP adapter
+    http_settings = HTTPClientSettings(timeout=settings.timeout)
+    http_adapter = HTTPClientAdapter(settings=http_settings)
+
+    # Run server
+    try:
+        await mcp.run()
+    finally:
+        await http_adapter._cleanup_resources()
 ```
 
-**New pattern (recommended):**
+### Testing
+
+Tests use standard pytest mocking:
 
 ```python
-# ✅ Use Inject[] with @depends.inject decorator
-@depends.inject
-async def my_tool(http: Inject[HTTPClientAdapter] = None): ...
-```
-
-### Testing with DI
-
-Tests can mock adapters via dependency injection:
-
-```python
-from acb.depends import depends
 import pytest
+from unittest.mock import AsyncMock
 
 
 @pytest.fixture
 def mock_http():
     """Create mock HTTP adapter."""
-    mock = MockHTTPClientAdapter()
-    depends.set(HTTPClientAdapter, mock)
+    mock = AsyncMock()
+    mock.get.return_value.json.return_value = {"ok": True}
     return mock
 
 
 async def test_my_tool(mock_http):
-    """Test uses mock automatically via DI."""
+    """Test with mocked HTTP client."""
+    # Replace global instance with mock
+    global http_adapter
+    http_adapter = mock_http
+
     result = await my_tool()
-    assert mock_http.called
+    assert result["ok"] is True
+    mock_http.get.assert_called_once()
 ```
 
 ## Quality Standards
@@ -400,34 +397,32 @@ uv run ruff format && uv run ruff check && uv run mypy mcp_common tests && uv ru
 
 ## Key Documentation Files
 
-- **`README.md`** - User-facing documentation with quickstart and examples
-- **`docs/ACB_FOUNDATION.md`** - **START HERE** - ACB prerequisite guide (MUST READ before implementing)
+- **`README.md`** - **START HERE** - User-facing documentation with quickstart and examples
+- **`examples/README.md`** - Complete example server documentation
 - **`docs/ARCHITECTURE.md`** - Complete technical design (if exists - check docs/)
-- **`docs/IMPLEMENTATION_PLAN.md`** - Phased implementation roadmap (if exists)
 - **`docs/MCP_ECOSYSTEM_CRITICAL_AUDIT.md`** - Analysis of 9 production servers that informed design
 - **`docs/SECURITY_IMPLEMENTATION.md`** - Security features and patterns
-- **`docs/PHASE3_*.md`** - Phase-specific implementation documentation
-- **`examples/README.md`** - Example server documentation
+- **`docs/ONEIRIC_CLI_FACTORY_*.md`** - CLI factory documentation and implementation guides
 
 ## Common Pitfalls to Avoid
 
-1. **Using `uuid4()` for MODULE_ID** - Must be static UUID7, generated once and hardcoded
-1. **Creating Logger manually** - Logger is injected by ACB via `LoggerProtocol`
-1. **String for MODULE_STATUS** - Must use `AdapterStatus.STABLE` enum
-1. **Forgetting `super().__init__(**kwargs)`** - Required for ACB lifecycle
-1. **Missing MODULE_METADATA** - Required for ACB component discovery
-1. **DI registration in `__init__`** - Must be at module level with `suppress(Exception)`
-1. **Not implementing lifecycle methods** - `_create_client()` and `_cleanup_resources()` required
+1. **Forgetting to call `.load()`** - Always use `MySettings.load("server-name")` not `MySettings()`
+1. **Missing cleanup** - Always cleanup resources in `finally` blocks (HTTP clients, etc.)
+1. **Not validating API keys** - Use `get_api_key()` or `get_api_key_secure()` for validation
+1. **Hardcoding paths** - Use Path expansion (`~` → home) via MCPBaseSettings
+1. **Creating new clients per request** - Use HTTPClientAdapter for connection pooling
 1. **Ignoring test coverage** - Must maintain 90%+ coverage (enforced by CI)
 1. **Skipping type hints** - Strict MyPy requires full type coverage
+1. **Missing docstrings** - All public APIs need Google-style docstrings
+1. **Not using ServerPanels** - Use Rich UI for professional console output
 
-## Implemented Components (v2.0.0)
+## Implemented Components (v0.3.6)
 
 ### ✅ Core Configuration (mcp_common/config/)
 
 - **MCPBaseSettings** - YAML + environment variable configuration
-  - Extends `acb.config.Settings`
-  - Automatic YAML loading from `settings/{name}.yaml`
+  - Extends Pydantic `BaseModel`
+  - Automatic YAML loading from `settings/{name}.yaml` via `.load()`
   - Environment variable overrides
   - Path expansion (`~` → home directory)
   - API key validation methods (`get_api_key()`, `get_api_key_secure()`, `get_masked_key()`)
@@ -440,7 +435,7 @@ uv run ruff format && uv run ruff check && uv run mypy mcp_common tests && uv ru
   - 11x performance improvement vs per-request clients
   - Automatic lifecycle management
   - Configurable pool size, timeouts, retries
-  - ACB-native with DI registration
+  - Direct instantiation (no DI required)
 
 ### ✅ Security Utilities (mcp_common/security/)
 
@@ -479,20 +474,21 @@ uv run ruff format && uv run ruff check && uv run mypy mcp_common tests && uv ru
 - **APIKeyFormatError** - Invalid API key format
 - **APIKeyLengthError** - API key length validation
 
-### 🚧 Rate Limiting (mcp_common/middleware/rate_limit_config.py)
+### 🚧 Rate Limiting
 
-- **RateLimitConfig** - Configuration model for rate limiting
-- **Needs Migration:** Convert to ACB adapter pattern with MODULE_ID/STATUS/METADATA
-- **Reference:** `crackerjack/mcp/rate_limiter.py` for token bucket implementation
+- Not currently provided by this library
+- If using FastMCP, its built-in `RateLimitingMiddleware` can be enabled
+- For other frameworks, implement project-specific rate limiting
+- **Reference:** `crackerjack/mcp/rate_limiter.py` for token bucket implementation examples
 
 ## Working Example
 
 See `examples/weather_server.py` for a complete working MCP server demonstrating:
 
 - HTTPClientAdapter with connection pooling
-- MCPBaseSettings with YAML configuration
+- MCPBaseSettings with YAML configuration via `.load()`
 - ServerPanels for startup UI
-- ACB dependency injection
+- Global instance pattern (no dependency injection)
 - FastMCP tool integration (optional)
 - Error handling and validation
 
@@ -505,20 +501,32 @@ python weather_server.py
 
 ## Version and Release Information
 
-- **Current Version:** 2.0.0 (partially implemented)
-- **Breaking Changes from v1.x:**
-  - ACB is now required (was optional)
-  - HTTP client is `HTTPClientAdapter` via DI (was `get_http_client()` function)
-  - Logging uses ACB Logger (no `MCPLogger` wrapper)
-  - Rate limiting will be `RateLimiterAdapter` (migration in progress)
-  - Settings extend `acb.config.Settings` (not raw Pydantic)
+- **Current Version:** 0.3.6 (Oneiric-Native - production ready)
+- **New in v0.3.6:**
+  - Removed ACB dependency - now pure Pydantic + Rich
+  - Direct library usage (no framework lock-in)
+  - Simplified adapter patterns
+  - Standard Python logging (no custom wrappers)
+- **New in v0.3.3:**
+  - Oneiric CLI Factory for server lifecycle management
+  - MCPServerSettings with YAML configuration
+  - RuntimeHealthSnapshot for health monitoring
+  - SignalHandler for graceful shutdown
+  - Security utilities (PID validation, cache ownership)
+  - Complete CLI example server
+- **Breaking Changes from v2.x (ACB-native):**
+  - ACB removed as dependency
+  - Settings extend Pydantic `BaseModel` (not `acb.config.Settings`)
+  - HTTP client uses direct instantiation (not dependency injection)
+  - Standard Python logging (not ACB Logger)
+  - Rate limiting not included (use FastMCP middleware or project-specific)
 
 ## External Dependencies and Their Roles
 
-- **ACB (acb>=0.19.0)** - Core framework (adapters, DI, logger, settings, console) - **editable install from ../acb**
-- **httpx>=0.27.0** - HTTP client with async support (used in HTTPClientAdapter)
-- **pydantic>=2.10.0** - Data validation (used with ACB Settings)
-- **Rich** (via acb.console) - Terminal UI for ServerPanels
+- **pydantic>=2.12.4** - Data validation and settings management (MCPBaseSettings)
+- **rich>=14.2.0** - Terminal UI for beautiful console output (ServerPanels)
+- **httpx>=0.27.0** - HTTP client with async support (HTTPClientAdapter)
+- **pyyaml>=6.0.0** - YAML configuration file parsing
 - Optional: **fastmcp** - MCP protocol host to run servers and examples (install separately)
 
 ## Development Dependencies

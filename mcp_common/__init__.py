@@ -1,30 +1,32 @@
-"""MCP Common - ACB-Native Foundation Library for MCP Servers.
+"""MCP Common - Oneiric-Native Foundation Library for MCP Servers.
 
 This package provides battle-tested patterns extracted from production MCP servers,
-including HTTP clients, configuration management, and Rich UI components.
+including configuration management, Rich UI components, and CLI lifecycle management.
 
-ACB-Native Design:
-    - Dependency injection via ACB's `Inject[]` pattern with `@depends.inject`
-    - Structured logging via ACB Logger
-    - YAML + environment variable configuration via ACB Settings
-    - Lifecycle management via ACB adapters
+Oneiric Design Patterns:
+    - YAML + environment variable configuration
+    - Rich console UI for beautiful terminal output
+    - Type-safe settings with Pydantic validation
+    - CLI factory for standardized server lifecycle
 
 Usage:
-    >>> from acb.depends import Inject, depends
     >>> from mcp_common.ui import ServerPanels
-    >>> from mcp_common.adapters.http import HTTPClientAdapter
+    >>> from mcp_common.config import MCPBaseSettings
+    >>> from mcp_common.cli import MCPServerCLIFactory
     >>>
-    >>> @depends.inject
-    >>> async def my_tool(http: Inject[HTTPClientAdapter] = None):
-    ...     response = await http.get("https://api.example.com")
-    ...     return response.json()
+    >>> # Display startup panel
+    >>> ServerPanels.startup_success(
+    ...     server_name="My Server",
+    ...     features=["Feature 1", "Feature 2"]
+    ... )
+    >>>
+    >>> # Load configuration
+    >>> settings = MCPBaseSettings.load("my-server")
 """
 
 from __future__ import annotations
 
-from acb import register_pkg
-from acb.monitoring.health import ComponentHealth, HealthCheckResponse, HealthStatus
-
+from mcp_common.cli import MCPServerCLIFactory, MCPServerSettings, RuntimeHealthSnapshot
 from mcp_common.config import MCPBaseSettings, ValidationMixin
 from mcp_common.exceptions import (
     APIKeyFormatError,
@@ -38,27 +40,19 @@ from mcp_common.exceptions import (
 )
 from mcp_common.ui import ServerPanels
 
-# Register mcp-common package with ACB
-# This enables:
-# - Dependency injection for all components
-# - Automatic lifecycle management
-# - Structured logging with context
-# - Settings resolution via ACB config system
-register_pkg("mcp_common")
-
-__version__ = "2.0.0"  # ACB-native v2.0.0
+__version__ = "0.3.6"  # Oneiric-native
 
 __all__: list[str] = [
     "APIKeyFormatError",
     "APIKeyLengthError",
     "APIKeyMissingError",
-    "ComponentHealth",
     "CredentialValidationError",
     "DependencyMissingError",
-    "HealthCheckResponse",
-    "HealthStatus",
     "MCPBaseSettings",
+    "MCPServerCLIFactory",
     "MCPServerError",
+    "MCPServerSettings",
+    "RuntimeHealthSnapshot",
     "ServerConfigurationError",
     "ServerInitializationError",
     "ServerPanels",

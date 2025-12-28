@@ -254,7 +254,7 @@ def validate_api_key_format(
 
 
 def validate_api_key_startup(
-    settings: t.Any,  # type: ignore[annotation-unchecked]  # Can't import Settings without circular import
+    settings: t.Any,  # Can't import Settings without circular import
     key_fields: list[str] | None = None,
     provider: str | None = None,
 ) -> dict[str, str]:
