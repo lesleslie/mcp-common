@@ -541,7 +541,7 @@ def test_register_signal_handlers_shutdown(
 
     monkeypatch.setattr("mcp_common.cli.factory.SignalHandler", DummySignalHandler)
 
-    factory._register_signal_handlers(os.getpid(), json_output=False)
+    factory._register_signal_handlers(json_output=False)
     handlers[0].on_shutdown()
 
     updated = load_runtime_health(factory.settings.health_snapshot_path())
@@ -569,7 +569,7 @@ def test_register_signal_handlers_shutdown_json_no_output(
 
     monkeypatch.setattr("mcp_common.cli.factory.SignalHandler", DummySignalHandler)
 
-    factory._register_signal_handlers(os.getpid(), json_output=True)
+    factory._register_signal_handlers(json_output=True)
     handlers[0].on_shutdown()
 
     updated = load_runtime_health(factory.settings.health_snapshot_path())

@@ -151,8 +151,8 @@ class MCPServerCLIFactory:
     ) -> None:
         """Start the MCP server."""
         self._validate_cache_and_check_process(force, json_output)
-        pid = self._write_pid_and_health_snapshot()
-        self._register_signal_handlers(pid, json_output)
+        self._write_pid_and_health_snapshot()
+        self._register_signal_handlers(json_output)
         self._execute_start_handler(json_output)
         sys.exit(ExitCode.SUCCESS)
 
@@ -215,7 +215,7 @@ class MCPServerCLIFactory:
         write_runtime_health(self.settings.health_snapshot_path(), snapshot)
         return pid
 
-    def _register_signal_handlers(self, pid: int, json_output: bool) -> None:
+    def _register_signal_handlers(self, json_output: bool) -> None:
         """Register signal handlers for graceful shutdown."""
 
         def shutdown() -> None:
