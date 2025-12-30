@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-common"
-version = "0.4.1"
+version = "0.4.2"
 description = "ACB-native foundation library providing battle-tested patterns for MCP (Model Context Protocol) servers, with dependency injection, structured logging, and lifecycle management"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -42,7 +42,6 @@ dependencies = [
 
 [project.license]
 text = "BSD-3-Clause"
-
 
 [project.urls]
 Homepage = "https://github.com/lesleslie/mcp-common"
@@ -264,7 +263,5 @@ paths = [
 
 [dependency-groups]
 dev = [
-    "crackerjack>=0.44.28",
-    "skylos<2.7.0",
-    "session-buddy>=0.9.3",
+    "crackerjack>=0.41.3",
 ]
