@@ -1878,9 +1878,10 @@ wheels = [
 
 [[package]]
 name = "mcp-common"
-version = "0.4.2"
+version = "0.4.3"
 source = { editable = "." }
 dependencies = [
+    { name = "oneiric" },
     { name = "psutil" },
     { name = "pydantic" },
     { name = "pyyaml" },
@@ -1896,6 +1897,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "oneiric", specifier = ">=0.3.6" },
     { name = "psutil", specifier = ">=7.2.1" },
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "pyyaml", specifier = ">=6.0.3" },
@@ -2305,7 +2307,7 @@ wheels = [
 
 [[package]]
 name = "oneiric"
-version = "0.3.5"
+version = "0.3.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiobreaker" },
@@ -2325,9 +2327,9 @@ dependencies = [
     { name = "typer" },
     { name = "watchfiles" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/45/6d/fd92eb2841ceba48a6078a4d2c6d60e6fa8c7b3edaf224cd60c6c8af27bb/oneiric-0.3.5.tar.gz", hash = "sha256:01c70121bbb00d6eb3641c57c327bbb592317b33c81d81019145731fd3e6821b", size = 223163, upload-time = "2025-12-30T00:14:18.255Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1f/cf/94726f1a9f779c3bbc1c7a36829a896aa0e1e29f4fe1b4774255b2b55c8c/oneiric-0.3.6.tar.gz", hash = "sha256:328b09c38267112ae52c814294b1ece70af094e7ed8fa69dac635eef4fdd6dc5", size = 233011, upload-time = "2026-01-02T12:38:15.688Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/dc/e9/edfeee1ffa436dcc5d377a24e9b9f08b48325c03e11f68cd5ff660b10cf7/oneiric-0.3.5-py3-none-any.whl", hash = "sha256:987ee6cd75d927603de1275fe318a2a53c56c7a9f829e00156f9529ed274be9b", size = 306356, upload-time = "2025-12-30T00:14:16.482Z" },
+    { url = "https://files.pythonhosted.org/packages/c2/78/2b0f8e9731981e845787e8ddbead4a499ee5aeda2c182cbcc87da17936f1/oneiric-0.3.6-py3-none-any.whl", hash = "sha256:468ff36c687769a27efcbb86a8002f08209cd1abc3d6cc952837a480ec5625d5", size = 317491, upload-time = "2026-01-02T12:38:17.287Z" },
 ]
 
 [[package]]
