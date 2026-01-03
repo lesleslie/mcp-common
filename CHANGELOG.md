@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.5] - 2026-01-03
+
+### Changed
+
+- Update deps, docs
+
+### Fixed
+
+- Resolve all ruff violations for crackerjack compliance
+
+### Internal
+
+- Session checkpoint - Phase 3 migration complete
+- Session cleanup - optimize repository after Phase 3 migration
+
 ## [0.4.4] - 2026-01-02
 
 ### Added
