@@ -4,6 +4,7 @@ Provides a production-ready factory for creating standardized MCP server
 CLIs with lifecycle management, health monitoring, and graceful shutdown.
 """
 
+import asyncio
 import json
 import os
 import sys
@@ -12,6 +13,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 import typer
+import uvicorn
 
 from mcp_common.cli.health import (
     RuntimeHealthSnapshot,
@@ -86,8 +88,8 @@ class MCPServerCLIFactory:
         server_class: type,
         config_class: type,
         name: str,
-        description: str = "MCP Server",
-        use_subcommands: bool = True,
+        _description: str = "MCP Server",
+        _use_subcommands: bool = True,
     ) -> "MCPServerCLIFactory":
         """Create CLI factory for server-class pattern.
 
@@ -168,8 +170,6 @@ class MCPServerCLIFactory:
             - shutdown(): Async shutdown lifecycle method
             - get_app(): Return the ASGI application
         """
-        import asyncio
-
         # Global references for handler closures
         _server_instance = None
         _config_instance = None
@@ -189,8 +189,6 @@ class MCPServerCLIFactory:
 
             # Start the server (uvicorn or similar)
             # This typically blocks until the server is stopped
-            import uvicorn
-
             app = _server_instance.get_app()
             host = getattr(_config_instance, "http_host", "127.0.0.1")
             port = getattr(_config_instance, "http_port", 8000)
@@ -202,7 +200,7 @@ class MCPServerCLIFactory:
                 log_level=getattr(_config_instance, "log_level", "info").lower(),
             )
 
-        def stop_handler(pid: int) -> None:
+        def stop_handler(_pid: int) -> None:
             """Stop handler that initiates graceful shutdown."""
             nonlocal _server_instance
 
@@ -212,8 +210,6 @@ class MCPServerCLIFactory:
 
         def health_probe_handler() -> RuntimeHealthSnapshot:
             """Health probe handler that checks server health."""
-            import os
-
             nonlocal _server_instance
 
             # Get current PID
@@ -236,12 +232,11 @@ class MCPServerCLIFactory:
                     orchestrator_pid=pid,
                     watchers_running=health_response.status == "healthy",
                 )
-            else:
-                # No health check method, assume healthy
-                return RuntimeHealthSnapshot(
-                    orchestrator_pid=pid,
-                    watchers_running=True,
-                )
+            # No health check method, assume healthy
+            return RuntimeHealthSnapshot(
+                orchestrator_pid=pid,
+                watchers_running=True,
+            )
 
         # Create factory using handler-based constructor
         return cls(

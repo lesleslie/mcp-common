@@ -30,17 +30,16 @@ Example:
 from __future__ import annotations
 
 import time
-from abc import ABC
 from typing import Any
 
 from oneiric.runtime.mcp_health import (
-    HealthCheckResponse,
-    HealthMonitor,
     HealthStatus,
 )
 
+from mcp_common.server import create_runtime_components
 
-class BaseOneiricServerMixin(ABC):
+
+class BaseOneiricServerMixin:
     """Base mixin providing reusable Oneiric lifecycle methods.
 
     This mixin provides template methods for common server operations while
@@ -101,8 +100,6 @@ class BaseOneiricServerMixin(ABC):
             ...         cache_dir="/tmp/my-cache"
             ...     )
         """
-        from mcp_common.server import create_runtime_components
-
         # Use config.cache_dir if cache_dir not provided
         if cache_dir is None:
             cache_dir = getattr(self.config, "cache_dir", None) or ".oneiric_cache"
@@ -255,8 +252,8 @@ class BaseOneiricServerMixin(ABC):
         # Get cache stats
         cache_stats = await self.runtime.cache_manager.get_cache_stats()
 
-        # Build standard components
-        components = [
+        # Build and return standard components
+        return [
             self.runtime.health_monitor.create_component_health(
                 name="cache",
                 status=HealthStatus.HEALTHY,
@@ -268,13 +265,9 @@ class BaseOneiricServerMixin(ABC):
             self.runtime.health_monitor.create_component_health(
                 name="snapshot",
                 status=HealthStatus.HEALTHY,
-                details={
-                    "initialized": self.runtime.snapshot_manager.current_snapshot is not None
-                },
+                details={"initialized": self.runtime.snapshot_manager.current_snapshot is not None},
             ),
         ]
-
-        return components
 
     def _extract_config_snapshot(self) -> dict[str, Any]:
         """Extract configuration values for snapshots.
