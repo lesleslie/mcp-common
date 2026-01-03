@@ -7,7 +7,7 @@ This guide explains how to integrate mcp-common into MCP servers using the enhan
 mcp-common v0.4.0 provides two major enhancements for MCP servers:
 
 1. **Server Module** (`mcp_common.server/`) - Reusable lifecycle components
-2. **Enhanced CLI Factory** - Single factory for all MCP servers (handler + server class patterns)
+1. **Enhanced CLI Factory** - Single factory for all MCP servers (handler + server class patterns)
 
 ### Architecture Patterns
 
@@ -18,6 +18,7 @@ All MCP servers should use `mcp_common.cli.MCPServerCLIFactory`.
 Best for: mailgun-mcp, raindropio-mcp, opera-cloud-mcp, unifi-mcp, excalidraw-mcp
 
 **Characteristics:**
+
 - OOP approach with server class
 - Clean lifecycle methods (`startup()`, `shutdown()`)
 - Uses Oneiric runtime components
@@ -75,6 +76,7 @@ def main():
 Best for: crackerjack, session-buddy
 
 **Characteristics:**
+
 - Procedural approach with handler functions
 - Custom lifecycle management
 - Direct control over startup/shutdown
@@ -232,25 +234,30 @@ def main():
 Provides reusable template methods for common operations:
 
 **`_init_runtime_components(server_name, cache_dir=None)`**
+
 - Initialize runtime components
 - Returns `RuntimeComponents` container
 - Uses `self.config.cache_dir` if cache_dir not provided
 
 **`_create_startup_snapshot(custom_components=None)`**
+
 - Create startup snapshot with standard + custom components
 - Standard components: server status, timestamp, config
 - Merge in custom components via dict
 
 **`_create_shutdown_snapshot()`**
+
 - Create shutdown snapshot
 - Marks server as stopped
 
 **`_build_health_components()`**
+
 - Build standard health check components
 - Returns list of component health objects
 - Add server-specific components before calling `create_health_response()`
 
 **`_extract_config_snapshot()`**
+
 - Extract config values for snapshots
 - Override to add server-specific fields
 - Automatically includes http_port, http_host, debug, etc.
@@ -266,6 +273,7 @@ Factory function that creates and initializes:
 - `HealthMonitor` - Component health tracking
 
 **Before (30 lines):**
+
 ```python
 self.snapshot_manager = RuntimeSnapshotManager(
     cache_dir=".oneiric_cache",
@@ -282,6 +290,7 @@ await self.cache_manager.initialize()
 ```
 
 **After (3 lines):**
+
 ```python
 self.runtime = create_runtime_components("my-server", ".oneiric_cache")
 await self.runtime.initialize()
@@ -311,6 +320,7 @@ if status["security"]:
 ```
 
 **Before (duplicated across 6 projects):**
+
 ```python
 import importlib.util
 
@@ -326,6 +336,7 @@ RATE_LIMITING_AVAILABLE = (
 ```
 
 **After (centralized in mcp-common):**
+
 ```python
 from mcp_common.server import get_availability_status
 
@@ -349,6 +360,7 @@ factory = MCPServerCLIFactory.create_server_cli(
 ```
 
 **Benefits over oneiric.core.cli:**
+
 - ✅ Production features (PID files, signal handling, health persistence)
 - ✅ Automatic uvicorn integration
 - ✅ Graceful shutdown with cleanup
@@ -362,27 +374,31 @@ When using `create_server_cli()`, your server class must have:
 ### Required Methods
 
 1. **`__init__(config)`** - Initialize with config object
+
    ```python
    def __init__(self, config):
        self.config = config
        # ... initialize server ...
    ```
 
-2. **`async startup()`** - Startup lifecycle
+1. **`async startup()`** - Startup lifecycle
+
    ```python
    async def startup(self):
        await self.runtime.initialize()
        # ... startup logic ...
    ```
 
-3. **`async shutdown()`** - Shutdown lifecycle
+1. **`async shutdown()`** - Shutdown lifecycle
+
    ```python
    async def shutdown(self):
        await self._create_shutdown_snapshot()
        await self.runtime.cleanup()
    ```
 
-4. **`get_app()`** - Return ASGI application
+1. **`get_app()`** - Return ASGI application
+
    ```python
    def get_app(self):
        return self.mcp.http_app
@@ -551,10 +567,10 @@ uv add mcp-common>=0.4.0
 ### Step 3: Refactor Server Class
 
 1. Add `BaseOneiricServerMixin` to inheritance
-2. Replace manual runtime init with `create_runtime_components()`
-3. Replace manual snapshot creation with `_create_startup_snapshot()`
-4. Replace manual health component building with `_build_health_components()`
-5. Remove `RuntimeSnapshotManager`, `RuntimeCacheManager`, `HealthMonitor` attributes
+1. Replace manual runtime init with `create_runtime_components()`
+1. Replace manual snapshot creation with `_create_startup_snapshot()`
+1. Replace manual health component building with `_build_health_components()`
+1. Remove `RuntimeSnapshotManager`, `RuntimeCacheManager`, `HealthMonitor` attributes
 
 ### Step 4: Update main()
 
@@ -599,6 +615,7 @@ python -m my_server health --probe
 **Problem:** Server fails to start with import error
 
 **Solution:** Ensure mcp-common is installed:
+
 ```bash
 uv add mcp-common>=0.4.0
 uv sync
@@ -609,6 +626,7 @@ uv sync
 **Problem:** Health check returns "unhealthy"
 
 **Solution:** Ensure `health_check()` method returns `HealthCheckResponse`:
+
 ```python
 async def health_check(self) -> HealthCheckResponse:
     components = await self._build_health_components()
@@ -620,6 +638,7 @@ async def health_check(self) -> HealthCheckResponse:
 **Problem:** `AttributeError: 'RuntimeComponents' object has no attribute 'snapshot_manager'`
 
 **Solution:** Call `await runtime.initialize()` before using components:
+
 ```python
 async def startup(self):
     await self.runtime.initialize()  # Must call first!
@@ -631,6 +650,7 @@ async def startup(self):
 **Problem:** Server uses default values instead of YAML config
 
 **Solution:** Ensure config class has correct `env_prefix`:
+
 ```python
 class MyConfig(OneiricMCPConfig):
     class Config:
@@ -704,6 +724,7 @@ if check_rate_limiting_available():
 ### 1. Use Template Methods
 
 Leverage `_create_startup_snapshot()` and `_build_health_components()`:
+
 ```python
 async def startup(self):
     await self.runtime.initialize()
@@ -716,6 +737,7 @@ async def startup(self):
 ### 2. Override for Customization
 
 Override `_extract_config_snapshot()` to add custom fields:
+
 ```python
 def _extract_config_snapshot(self):
     base = super()._extract_config_snapshot()
@@ -726,6 +748,7 @@ def _extract_config_snapshot(self):
 ### 3. Use Availability Checks
 
 Check optional dependencies before importing:
+
 ```python
 from mcp_common.server import check_serverpanels_available
 
@@ -737,6 +760,7 @@ if check_serverpanels_available():
 ### 4. Handle Errors Gracefully
 
 Use try-except in lifecycle methods:
+
 ```python
 async def startup(self):
     try:
@@ -758,7 +782,8 @@ async def startup(self):
 ## Support
 
 For issues or questions:
+
 1. Check existing issues in GitHub
-2. Review example servers in `examples/`
-3. Consult this documentation
-4. Check Oneiric documentation for runtime details
+1. Review example servers in `examples/`
+1. Consult this documentation
+1. Check Oneiric documentation for runtime details

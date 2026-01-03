@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 #### New Server Module (`mcp_common/server/`)
+
 - `BaseOneiricServerMixin` - Reusable server lifecycle methods with template pattern
   - `_init_runtime_components()` - Initialize Oneiric runtime components
   - `_create_startup_snapshot()` - Create server startup snapshots
@@ -24,12 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - All availability functions cached with `@lru_cache` for performance
 
 #### CLI Factory Enhancements
+
 - `MCPServerCLIFactory.create_server_cli()` - Support server_class pattern
   - Bridges gap between handler and server_class patterns
   - Enables all MCP servers to use production-ready factory
   - Maintains backward compatibility with existing handler pattern
 
 #### Documentation
+
 - `docs/SERVER_INTEGRATION.md` - Comprehensive integration and migration guide
   - Architecture patterns (server class vs handler functions)
   - Migration guide from oneiric.core.cli
@@ -38,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `docs/PHASE1_COMPLETE_SUMMARY.md` - Detailed Phase 1 completion summary
 
 #### Testing
+
 - 35 new tests for server module (all passing, 100% pass rate)
 - 97.83% coverage on base.py
 - 91.30% coverage on runtime.py
@@ -45,10 +49,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Integration tests with actual Oneiric runtime components
 
 ### Changed
+
 - Enhanced CLI factory to support both handler and server_class patterns
 - Improved documentation structure with integration guides
 
 ### Deprecated
+
 - `oneiric.core.cli.MCPServerCLIFactory` - Use `mcp_common.cli.MCPServerCLIFactory.create_server_cli()` instead
 
 ## [0.4.1] - 2025-12-27
