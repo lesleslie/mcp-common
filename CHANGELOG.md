@@ -5,6 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.4] - 2026-01-02
+
+### Added
+
+#### New Server Module (`mcp_common/server/`)
+- `BaseOneiricServerMixin` - Reusable server lifecycle methods with template pattern
+  - `_init_runtime_components()` - Initialize Oneiric runtime components
+  - `_create_startup_snapshot()` - Create server startup snapshots
+  - `_create_shutdown_snapshot()` - Create server shutdown snapshots
+  - `_build_health_components()` - Build health check components
+  - `_extract_config_snapshot()` - Extract config for snapshots
+- `check_serverpanels_available()` - Check if mcp_common.ui module exists
+- `check_security_available()` - Check if mcp_common.security module exists
+- `check_rate_limiting_available()` - Check if FastMCP rate limiting exists
+- `get_availability_status()` - Get all dependency statuses as dict
+- `create_runtime_components()` - Factory for Oneiric runtime initialization
+- All availability functions cached with `@lru_cache` for performance
+
+#### CLI Factory Enhancements
+- `MCPServerCLIFactory.create_server_cli()` - Support server_class pattern
+  - Bridges gap between handler and server_class patterns
+  - Enables all MCP servers to use production-ready factory
+  - Maintains backward compatibility with existing handler pattern
+
+#### Documentation
+- `docs/SERVER_INTEGRATION.md` - Comprehensive integration and migration guide
+  - Architecture patterns (server class vs handler functions)
+  - Migration guide from oneiric.core.cli
+  - Before/after code examples showing 100+ line savings per server
+  - Complete usage examples and best practices
+- `docs/PHASE1_COMPLETE_SUMMARY.md` - Detailed Phase 1 completion summary
+
+#### Testing
+- 35 new tests for server module (all passing, 100% pass rate)
+- 97.83% coverage on base.py
+- 91.30% coverage on runtime.py
+- 77.78% coverage on availability.py
+- Integration tests with actual Oneiric runtime components
+
+### Changed
+- Enhanced CLI factory to support both handler and server_class patterns
+- Improved documentation structure with integration guides
+
+### Deprecated
+- `oneiric.core.cli.MCPServerCLIFactory` - Use `mcp_common.cli.MCPServerCLIFactory.create_server_cli()` instead
+
 ## [0.4.1] - 2025-12-27
 
 ### Changed

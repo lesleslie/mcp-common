@@ -50,7 +50,14 @@ class MCPServerCLIFactory:
     Creates Typer-based CLIs with standard lifecycle commands (start, stop,
     restart, status, health) and extensibility for server-specific commands.
 
-    Example:
+    Two Usage Patterns:
+        1. Handler Pattern (crackerjack, session-buddy):
+            Pass handler functions directly to __init__
+
+        2. Server Class Pattern (mailgun-mcp, raindropio-mcp, etc.):
+            Use create_server_cli() class method with server_class
+
+    Example (Handler Pattern):
         >>> factory = MCPServerCLIFactory("my-server")
         >>> app = factory.create_app()
         >>>
@@ -60,7 +67,190 @@ class MCPServerCLIFactory:
         >>>
         >>> if __name__ == "__main__":
         ...     app()
+
+    Example (Server Class Pattern):
+        >>> from mcp_common.cli import MCPServerCLIFactory
+        >>>
+        >>> factory = MCPServerCLIFactory.create_server_cli(
+        ...     server_class=MyMCPServer,
+        ...     config_class=MyConfig,
+        ...     name="my-server",
+        ... )
+        >>> app = factory.create_app()
+        >>> app()
     """
+
+    @classmethod
+    def create_server_cli(
+        cls,
+        server_class: type,
+        config_class: type,
+        name: str,
+        description: str = "MCP Server",
+        use_subcommands: bool = True,
+    ) -> "MCPServerCLIFactory":
+        """Create CLI factory for server-class pattern.
+
+        Bridges the gap between oneiric.core.cli.MCPServerCLIFactory
+        and mcp_common.cli.MCPServerCLIFactory by converting server_class
+        pattern to handler functions internally.
+
+        This allows all MCP servers to use mcp_common's production-ready
+        factory (with PID files, signal handling, health persistence) while
+        maintaining their clean OOP structure.
+
+        Args:
+            server_class: MCPServerBase subclass with startup/shutdown methods
+            config_class: OneiricMCPConfig subclass for server configuration
+            name: Server identifier (e.g., 'mailgun-mcp', 'raindropio-mcp')
+            description: Server description for CLI help text
+            use_subcommands: Enable subcommand structure (default: True)
+
+        Returns:
+            Configured MCPServerCLIFactory instance
+
+        Example:
+            >>> from mcp_common.cli import MCPServerCLIFactory
+            >>> from oneiric.core.config import OneiricMCPConfig
+            >>>
+            >>> class MyConfig(OneiricMCPConfig):
+            ...     http_port: int = 3039
+            >>>
+            >>> class MyMCPServer:
+            ...     def __init__(self, config):
+            ...         self.config = config
+            ...         # ... initialize server ...
+            >>>
+            ...     async def startup(self):
+            ...         # ... startup logic ...
+            >>>
+            ...     async def shutdown(self):
+            ...         # ... shutdown logic ...
+            >>>
+            ...     def get_app(self):
+            ...         # ... return ASGI app ...
+            >>>
+            >>> # Create CLI factory
+            >>> factory = MCPServerCLIFactory.create_server_cli(
+            ...     server_class=MyMCPServer,
+            ...     config_class=MyConfig,
+            ...     name="my-server",
+            ...     description="My MCP Server",
+            ... )
+            >>>
+            >>> # Create and run CLI
+            >>> app = factory.create_app()
+            >>> app()
+
+        Migration from oneiric.core.cli:
+            ```python
+            # Before (oneiric.core.cli)
+            from oneiric.core.cli import MCPServerCLIFactory
+            factory = MCPServerCLIFactory(
+                server_class=MyServer,
+                config_class=MyConfig,
+                name="my-server",
+            )
+
+            # After (mcp_common.cli)
+            from mcp_common.cli import MCPServerCLIFactory
+            factory = MCPServerCLIFactory.create_server_cli(
+                server_class=MyServer,
+                config_class=MyConfig,
+                name="my-server",
+            )
+            ```
+
+        Note:
+            The server_class must have these methods:
+            - __init__(config): Initialize with config object
+            - startup(): Async startup lifecycle method
+            - shutdown(): Async shutdown lifecycle method
+            - get_app(): Return the ASGI application
+        """
+        import asyncio
+
+        # Global references for handler closures
+        _server_instance = None
+        _config_instance = None
+
+        def start_handler() -> None:
+            """Start handler that creates server instance and runs it."""
+            nonlocal _server_instance, _config_instance
+
+            # Load configuration
+            _config_instance = config_class()
+
+            # Create server instance
+            _server_instance = server_class(_config_instance)
+
+            # Run startup lifecycle
+            asyncio.run(_server_instance.startup())
+
+            # Start the server (uvicorn or similar)
+            # This typically blocks until the server is stopped
+            import uvicorn
+
+            app = _server_instance.get_app()
+            host = getattr(_config_instance, "http_host", "127.0.0.1")
+            port = getattr(_config_instance, "http_port", 8000)
+
+            uvicorn.run(
+                app,
+                host=host,
+                port=port,
+                log_level=getattr(_config_instance, "log_level", "info").lower(),
+            )
+
+        def stop_handler(pid: int) -> None:
+            """Stop handler that initiates graceful shutdown."""
+            nonlocal _server_instance
+
+            if _server_instance is not None:
+                # Run shutdown lifecycle
+                asyncio.run(_server_instance.shutdown())
+
+        def health_probe_handler() -> RuntimeHealthSnapshot:
+            """Health probe handler that checks server health."""
+            import os
+
+            nonlocal _server_instance
+
+            # Get current PID
+            pid = os.getpid()
+
+            if _server_instance is None:
+                # Server not running yet
+                return RuntimeHealthSnapshot(
+                    orchestrator_pid=pid,
+                    watchers_running=False,
+                )
+
+            # Check if server has health_check method
+            if hasattr(_server_instance, "health_check"):
+                # Call server's health check
+                health_response = asyncio.run(_server_instance.health_check())
+
+                # Convert to RuntimeHealthSnapshot
+                return RuntimeHealthSnapshot(
+                    orchestrator_pid=pid,
+                    watchers_running=health_response.status == "healthy",
+                )
+            else:
+                # No health check method, assume healthy
+                return RuntimeHealthSnapshot(
+                    orchestrator_pid=pid,
+                    watchers_running=True,
+                )
+
+        # Create factory using handler-based constructor
+        return cls(
+            server_name=name,
+            settings=None,  # Will auto-load via MCPServerSettings.load(name)
+            start_handler=start_handler,
+            stop_handler=stop_handler,
+            health_probe_handler=health_probe_handler,
+        )
 
     def __init__(
         self,

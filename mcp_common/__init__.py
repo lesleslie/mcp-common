@@ -40,7 +40,7 @@ from mcp_common.exceptions import (
 )
 from mcp_common.ui import ServerPanels
 
-__version__ = "0.3.6"  # Oneiric-native
+__version__ = "0.4.4"  # Server module + enhanced CLI factory
 
 __all__: list[str] = [
     "APIKeyFormatError",
