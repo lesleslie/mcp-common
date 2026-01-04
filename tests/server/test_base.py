@@ -66,7 +66,7 @@ class TestBaseOneiricServerMixin:
 
     def test_init_runtime_components(self, server, mock_config):
         """Should initialize runtime components."""
-        with patch("mcp_common.server.create_runtime_components") as mock_create:
+        with patch("mcp_common.server.base.create_runtime_components") as mock_create:
             mock_runtime = MagicMock()
             mock_create.return_value = mock_runtime
 
@@ -77,7 +77,7 @@ class TestBaseOneiricServerMixin:
 
     def test_init_runtime_components_with_custom_cache_dir(self, server, mock_config):
         """Should initialize with custom cache dir."""
-        with patch("mcp_common.server.create_runtime_components") as mock_create:
+        with patch("mcp_common.server.base.create_runtime_components") as mock_create:
             mock_runtime = MagicMock()
             mock_create.return_value = mock_runtime
 
@@ -274,7 +274,7 @@ class TestBaseOneiricServerMixinIntegration:
     @pytest.mark.asyncio
     async def test_complete_lifecycle(self, full_server):
         """Should support complete startup/shutdown lifecycle."""
-        with patch("mcp_common.server.create_runtime_components") as mock_create:
+        with patch("mcp_common.server.base.create_runtime_components") as mock_create:
             # Setup mock runtime
             mock_runtime = MagicMock()
             mock_runtime.initialize = AsyncMock()
@@ -312,7 +312,7 @@ class TestBaseOneiricServerMixinIntegration:
     @pytest.mark.asyncio
     async def test_health_check_flow(self, full_server):
         """Should support health check with custom components."""
-        with patch("mcp_common.server.create_runtime_components") as mock_create:
+        with patch("mcp_common.server.base.create_runtime_components") as mock_create:
             # Setup mock runtime
             mock_runtime = MagicMock()
             mock_runtime.cache_manager.get_cache_stats = AsyncMock(

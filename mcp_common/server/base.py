@@ -36,7 +36,7 @@ from oneiric.runtime.mcp_health import (
     HealthStatus,
 )
 
-from mcp_common.server import create_runtime_components
+from mcp_common.server.runtime import create_runtime_components
 
 
 class BaseOneiricServerMixin:
