@@ -352,7 +352,8 @@ class MCPBaseSettings(BaseModel):
         cls._load_environment_layer(data, env_prefix)
         cls._load_explicit_config_layer(data, config_path)
 
-        return cls(**data)
+        # Use model_validate() instead of cls(**data) to avoid ValidationInfo wrapping
+        return cls.model_validate(data)
 
     @classmethod
     def _load_server_yaml_layer(cls, data: dict[str, Any], server_name: str) -> None:
