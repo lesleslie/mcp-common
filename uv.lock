@@ -545,7 +545,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.47.11"
+version = "0.47.15"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -604,9 +604,9 @@ dependencies = [
     { name = "websockets" },
     { name = "zuban" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/05/91/8c4526f0c20b4ac76204532e4f04e1d6d2ed0353186bcdf1bb0f390296f6/crackerjack-0.47.11.tar.gz", hash = "sha256:a3e5f4660043d9d0de8c6f3d9f530330a5a1b6ed94c05b697b70066d3d01f819", size = 1963334, upload-time = "2026-01-05T14:42:58.809Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/31/20/2adc9809c2833573575e1ee3fef7bd22ea4cb14612e6d622e48b151d32fb/crackerjack-0.47.15.tar.gz", hash = "sha256:a2c08fae13fb445ea77bce960b0972fadcb4102bfd684c47b45ac8d79983dd71", size = 1965247, upload-time = "2026-01-05T17:29:49.371Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c1/14/8ee6d271e5aa0b3059b6d6c0006ac5265fe238838ac86cf16dccee9b22e0/crackerjack-0.47.11-py3-none-any.whl", hash = "sha256:9215f11eccd6175c7fe189dd33ef8db2aad1e9cfc7f3026f7404d2f5415b9729", size = 1111831, upload-time = "2026-01-05T14:43:01.098Z" },
+    { url = "https://files.pythonhosted.org/packages/98/f3/d2241584127fa6a598ac8b911261536961e1cc8084a7ba90b8ccb2019018/crackerjack-0.47.15-py3-none-any.whl", hash = "sha256:858c543c366cc1478c1ad95d7613b9e6fe0b17ea0e9d65c470779747823609e0", size = 1112383, upload-time = "2026-01-05T17:29:44.874Z" },
 ]
 
 [[package]]
@@ -1865,7 +1865,7 @@ wheels = [
 
 [[package]]
 name = "mcp-common"
-version = "0.4.6"
+version = "0.4.7"
 source = { editable = "." }
 dependencies = [
     { name = "oneiric" },
@@ -2294,7 +2294,7 @@ wheels = [
 
 [[package]]
 name = "oneiric"
-version = "0.3.10"
+version = "0.3.11"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiobreaker" },
@@ -2314,9 +2314,9 @@ dependencies = [
     { name = "typer" },
     { name = "watchfiles" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ca/17/7b95bc9cd7fa34a51458059207df53fb01e8d56c5f8e03fd8379f2b5ea0e/oneiric-0.3.10.tar.gz", hash = "sha256:546f390a06f8ed9d95c4a2130cd63c25ba41991fcd46b06b345031969d235d39", size = 232921, upload-time = "2026-01-05T15:52:59.817Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4a/fc/531f0876630267efe15f68cf3ea5d16e97dfb46070de88d7d806339dd721/oneiric-0.3.11.tar.gz", hash = "sha256:140e4cd99010b0ca62d013b8e778cb76dc8e07c71fcf24a7bbcd68689b317989", size = 232930, upload-time = "2026-01-05T17:34:15.351Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5e/f2/77870b2cd6fa7ff81964a7dab468bf0e273496ca0a7fba223db0d160f2f9/oneiric-0.3.10-py3-none-any.whl", hash = "sha256:87243690629879b984313cfce235bea399e4cede3c6be4d99bfd8226d8f71083", size = 317505, upload-time = "2026-01-05T15:52:57.905Z" },
+    { url = "https://files.pythonhosted.org/packages/4f/d9/7ebee383dd5c014a191ea0b45d36cd027a70ebea905b8ba8891a284951f3/oneiric-0.3.11-py3-none-any.whl", hash = "sha256:394df5647ddf637f49e0b53ecfc5492e2890fe582aa0438a48289dd10e93368c", size = 317505, upload-time = "2026-01-05T17:34:13.365Z" },
 ]
 
 [[package]]
