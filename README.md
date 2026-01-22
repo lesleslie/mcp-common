@@ -175,6 +175,37 @@ http_adapter = HTTPClientAdapter(settings=http_settings)
 response = await http_adapter.get("https://api.example.com")
 ```
 
+**Architecture Overview:**
+
+```mermaid
+graph TB
+    subgraph "mcp-common Components"
+        A[HTTP Client Adapter<br/>with Connection Pooling]
+        B[Settings Management<br/>YAML + Env Vars]
+        C[CLI Factory<br/>Lifecycle Management]
+        D[Rich UI Panels<br/>Console Output]
+        E[Security Utilities<br/>Validation & Sanitization]
+    end
+
+    subgraph "Integration"
+        F[FastMCP<br/>Optional]
+        G[MCP Server<br/>Application]
+    end
+
+    A --> G
+    B --> G
+    C --> G
+    D --> G
+    E --> G
+    F --> G
+
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style C fill:#e8f5e8
+    style D fill:#fff3e0
+    style E fill:#fce4ec
+```
+
 Note: Rate limiting is not provided by this library. If you use FastMCP, its built-in `RateLimitingMiddleware` can be enabled; otherwise, use project-specific configuration.
 
 ### 🎯 Oneiric CLI Factory (NEW in v0.3.3)
@@ -193,6 +224,54 @@ The `MCPServerCLIFactory` provides standardized CLI commands for managing MCP se
 - **Custom Handlers** - Extensible lifecycle hooks for server-specific logic
 - **Dual Output** - Human-readable and JSON output modes
 - **Standard Exit Codes** - Shell-scriptable with semantic exit codes
+
+**CLI Factory Architecture:**
+
+```mermaid
+graph LR
+    subgraph "User Application"
+        A[Server Implementation]
+        B[Custom Handlers]
+    end
+
+    subgraph "mcp-common CLI Factory"
+        C[MCPServerCLIFactory]
+        D[MCPServerSettings]
+        E[PID File Management]
+        F[Health Snapshots]
+        G[Signal Handlers]
+    end
+
+    subgraph "Typer CLI"
+        H[start command]
+        I[stop command]
+        J[restart command]
+        K[status command]
+        L[health command]
+    end
+
+    A --> C
+    B --> C
+    D --> C
+    C --> E
+    C --> F
+    C --> G
+    C --> H
+    C --> I
+    C --> J
+    C --> K
+    C --> L
+
+    style A fill:#e8f5e8
+    style B fill:#fff3e0
+    style C fill:#e3f2fd
+    style D fill:#f3e5f5
+    style H fill:#e0f2f1
+    style I fill:#e0f2f1
+    style J fill:#e0f2f1
+    style K fill:#e0f2f1
+    style L fill:#e0f2f1
+```
 
 **Quick Example:**
 

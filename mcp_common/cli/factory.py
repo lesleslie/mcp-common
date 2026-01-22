@@ -11,6 +11,7 @@ import sys
 import time
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import typer
 import uvicorn
@@ -171,8 +172,8 @@ class MCPServerCLIFactory:
             - get_app(): Return the ASGI application
         """
         # Global references for handler closures
-        _server_instance = None
-        _config_instance = None
+        _server_instance: Any = None
+        _config_instance: Any = None
 
         def start_handler() -> None:
             """Start handler that creates server instance and runs it."""
@@ -185,11 +186,17 @@ class MCPServerCLIFactory:
             _server_instance = server_class(_config_instance)
 
             # Run startup lifecycle
-            asyncio.run(_server_instance.startup())
+            if _server_instance is not None:
+                asyncio.run(_server_instance.startup())
+            else:
+                raise RuntimeError("Failed to create server instance")
 
             # Start the server (uvicorn or similar)
             # This typically blocks until the server is stopped
-            app = _server_instance.get_app()
+            if _server_instance is not None:
+                app = _server_instance.get_app()
+            else:
+                raise RuntimeError("Server instance was not properly initialized")
             host = getattr(_config_instance, "http_host", "127.0.0.1")
             port = getattr(_config_instance, "http_port", 8000)
 
@@ -295,7 +302,9 @@ class MCPServerCLIFactory:
         self._app = app
         return app
 
-    def _handle_stale_pid(self, pid_path: Path, force: bool = False) -> tuple[bool, str]:
+    def _handle_stale_pid(
+        self, pid_path: Path, force: bool = False
+    ) -> tuple[bool, str]:
         """Handle stale PID file detection and recovery.
 
         Args:
@@ -322,7 +331,10 @@ class MCPServerCLIFactory:
             if force:
                 pid_path.unlink(missing_ok=True)
                 return (True, f"Removed stale PID file (process {pid} not found)")
-            return (False, f"Stale PID file found (process {pid} dead). Use --force to remove.")
+            return (
+                False,
+                f"Stale PID file found (process {pid} dead). Use --force to remove.",
+            )
 
         # Process is alive
         return (False, f"Server already running (PID {pid})")
@@ -332,7 +344,9 @@ class MCPServerCLIFactory:
         force: bool = typer.Option(
             False, "--force", help="Force start (kill existing process if stale)"
         ),
-        json_output: bool = typer.Option(False, "--json", help="Output JSON instead of text"),
+        json_output: bool = typer.Option(
+            False, "--json", help="Output JSON instead of text"
+        ),
     ) -> None:
         """Start the MCP server."""
         self._validate_cache_and_check_process(force, json_output)
@@ -366,7 +380,9 @@ class MCPServerCLIFactory:
 
         if not can_continue:
             if json_output:
-                error_type = "stale_pid" if "stale" in message.lower() else "already_running"
+                error_type = (
+                    "stale_pid" if "stale" in message.lower() else "already_running"
+                )
                 typer.echo(
                     json.dumps(
                         {
@@ -423,7 +439,9 @@ class MCPServerCLIFactory:
         """Execute the custom start handler if provided."""
         if self.start_handler is not None:
             if json_output:
-                typer.echo(json.dumps({"status": "starting", "message": "Starting server"}))
+                typer.echo(
+                    json.dumps({"status": "starting", "message": "Starting server"})
+                )
             else:
                 typer.echo("Starting server")
             self.start_handler()
@@ -434,9 +452,15 @@ class MCPServerCLIFactory:
 
     def _cmd_stop(
         self,
-        timeout: int = typer.Option(10, "--timeout", help="Seconds to wait for shutdown"),
-        force: bool = typer.Option(False, "--force", help="Force kill (SIGKILL) if timeout"),
-        json_output: bool = typer.Option(False, "--json", help="Output JSON instead of text"),
+        timeout: int = typer.Option(
+            10, "--timeout", help="Seconds to wait for shutdown"
+        ),
+        force: bool = typer.Option(
+            False, "--force", help="Force kill (SIGKILL) if timeout"
+        ),
+        json_output: bool = typer.Option(
+            False, "--json", help="Output JSON instead of text"
+        ),
     ) -> None:
         """Stop the MCP server."""
         pid = self._get_server_pid(json_output)
@@ -448,7 +472,11 @@ class MCPServerCLIFactory:
 
         if not pid_path.exists():
             if json_output:
-                typer.echo(json.dumps({"status": "not_running", "message": "Server not running"}))
+                typer.echo(
+                    json.dumps(
+                        {"status": "not_running", "message": "Server not running"}
+                    )
+                )
             else:
                 typer.echo("Server not running")
             sys.exit(ExitCode.SERVER_NOT_RUNNING)
@@ -502,7 +530,11 @@ class MCPServerCLIFactory:
             os.kill(pid, 15)  # SIGTERM
         except ProcessLookupError:
             if json_output:
-                typer.echo(json.dumps({"status": "not_running", "message": "Process not found"}))
+                typer.echo(
+                    json.dumps(
+                        {"status": "not_running", "message": "Process not found"}
+                    )
+                )
             else:
                 typer.echo("Process not found; removing stale PID file")
             self.settings.pid_path().unlink(missing_ok=True)
@@ -521,7 +553,9 @@ class MCPServerCLIFactory:
         for _ in range(timeout * 10):  # Check every 0.1s
             if not pid_path.exists():
                 if json_output:
-                    typer.echo(json.dumps({"status": "stopped", "message": "Server stopped"}))
+                    typer.echo(
+                        json.dumps({"status": "stopped", "message": "Server stopped"})
+                    )
                 else:
                     typer.echo("Server stopped")
                 return True
@@ -558,7 +592,11 @@ class MCPServerCLIFactory:
         except ProcessLookupError:
             self.settings.pid_path().unlink(missing_ok=True)
             if json_output:
-                typer.echo(json.dumps({"status": "not_running", "message": "Process not found"}))
+                typer.echo(
+                    json.dumps(
+                        {"status": "not_running", "message": "Process not found"}
+                    )
+                )
             else:
                 typer.echo("Process not found; removed PID file")
         sys.exit(ExitCode.SUCCESS)
@@ -566,8 +604,12 @@ class MCPServerCLIFactory:
     def _cmd_restart(
         self,
         timeout: int = typer.Option(10, "--timeout", help="Stop timeout (seconds)"),
-        force: bool = typer.Option(False, "--force", help="Force restart if server not running"),
-        json_output: bool = typer.Option(False, "--json", help="Output JSON instead of text"),
+        force: bool = typer.Option(
+            False, "--force", help="Force restart if server not running"
+        ),
+        json_output: bool = typer.Option(
+            False, "--json", help="Output JSON instead of text"
+        ),
     ) -> None:
         """Restart the MCP server (stop + start)."""
         # Stop server
@@ -608,7 +650,9 @@ class MCPServerCLIFactory:
     def _emit_not_running(self, json_output: bool) -> None:
         """Emit not-running output and exit."""
         if json_output:
-            typer.echo(json.dumps({"status": "not_running", "message": "Server not running"}))
+            typer.echo(
+                json.dumps({"status": "not_running", "message": "Server not running"})
+            )
         else:
             typer.echo("Server not running")
         sys.exit(ExitCode.SERVER_NOT_RUNNING)
@@ -703,7 +747,9 @@ class MCPServerCLIFactory:
 
         return load_runtime_health(self.settings.health_snapshot_path())
 
-    def _emit_health_snapshot(self, snapshot: RuntimeHealthSnapshot, json_output: bool) -> None:
+    def _emit_health_snapshot(
+        self, snapshot: RuntimeHealthSnapshot, json_output: bool
+    ) -> None:
         """Emit health snapshot output."""
         if json_output:
             typer.echo(json.dumps(snapshot.as_dict()))
@@ -728,7 +774,9 @@ class MCPServerCLIFactory:
 
     def _cmd_status(
         self,
-        json_output: bool = typer.Option(False, "--json", help="Output JSON instead of text"),
+        json_output: bool = typer.Option(
+            False, "--json", help="Output JSON instead of text"
+        ),
     ) -> None:
         """Check if server is running (lightweight check)."""
         pid = self._read_pid_or_exit(json_output)
@@ -741,7 +789,9 @@ class MCPServerCLIFactory:
     def _cmd_health(
         self,
         probe: bool = typer.Option(False, "--probe", help="Run live health probes"),
-        json_output: bool = typer.Option(False, "--json", help="Output JSON instead of text"),
+        json_output: bool = typer.Option(
+            False, "--json", help="Output JSON instead of text"
+        ),
     ) -> None:
         """Display server health (snapshot or live probe)."""
         snapshot = self._get_health_snapshot(probe)

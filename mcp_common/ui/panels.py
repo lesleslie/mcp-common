@@ -320,7 +320,9 @@ class ServerPanels:
         border_style: str = "cyan",
     ) -> None:
         """Display a generic table with provided headers and rows."""
-        table = Table(title=title, show_header=True, header_style=f"bold {border_style}")
+        table = Table(
+            title=title, show_header=True, header_style=f"bold {border_style}"
+        )
         for header in headers:
             table.add_column(header)
         for row in rows:
@@ -456,7 +458,9 @@ class ServerPanels:
             lv = txt.lower()
             if any(k in lv for k in ("running", "healthy", "ok", "success")):
                 return Text(txt, style="green")
-            if any(k in lv for k in ("stopped", "failed", "error", "down", "unhealthy")):
+            if any(
+                k in lv for k in ("stopped", "failed", "error", "down", "unhealthy")
+            ):
                 return Text(txt, style="red")
             if "warn" in lv or "degrad" in lv:
                 return Text(txt, style="yellow")

@@ -390,7 +390,9 @@ class MCPBaseSettings(BaseModel):
                 data[field_name] = env_value
 
     @classmethod
-    def _load_explicit_config_layer(cls, data: dict[str, Any], config_path: Path | None) -> None:
+    def _load_explicit_config_layer(
+        cls, data: dict[str, Any], config_path: Path | None
+    ) -> None:
         """Load Layer 4: Explicit config path (highest priority)."""
         if config_path is not None and config_path.exists():
             with config_path.open() as f:

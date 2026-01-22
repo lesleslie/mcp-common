@@ -30,13 +30,20 @@ Example:
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from oneiric.runtime.mcp_health import (
     HealthStatus,
 )
 
 from mcp_common.server.runtime import create_runtime_components
+
+if TYPE_CHECKING:
+    from mcp_common.config.base import (  # Adjust import based on actual config type
+        MCPBaseSettings,
+        MCPServerSettings,
+    )
+    from mcp_common.server.runtime import RuntimeComponents
 
 
 class BaseOneiricServerMixin:
@@ -70,6 +77,10 @@ class BaseOneiricServerMixin:
         ...         await self._create_shutdown_snapshot()
         ...         await self.runtime.cleanup()
     """
+
+    # Type annotations for attributes expected to be provided by implementing classes
+    config: MCPBaseSettings | MCPServerSettings
+    runtime: RuntimeComponents
 
     def _init_runtime_components(
         self,
@@ -265,7 +276,10 @@ class BaseOneiricServerMixin:
             self.runtime.health_monitor.create_component_health(
                 name="snapshot",
                 status=HealthStatus.HEALTHY,
-                details={"initialized": self.runtime.snapshot_manager.current_snapshot is not None},
+                details={
+                    "initialized": self.runtime.snapshot_manager.current_snapshot
+                    is not None
+                },
             ),
         ]
 

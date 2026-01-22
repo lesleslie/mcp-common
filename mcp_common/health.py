@@ -36,14 +36,22 @@ class HealthStatus(str, Enum):
         """Compare health status severity (healthy < degraded < unhealthy)."""
         if not isinstance(other, HealthStatus):
             return NotImplemented
-        order = {HealthStatus.HEALTHY: 0, HealthStatus.DEGRADED: 1, HealthStatus.UNHEALTHY: 2}
+        order = {
+            HealthStatus.HEALTHY: 0,
+            HealthStatus.DEGRADED: 1,
+            HealthStatus.UNHEALTHY: 2,
+        }
         return order[self] < order[other]
 
     def __gt__(self, other: object) -> bool:
         """Support greater-than comparisons for max/min operations."""
         if not isinstance(other, HealthStatus):
             return NotImplemented
-        order = {HealthStatus.HEALTHY: 0, HealthStatus.DEGRADED: 1, HealthStatus.UNHEALTHY: 2}
+        order = {
+            HealthStatus.HEALTHY: 0,
+            HealthStatus.DEGRADED: 1,
+            HealthStatus.UNHEALTHY: 2,
+        }
         return order[self] > order[other]
 
 

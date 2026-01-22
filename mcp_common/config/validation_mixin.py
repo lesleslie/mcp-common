@@ -12,7 +12,10 @@ import typing as t
 
 # Try to import specific exceptions (graceful degradation)
 try:
-    from mcp_common.exceptions import CredentialValidationError, ServerConfigurationError
+    from mcp_common.exceptions import (
+        CredentialValidationError,
+        ServerConfigurationError,
+    )
 
     EXCEPTIONS_AVAILABLE = True
 except ImportError:
@@ -214,7 +217,9 @@ class ValidationMixin:
 
         # Validate port if provided
         max_port = 65535
-        if port is not None and (not isinstance(port, int) or port < 1 or port > max_port):
+        if port is not None and (
+            not isinstance(port, int) or port < 1 or port > max_port
+        ):
             prefix = f"{context} " if context else ""
             msg = f"{prefix}port must be between 1 and 65535, got: {port}"
 

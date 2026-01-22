@@ -24,12 +24,18 @@ API_KEY_PATTERN = re.compile(
 # Common sensitive key patterns
 SENSITIVE_PATTERNS = {
     "openai": re.compile(r"sk-[A-Za-z0-9]{48}"),  # REGEX OK: OpenAI API key pattern
-    "anthropic": re.compile(r"sk-ant-[A-Za-z0-9\-_]{95,}"),  # REGEX OK: Anthropic API key pattern
-    "github": re.compile(r"gh[ps]_[A-Za-z0-9]{36,255}"),  # REGEX OK: GitHub token pattern
+    "anthropic": re.compile(
+        r"sk-ant-[A-Za-z0-9\-_]{95,}"
+    ),  # REGEX OK: Anthropic API key pattern
+    "github": re.compile(
+        r"gh[ps]_[A-Za-z0-9]{36,255}"
+    ),  # REGEX OK: GitHub token pattern
     "jwt": re.compile(
         r"eyJ[A-Za-z0-9\-_]+\.eyJ[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+"
     ),  # REGEX OK: JWT token pattern
-    "generic_hex": re.compile(r"\b[0-9a-f]{32,}\b"),  # REGEX OK: Generic hex API key pattern
+    "generic_hex": re.compile(
+        r"\b[0-9a-f]{32,}\b"
+    ),  # REGEX OK: Generic hex API key pattern
 }
 
 
@@ -79,7 +85,9 @@ def sanitize_output(
         >>> # Returns: {"api_key": "sk-***", "result": "success"}
     """
     if isinstance(data, dict):
-        return {k: sanitize_output(v, mask_keys, mask_patterns) for k, v in data.items()}
+        return {
+            k: sanitize_output(v, mask_keys, mask_patterns) for k, v in data.items()
+        }
 
     if isinstance(data, list):
         return [sanitize_output(item, mask_keys, mask_patterns) for item in data]
@@ -144,7 +152,9 @@ def sanitize_dict_for_logging(
             sanitized[key] = sanitize_dict_for_logging(value, sensitive_keys)
         elif isinstance(value, list):
             sanitized[key] = [
-                sanitize_dict_for_logging(item, sensitive_keys) if isinstance(item, dict) else item
+                sanitize_dict_for_logging(item, sensitive_keys)
+                if isinstance(item, dict)
+                else item
                 for item in value
             ]
         else:

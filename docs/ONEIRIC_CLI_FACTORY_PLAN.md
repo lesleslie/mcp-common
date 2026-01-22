@@ -18,6 +18,37 @@ runtime cache conventions for MCP servers migrating to Oneiric.
 - `--health --probe`: executes live health probes using Oneiric lifecycle
   health checks, then reports updated snapshot results.
 
+**CLI Status vs Health vs Probe Flow:**
+
+```mermaid
+flowchart TD
+    A[CLI Command] --> B{Command Type}
+    B -->|status| C[Lightweight Process Check]
+    B -->|health| D[Runtime Health Snapshot]
+    B -->|health --probe| E[Live Health Probes]
+
+    C --> C1[Read PID file]
+    C --> C2[Check snapshot freshness]
+    C --> C3[Verify process alive]
+
+    D --> D1[Read runtime_health.json]
+    D --> D2[Show health summary]
+    D --> D3[Display lifecycle state]
+
+    E --> E1[Execute live health checks]
+    E --> E2[Update runtime_health.json]
+    E --> E3[Report probe results]
+
+    C --> F[Output: Process status]
+    D --> G[Output: Health summary]
+    E --> H[Output: Live probe results]
+
+    style A fill:#e3f2fd
+    style C fill:#e8f5e8
+    style D fill:#fff3e0
+    style E fill:#fce4ec
+```
+
 ### Runtime Cache Conventions
 
 - Cache root: `.oneiric_cache/` within each project workspace.

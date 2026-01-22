@@ -37,7 +37,8 @@ class MCPServerSettings(BaseModel):
 
     server_name: str = Field(description="Server identifier")
     cache_root: Path = Field(
-        default=Path(".oneiric_cache"), description="Cache directory for PID and snapshots"
+        default=Path(".oneiric_cache"),
+        description="Cache directory for PID and snapshots",
     )
     health_ttl_seconds: float = Field(
         default=60.0, ge=1.0, description="Snapshot freshness threshold (seconds)"
@@ -157,7 +158,9 @@ class MCPServerSettings(BaseModel):
                     data[field_name] = raw_env_value
 
     @classmethod
-    def _load_explicit_config_layer(cls, data: dict[str, Any], config_path: Path | None) -> None:
+    def _load_explicit_config_layer(
+        cls, data: dict[str, Any], config_path: Path | None
+    ) -> None:
         """Load Layer 4: Explicit config path (highest priority)."""
         if config_path is not None and config_path.exists():
             with config_path.open() as f:

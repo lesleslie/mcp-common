@@ -170,7 +170,10 @@ def validate_pid_integrity(
         # PID file should be created AFTER process started
         # Allow 1 second tolerance for clock skew
         if process_create_time > pid_file_mtime + 1.0:
-            return (False, f"Process {pid} started after PID file created (possible impersonation)")
+            return (
+                False,
+                f"Process {pid} started after PID file created (possible impersonation)",
+            )
     except (OSError, psutil.NoSuchProcess):
         # Can't validate timing, fail safe
         return (False, f"Cannot validate process {pid} timing")

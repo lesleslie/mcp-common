@@ -135,7 +135,9 @@ class APIKeyValidator:
                 example="x" * min_length,
             )
 
-    def _validate_key_missing(self, key: str | None, raise_on_invalid: bool) -> bool | None:
+    def _validate_key_missing(
+        self, key: str | None, raise_on_invalid: bool
+    ) -> bool | None:
         """Helper to validate if the key is missing."""
         if not key or not key.strip():
             if raise_on_invalid:

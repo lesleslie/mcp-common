@@ -133,7 +133,9 @@ def health_probe_handler() -> RuntimeHealthSnapshot:
         lifecycle_state={
             "started_at": server_state.get("started_at"),
             "uptime_seconds": (
-                time.time() - server_state["started_at"] if server_state.get("started_at") else 0
+                time.time() - server_state["started_at"]
+                if server_state.get("started_at")
+                else 0
             ),
         },
         activity_state={

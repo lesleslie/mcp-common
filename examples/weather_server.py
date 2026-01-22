@@ -32,7 +32,12 @@ except ImportError as e:  # pragma: no cover - example UX improvement
     )
     raise SystemExit(msg) from e
 
-from mcp_common import HTTPClientAdapter, HTTPClientSettings, MCPBaseSettings, ServerPanels
+from mcp_common import (
+    HTTPClientAdapter,
+    HTTPClientSettings,
+    MCPBaseSettings,
+    ServerPanels,
+)
 
 
 class WeatherSettings(MCPBaseSettings):
@@ -224,7 +229,11 @@ async def main() -> None:
     ServerPanels.status_table(
         title="Server Status",
         rows=[
-            ("HTTP Client", "✅ Ready", f"Pool: {settings.http_max_connections} connections"),
+            (
+                "HTTP Client",
+                "✅ Ready",
+                f"Pool: {settings.http_max_connections} connections",
+            ),
             ("Configuration", "✅ Loaded", f"API: {settings.base_url}"),
             ("MCP Tools", "✅ Registered", "2 tools available"),
         ],

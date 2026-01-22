@@ -25,7 +25,11 @@ Example:
 """
 
 from mcp_common.cli.factory import MCPServerCLIFactory
-from mcp_common.cli.health import RuntimeHealthSnapshot, load_runtime_health, write_runtime_health
+from mcp_common.cli.health import (
+    RuntimeHealthSnapshot,
+    load_runtime_health,
+    write_runtime_health,
+)
 from mcp_common.cli.settings import MCPServerSettings
 from mcp_common.cli.signals import SignalHandler
 

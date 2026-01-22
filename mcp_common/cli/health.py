@@ -96,7 +96,9 @@ def load_runtime_health(path: Path) -> RuntimeHealthSnapshot:
     snapshot.last_remote_sync_at = data.get("last_remote_sync_at")
     snapshot.last_remote_error = data.get("last_remote_error")
     lifecycle_state = data.get("lifecycle_state")
-    snapshot.lifecycle_state = lifecycle_state if isinstance(lifecycle_state, dict) else {}
+    snapshot.lifecycle_state = (
+        lifecycle_state if isinstance(lifecycle_state, dict) else {}
+    )
     activity_state = data.get("activity_state")
     snapshot.activity_state = activity_state if isinstance(activity_state, dict) else {}
 

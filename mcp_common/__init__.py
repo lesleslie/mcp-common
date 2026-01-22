@@ -38,7 +38,10 @@ from mcp_common.exceptions import (
     ServerConfigurationError,
     ServerInitializationError,
 )
+from mcp_common.interfaces import DualUseTool, ensure_dual_use
+from mcp_common.schemas import ToolInput, ToolResponse
 from mcp_common.ui import ServerPanels
+from mcp_common.validation import validate_input, validate_output
 
 __version__ = "0.4.4"  # Server module + enhanced CLI factory
 
@@ -48,6 +51,7 @@ __all__: list[str] = [
     "APIKeyMissingError",
     "CredentialValidationError",
     "DependencyMissingError",
+    "DualUseTool",
     "MCPBaseSettings",
     "MCPServerCLIFactory",
     "MCPServerError",
@@ -56,6 +60,11 @@ __all__: list[str] = [
     "ServerConfigurationError",
     "ServerInitializationError",
     "ServerPanels",
+    "ToolInput",
+    "ToolResponse",
     "ValidationMixin",
     "__version__",
+    "ensure_dual_use",
+    "validate_input",
+    "validate_output",
 ]

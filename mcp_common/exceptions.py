@@ -38,7 +38,9 @@ class ServerConfigurationError(MCPServerError):
         value: The invalid value that caused the error (if applicable)
     """
 
-    def __init__(self, message: str, field: str | None = None, value: str | None = None) -> None:
+    def __init__(
+        self, message: str, field: str | None = None, value: str | None = None
+    ) -> None:
         """Initialize configuration error with optional field context.
 
         Args:

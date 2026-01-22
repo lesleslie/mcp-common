@@ -109,6 +109,41 @@ def custom():
 app()
 ```
 
+**Server Lifecycle Flow:**
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant CLI as CLI Factory
+    participant S as Server Process
+    participant P as PID File
+    participant H as Health Snapshot
+
+    U->>CLI: python server.py start
+    CLI->>P: Create PID file (0o600)
+    CLI->>H: Create health snapshot
+    CLI->>S: Initialize server
+    S->>S: Run startup lifecycle
+    S->>U: Server running
+
+    U->>CLI: python server.py status
+    CLI->>P: Check PID file exists
+    CLI->>S: Verify process alive
+    CLI->>H: Check snapshot freshness
+    CLI->>U: Report status
+
+    U->>CLI: python server.py health
+    CLI->>H: Read health snapshot
+    H->>U: Return health details
+
+    U->>CLI: python server.py stop
+    CLI->>S: Send shutdown signal
+    S->>S: Run shutdown lifecycle
+    CLI->>P: Remove PID file
+    CLI->>H: Update health snapshot
+    CLI->>U: Server stopped
+```
+
 ### Configuration
 
 Edit `examples/settings/example-server.yaml`:
@@ -130,6 +165,30 @@ Or use environment variables:
 export MCP_SERVER_LOG_LEVEL=DEBUG
 export MCP_SERVER_CUSTOM_PORT=9090
 python examples/cli_server.py start
+```
+
+**Configuration Loading Hierarchy:**
+
+```mermaid
+graph TD
+    A[Configuration Loading Order] --> B[settings/local.yaml<br/>(gitignored)]
+    A --> C[settings/{server-name}.yaml<br/>(in repo)]
+    A --> D[Environment Variables<br/>MCP_SERVER_*]
+    A --> E[Defaults in Code]
+
+    B --> F[Loaded Config Object]
+    C --> F
+    D --> F
+    E --> F
+
+    F --> G[Priority: local.yaml > env vars > yaml > defaults]
+
+    style A fill:#e3f2fd
+    style B fill:#e8f5e8
+    style C fill:#fff3e0
+    style D fill:#fce4ec
+    style E fill:#f3e5f5
+    style F fill:#e0f2f1
 ```
 
 ### Exit Codes
