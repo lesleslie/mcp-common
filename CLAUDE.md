@@ -503,7 +503,7 @@ python weather_server.py
 
 - **Current Version:** 0.3.6 (Oneiric-Native - production ready)
 - **New in v0.3.6:**
-  - Removed ACB dependency - now pure Pydantic + Rich
+  - Oneiric-native implementation - pure Pydantic + Rich
   - Direct library usage (no framework lock-in)
   - Simplified adapter patterns
   - Standard Python logging (no custom wrappers)
@@ -514,11 +514,7 @@ python weather_server.py
   - SignalHandler for graceful shutdown
   - Security utilities (PID validation, cache ownership)
   - Complete CLI example server
-- **Breaking Changes from v2.x (ACB-native):**
-  - ACB removed as dependency
-  - Settings extend Pydantic `BaseModel` (not `acb.config.Settings`)
-  - HTTP client uses direct instantiation (not dependency injection)
-  - Standard Python logging (not ACB Logger)
+  - Standard Python logging (not custom wrappers)
   - Rate limiting not included (use FastMCP middleware or project-specific)
 
 ## External Dependencies and Their Roles

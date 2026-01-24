@@ -22,7 +22,7 @@ The specification successfully addresses all 19 audit findings and aligns well w
 
 - ✅ Meets crackerjack's CLI factory requirements (§4 of cutover plan)
 - ✅ Supports minimal status tool pattern (reads Oneiric snapshots)
-- ✅ No dependencies on ACB (pure Oneiric-native)
+- ✅ No legacy dependencies (pure Oneiric-native)
 - ✅ Extensible for server-specific needs (crackerjack QA, session-buddy features)
 - ✅ Standard flags align with Oneiric MCP Server CLI Standard
 
@@ -34,7 +34,7 @@ ______________________________________________________________________
 
 | Cutover Requirement | Spec Support | Location | Status |
 |---------------------|--------------|----------|--------|
-| Drop ACB dependency | ✅ Pure Oneiric-native | §10: Migration Guide | Ready |
+| Remove legacy dependencies | ✅ Pure Oneiric-native | §10: Migration Guide | Ready |
 | Standard MCP flags | ✅ `--start/stop/restart/status/health` | §2: CLI Factory API | Ready |
 | `.oneiric_cache/` usage | ✅ Configurable cache root | §2: MCPServerSettings | Ready |
 | Runtime snapshot writes | ✅ `write_runtime_health()` | §3: Error Handling | Ready |
@@ -589,7 +589,7 @@ ______________________________________________________________________
 
 ### Scenario 1: Crackerjack Cutover
 
-**Task:** Replace ACB-based CLI with factory-based CLI
+**Task:** Replace legacy CLI with factory-based CLI
 
 **Factory Usage:**
 
@@ -634,7 +634,7 @@ if __name__ == "__main__":
 - Factory provides standard lifecycle commands
 - Custom QA commands added easily
 - Settings extended for QA-specific config
-- No ACB dependencies needed
+- No legacy dependencies needed
 
 ______________________________________________________________________
 
@@ -831,12 +831,12 @@ ______________________________________________________________________
 
 - More complex requirements (stress tests factory)
 - QA tooling migration validates Oneiric integration
-- Removes most ACB dependencies (good test case)
+- Removes most legacy dependencies (good test case)
 
 **Tasks:**
 
 1. **Remove WebSocket/Dashboard** (4 hours)
-1. **Remove ACB dependencies** (6 hours)
+1. **Remove legacy dependencies** (6 hours)
 1. **Integrate CLI factory** (4 hours)
 1. **Port QA tools to Oneiric** (8 hours)
 1. **Update tests** (4 hours)
@@ -912,7 +912,7 @@ ______________________________________________________________________
 
 1. **Stress Test:** More complex requirements validate factory design
 1. **Oneiric Integration:** QA tools migration tests Oneiric adapter patterns
-1. **ACB Removal:** Largest ACB codebase to remove (good validation)
+1. **Legacy Dependency Removal:** Largest legacy codebase to remove (good validation)
 1. **Lessons Learned:** Issues discovered here benefit all other migrations
 
 **Risk Mitigation:**

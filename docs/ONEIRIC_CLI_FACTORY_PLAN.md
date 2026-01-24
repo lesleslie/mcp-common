@@ -70,7 +70,7 @@ The CLI reads Oneiric runtime snapshots for health/status details:
 
 ### Implementation Steps
 
-1. Remove ACB dependencies and references from `mcp-common`.
+1. Remove legacy dependencies and references from `mcp-common`.
 1. Add Oneiric-native settings wrapper and cache path helpers.
 1. Implement the CLI factory with standard flags and snapshot-based status/health.
 1. Update docs and examples to reflect Oneiric-only usage.

@@ -11,7 +11,7 @@ The MCP Server Migration Plan has been successfully executed, completing Phase 1
 - **Migration Infrastructure**: Established baseline audits, checklists, tracking dashboards
 - **Documentation**: Comprehensive migration plans, operational models, compatibility contracts
 - **Test Coverage Baselines**: Documented for all projects (mailgun-mcp: 46%, unifi-mcp: 27%, opera-cloud-mcp: 39%, raindropio-mcp: 89%, excalidraw-mcp: 77%)
-- **ACB Removal**: Inventory completed, only mailgun-mcp has direct ACB usage
+- **Legacy Dependency Removal**: Inventory completed, only mailgun-mcp has direct legacy dependency usage
 - **Rollback Procedures**: Comprehensive templates created for all servers
 - **Pre-migration Tags**: v1.0.0-pre-migration tags created in all repositories
 
@@ -180,7 +180,7 @@ return HealthCheckResponse(
 
 ### 1. No Legacy Support
 
-- **Decision**: Remove all ACB patterns and legacy CLI flags
+- **Decision**: Remove all legacy patterns and legacy CLI flags
 - **Impact**: Clean break from legacy systems, simplified architecture
 - **Result**: All servers now use standardized Oneiric patterns
 
@@ -236,9 +236,9 @@ return HealthCheckResponse(
 
 ## Challenges and Solutions
 
-### Challenge 1: ACB Dependency Removal
+### Challenge 1: Legacy Dependency Removal
 
-- **Issue**: mailgun-mcp had direct ACB imports
+- **Issue**: mailgun-mcp had direct legacy dependency imports
 - **Solution**: Replaced with Oneiric patterns, maintained functionality
 - **Result**: Clean migration with no breaking changes
 

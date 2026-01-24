@@ -23,7 +23,7 @@
 - Migration infrastructure established
 - Comprehensive documentation created
 - Test coverage baselines documented
-- ACB removal inventory completed
+- Legacy dependency removal inventory completed
 - Rollback procedures created
 - Compatibility contracts defined
 
@@ -197,11 +197,11 @@ python -m project_mcp status
 1. **ROLLBACK_PROCEDURES_TEMPLATE.md** - Rollback procedures
 1. **OPERATIONAL_MODEL_DOCUMENTATION.md** - Operational model
 1. **COMPATIBILITY_CONTRACT.md** - Compatibility contract
-1. **ACB_REMOVAL_INVENTORY.md** - ACB removal inventory
+1. **LEGACY_DEPENDENCY_REMOVAL_INVENTORY.md** - Legacy dependency removal inventory
 
 ## 🎯 Key Technical Decisions
 
-1. **No Legacy Support**: Remove all ACB patterns and legacy CLI flags
+1. **No Legacy Support**: Remove all legacy patterns and legacy CLI flags
 1. **Standardized CLI Interface**: Use subcommand syntax (start, stop, health, config)
 1. **Health Schema Compliance**: Use mcp-common health primitives and Session-Buddy contracts
 1. **Runtime Cache Implementation**: Implement `.oneiric_cache/` with PID files and snapshots

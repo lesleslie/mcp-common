@@ -35,7 +35,7 @@ This specification defines a **production-ready CLI factory** for MCP servers mi
 
 **Key Architectural Decisions:**
 
-1. **No ACB Dependencies** - Clean break from ACB, pure Oneiric-native implementation
+1. **No Legacy Dependencies** - Clean break from legacy dependencies, pure Oneiric-native implementation
 1. **Typer-based CLI** - Following Oneiric's `typer.Typer()` pattern for consistency
 1. **Settings-driven paths** - All paths resolved via `MCPServerSettings` (Pydantic BaseModel)
 1. **Atomic operations** - All file writes use `tmp.write() → tmp.replace()` for crash-safety
@@ -1476,7 +1476,7 @@ ______________________________________________________________________
 
    - CLI factory quickstart
    - Configuration guide
-   - Migration guide from ACB
+   - Migration guide from legacy dependencies
 
 ### Phase 5: Migration (Week 5+)
 
@@ -1484,7 +1484,7 @@ ______________________________________________________________________
 
 1. **Migrate session-buddy** (first adopter)
 
-   - Remove ACB dependencies
+   - Remove legacy dependencies
    - Implement CLI using factory
    - Test thoroughly
 
@@ -1502,44 +1502,44 @@ ______________________________________________________________________
 
 ## Migration Guide
 
-### From ACB to Oneiric-Native
+### From Legacy Dependencies to Oneiric-Native
 
 **Breaking Changes:**
 
-1. **No ACB imports** - All `acb.*` imports must be removed
-1. **Settings class** - Extend `MCPServerSettings` instead of `acb.config.Settings`
-1. **Logger** - Use standard `logging.Logger` instead of ACB logger
+1. **No Legacy imports** - All legacy dependency imports must be removed
+1. **Settings class** - Extend `MCPServerSettings` instead of legacy settings classes
+1. **Logger** - Use standard `logging.Logger` instead of legacy logger
 1. **CLI** - Use `MCPServerCLIFactory` instead of custom CLI
 
 **Migration Checklist:**
 
-- [ ] Remove all `acb` imports
-- [ ] Replace `acb.config.Settings` with `mcp_common.cli.MCPServerSettings`
-- [ ] Replace ACB logger with `logging.getLogger()`
+- [ ] Remove all legacy dependency imports
+- [ ] Replace legacy settings classes with `mcp_common.cli.MCPServerSettings`
+- [ ] Replace legacy logger with `logging.getLogger()`
 - [ ] Replace custom CLI with `MCPServerCLIFactory`
-- [ ] Update tests to remove ACB mocks
+- [ ] Update tests to remove legacy dependency mocks
 - [ ] Update pyproject.toml to remove `acb` dependency
 - [ ] Update documentation to reflect Oneiric-only usage
 
-**Before (ACB-based):**
+**Before (Historical ACB-based - DEPRECATED):**
 
 ```python
-# Old ACB-based server
-from acb.config import Settings
-from acb.adapters.logger import LoggerProtocol
-from acb.depends import Inject, depends
+# Old ACB-based server (DEPRECATED)
+# from acb.config import Settings
+# from acb.adapters.logger import LoggerProtocol
+# from acb.depends import Inject, depends
 
 
-class MyServerSettings(Settings):
-    api_key: str
+# class MyServerSettings(Settings):
+#     api_key: str
 
 
-@depends.inject
-async def my_tool(
-    logger: Inject[LoggerProtocol] = None,
-    settings: Inject[MyServerSettings] = None,
-):
-    logger.info("Tool called")
+# @depends.inject
+# async def my_tool(
+#     logger: Inject[LoggerProtocol] = None,
+#     settings: Inject[MyServerSettings] = None,
+# ):
+#     logger.info("Tool called")
 ```
 
 **After (Oneiric-native):**

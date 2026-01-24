@@ -601,7 +601,7 @@ pytest --cov=mcp_common --cov-report=html
 # Run specific test
 pytest tests/test_http_adapter.py -v
 
-# Run with ACB integration tests
+# Run integration tests
 pytest tests/integration/ -v
 ```
 
@@ -627,10 +627,9 @@ ______________________________________________________________________
 
 **Recent Versions:**
 
-- **0.3.6** - Oneiric-native (removed ACB dependency)
+- **0.3.6** - Oneiric-native (production ready)
 - **0.3.3** - Added Oneiric CLI Factory
 - **0.3.0** - Initial Oneiric patterns
-- **2.0.0** - Previous ACB-native version (deprecated)
 
 **Compatibility:**
 

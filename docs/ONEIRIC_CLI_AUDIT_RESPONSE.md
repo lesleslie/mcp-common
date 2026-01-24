@@ -32,7 +32,7 @@ ______________________________________________________________________
 | 2.4 | LOW | Logging and Verbosity | ✅ RESOLVED | §7: Logging & Verbosity |
 | 2.5 | MEDIUM | Exit Codes | ✅ RESOLVED | §3: Exit Codes (ExitCode class) |
 | 3.1 | LOW | Missing LifecycleManager Reference | ✅ RESOLVED | §2: Health command w/ probe flag |
-| 4.1 | CRITICAL | ACB Removal Impact | ✅ ACKNOWLEDGED | §10: Migration Guide (clean break) |
+| 4.1 | CRITICAL | Legacy Dependency Removal Impact | ✅ ACKNOWLEDGED | §10: Migration Guide (clean break) |
 | 4.2 | MEDIUM | session-buddy Migration Risk | ✅ RESOLVED | §9: Phase 5 implementation steps |
 | 5.1 | MEDIUM | Explicit Typer Integration | ✅ RESOLVED | §2: Complete factory implementation |
 | 5.2 | MEDIUM | Configuration Hierarchy | ✅ RESOLVED | §6: Configuration Hierarchy |
@@ -362,7 +362,7 @@ ______________________________________________________________________
 
 **Migration Checklist:**
 
-- [ ] Remove ACB dependencies
+- [ ] Remove legacy dependencies
 - [ ] Replace custom CLI with factory
 - [ ] Update settings to extend MCPServerSettings
 - [ ] Update tests
@@ -674,15 +674,15 @@ ______________________________________________________________________
 
 ### CRITICAL Risk
 
-#### ✅ ISSUE 4.1: ACB Removal Impact
+#### ✅ ISSUE 4.1: Legacy Dependency Removal Impact
 
 **Original Audit Finding:**
 
-> Removing ACB is a complete architectural pivot requiring major version bump and migration strategy.
+> Removing legacy dependencies is a complete architectural pivot requiring major version bump and migration strategy.
 
 **Resolution:**
 
-**Decision:** Clean break from ACB (no migration path)
+**Decision:** Clean break from legacy dependencies (no migration path)
 
 **Rationale:**
 
@@ -692,7 +692,7 @@ ______________________________________________________________________
 
 **Version Strategy:**
 
-- mcp-common v2.x: ACB-native (deprecated)
+- mcp-common v2.x: Legacy dependency-based (deprecated)
 - mcp-common v3.x: Oneiric-native (new)
 
 **Migration Guide (§10):**
