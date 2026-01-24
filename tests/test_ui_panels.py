@@ -2,7 +2,7 @@
 
 Note: These tests verify that panel methods execute without errors.
 Visual output verification is done manually or with snapshot testing tools.
-ACB's console singleton makes programmatic output capture complex in unit tests.
+Oneiric's console singleton makes programmatic output capture complex in unit tests.
 """
 
 from __future__ import annotations

@@ -1,6 +1,6 @@
 """Configuration management for MCP servers.
 
-Provides ACB-based settings with YAML + environment variable support.
+Provides Oneiric-based settings with YAML + environment variable support.
 """
 
 from __future__ import annotations

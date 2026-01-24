@@ -1,6 +1,6 @@
 """UI components for MCP servers.
 
-Provides Rich-based terminal UI components using ACB console.
+Provides Rich-based terminal UI components using Oneiric console.
 """
 
 from __future__ import annotations

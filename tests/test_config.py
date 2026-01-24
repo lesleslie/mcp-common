@@ -334,14 +334,14 @@ class TestMCPSettingsEnvironmentVariables:
 
     def test_env_var_override(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Test environment variables override default values."""
-        # Note: ACB Settings uses env vars with prefix based on class name
+        # Note: Oneiric Settings uses env vars with prefix based on class name
         # For MCPBaseSettings, prefix would be MCP_BASE_
         monkeypatch.setenv("MCP_BASE_LOG_LEVEL", "DEBUG")
         monkeypatch.setenv("MCP_BASE_ENABLE_DEBUG_MODE", "true")
 
         MCPBaseSettings()
 
-        # Note: Actual behavior depends on ACB Settings implementation
+        # Note: Actual behavior depends on Oneiric Settings implementation
         # This test documents expected behavior
         # If env vars don't work, this is a known limitation to document
 
@@ -355,5 +355,5 @@ class TestMCPSettingsEnvironmentVariables:
 
         MCPServerSettings()
 
-        # Document expected ACB Settings behavior
+        # Document expected Oneiric Settings behavior
         # Actual implementation may vary

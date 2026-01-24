@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The configuration layer standardizes settings management for MCP servers by extending ACB's `Settings` base class. It adds YAML loading, environment overrides, path expansion, and reusable validation helpers.
+The configuration layer standardizes settings management for MCP servers by extending Oneiric's `Settings` base class. It adds YAML loading, environment overrides, path expansion, and reusable validation helpers.
 
 ## Key Components
 

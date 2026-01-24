@@ -48,11 +48,11 @@ def mock_logger() -> Mock:
 
 @pytest.fixture(autouse=True)
 def reset_di_container() -> t.Iterator[None]:
-    """Reset ACB dependency injection container between tests.
+    """Reset Oneiric dependency injection container between tests.
 
     This ensures test isolation by clearing any registered dependencies.
     """
     # Clear any test-specific dependencies
     # Note: depends.reset() doesn't exist, so we manually clear if needed
-    # For now, just yield - ACB handles isolation via module registration
+    # For now, just yield - Oneiric handles isolation via module registration
     return

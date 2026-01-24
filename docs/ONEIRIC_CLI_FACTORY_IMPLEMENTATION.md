@@ -1521,27 +1521,6 @@ ______________________________________________________________________
 - [ ] Update pyproject.toml to remove `acb` dependency
 - [ ] Update documentation to reflect Oneiric-only usage
 
-**Before (Historical ACB-based - DEPRECATED):**
-
-```python
-# Old ACB-based server (DEPRECATED)
-# from acb.config import Settings
-# from acb.adapters.logger import LoggerProtocol
-# from acb.depends import Inject, depends
-
-
-# class MyServerSettings(Settings):
-#     api_key: str
-
-
-# @depends.inject
-# async def my_tool(
-#     logger: Inject[LoggerProtocol] = None,
-#     settings: Inject[MyServerSettings] = None,
-# ):
-#     logger.info("Tool called")
-```
-
 **After (Oneiric-native):**
 
 ```python
