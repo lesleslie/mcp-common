@@ -1,0 +1,12 @@
+# Repository manifest for Mahavishnu
+repos:
+  - name: mahavishnu
+    package: mahavishnu
+    path: /Users/les/Projects/mahavishnu
+    nickname: vishnu
+    role: orchestrator
+    tags:
+      - orchestration
+      - multi-engine
+    description: Multi-engine orchestration platform
+    mcp: native

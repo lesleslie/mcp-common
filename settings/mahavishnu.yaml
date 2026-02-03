@@ -1,0 +1,16 @@
+# Mahavishnu configuration
+server_name: "Mahavishnu Orchestrator"
+cache_root: .oneiric_cache
+health_ttl_seconds: 60.0
+log_level: INFO
+repos_path: settings/repos.yaml
+
+# Disable adapters for now
+adapters:
+  prefect: false
+  llamaindex: false
+  agno: false
+
+qc:
+  enabled: false
+  min_score: 80

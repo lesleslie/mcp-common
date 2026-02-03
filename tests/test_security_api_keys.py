@@ -11,6 +11,7 @@ import importlib
 import re
 
 import pytest
+from hypothesis import given, strategies as st
 from pydantic import BaseModel, Field
 
 from mcp_common.exceptions import APIKeyFormatError, APIKeyMissingError
@@ -431,3 +432,117 @@ class TestProviderPatternCoverage:
                 re.compile(pattern.pattern)
             except re.error as e:
                 pytest.fail(f"{provider} pattern is invalid regex: {e}")
+
+
+class TestAPIKeyValidationPropertyBased:
+    """Property-based tests for API key validation.
+
+    Uses Hypothesis to test validation properties across many random inputs.
+    """
+
+    @given(st.text(min_size=16, max_size=100))
+    def test_validate_random_strings(self, key: str) -> None:
+        """Test API key validation with random strings.
+
+        Property: Validator should handle all strings without crashing.
+        Generic validator may reject keys that are too short after whitespace stripping.
+        """
+        try:
+            result = validate_api_key_format(key, provider="generic")
+            assert isinstance(result, str)
+            # Generic validator strips whitespace
+            assert result == key.strip()
+        except (APIKeyFormatError, APIKeyMissingError):
+            # May fail if string is too short after stripping whitespace
+            # This is expected behavior
+            pass
+
+    @given(st.text(min_size=20, max_size=100, alphabet="abcdef0123456789"))
+    def test_validate_generic_hex_keys(self, key: str) -> None:
+        """Test validation of generic hex API keys.
+
+        Property: Valid hex keys of sufficient length should pass generic validation.
+        """
+        result = validate_api_key_format(key, provider="generic")
+        # Generic keys pass if they meet length requirements
+        assert len(result) >= 16
+
+    @given(st.text(min_size=1, max_size=50))
+    def test_validate_provider_specific_formats(self, provider: str) -> None:
+        """Test validation with various provider names.
+
+        Property: Provider validation should not crash with any provider name.
+        """
+        # Use a generic key that all providers should attempt to validate
+        key = "x" * 50
+
+        # Should not crash with any provider name
+        # May raise validation error, but should not crash
+        try:
+            result = validate_api_key_format(key, provider=provider.lower())
+            assert isinstance(result, str)
+        except (APIKeyFormatError, APIKeyMissingError):
+            # Expected for unknown providers or wrong formats
+            pass
+
+    @given(st.lists(st.text(min_size=16, max_size=50), min_size=0, max_size=10))
+    def test_validate_multiple_keys(self, keys: list[str]) -> None:
+        """Test validating multiple keys in sequence.
+
+        Property: Validation should be idempotent and not have side effects.
+        """
+        results = []
+        for key in keys:
+            try:
+                result = validate_api_key_format(key, provider="generic")
+                results.append(result)
+            except (APIKeyFormatError, APIKeyMissingError):
+                # Some keys may be invalid (e.g., whitespace-only)
+                pass
+
+        # All successful validations should return strings
+        assert all(isinstance(r, str) for r in results)
+
+    @given(st.text(min_size=1, max_size=20))
+    def test_mask_key_never_crashes(self, key: str) -> None:
+        """Test key masking never crashes on any input.
+
+        Property: mask_key should handle any string without crashing.
+        """
+        from mcp_common.security.api_keys import APIKeyValidator
+
+        validator = APIKeyValidator(provider="generic")
+        masked = validator.mask_key(key, visible_chars=4)
+        assert isinstance(masked, str)
+
+    @given(st.text(min_size=0, max_size=100))
+    def test_mask_key_short_keys(self, key: str) -> None:
+        """Test masking short keys returns placeholder.
+
+        Property: Keys shorter than visible_chars should return placeholder.
+        """
+        from mcp_common.security.api_keys import APIKeyValidator
+
+        validator = APIKeyValidator(provider="generic")
+        masked = validator.mask_key(key, visible_chars=10)
+        # Short keys should return placeholder
+        if len(key) <= 10:
+            assert masked == "***"
+        else:
+            assert isinstance(masked, str)
+
+    @given(st.text(min_size=0, max_size=1000))
+    def test_validation_preserves_key_content(self, text: str) -> None:
+        """Test validation doesn't modify key content for valid keys.
+
+        Property: For valid generic keys, validation should only strip whitespace.
+        """
+        # Add a generic key prefix to ensure it passes validation
+        if len(text.strip()) >= 16:
+            try:
+                result = validate_api_key_format(text, provider="generic")
+                # Should preserve content, only strip whitespace
+                assert result.strip() == text.strip()
+            except (APIKeyFormatError, APIKeyMissingError):
+                # May fail if text is too short after stripping
+                pass

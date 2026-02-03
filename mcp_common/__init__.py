@@ -26,6 +26,8 @@ Usage:
 
 from __future__ import annotations
 
+from oneiric.adapters.http import HTTPClientAdapter, HTTPClientSettings
+
 from mcp_common.cli import MCPServerCLIFactory, MCPServerSettings, RuntimeHealthSnapshot
 from mcp_common.config import MCPBaseSettings, ValidationMixin
 from mcp_common.exceptions import (
@@ -52,6 +54,8 @@ __all__: list[str] = [
     "CredentialValidationError",
     "DependencyMissingError",
     "DualUseTool",
+    "HTTPClientAdapter",
+    "HTTPClientSettings",
     "MCPBaseSettings",
     "MCPServerCLIFactory",
     "MCPServerError",

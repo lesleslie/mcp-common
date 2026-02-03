@@ -10,9 +10,11 @@ Tests comprehensive sanitization to prevent:
 from __future__ import annotations
 
 import math
+import re
 from pathlib import Path
 
 import pytest
+from hypothesis import given, strategies as st
 
 from mcp_common.security.sanitization import (
     API_KEY_PATTERN,
@@ -462,3 +464,135 @@ class TestAPIKeyPattern:
         """Should only match strings ≥16 characters."""
         assert not API_KEY_PATTERN.search("api_key=short")
         assert API_KEY_PATTERN.search("api_key=" + "a" * 16)
+
+
+class TestSanitizationPropertyBased:
+    """Property-based tests for sanitization.
+
+    Uses Hypothesis to test sanitization properties across many random inputs.
+    """
+
+    @given(st.text(min_size=0, max_size=1000))
+    def test_sanitize_never_crashes(self, text: str) -> None:
+        """Test sanitization never crashes on any input.
+
+        Property: Sanitization should handle any text without crashing.
+        """
+        result = sanitize_output(text)
+        assert isinstance(result, str)
+
+    @given(st.dictionaries(
+        st.text(min_size=1, max_size=20, alphabet="abc"),
+        st.text(min_size=0, max_size=100),
+        min_size=0,
+        max_size=10
+    ))
+    def test_sanitize_dict_never_crashes(self, data: dict) -> None:
+        """Test sanitization of dictionaries with random content.
+
+        Property: Should handle any dict structure without crashing.
+        """
+        result = sanitize_output(data)
+        assert isinstance(result, dict)
+
+    @given(st.lists(st.text(min_size=0, max_size=100), min_size=0, max_size=10))
+    def test_sanitize_list_never_crashes(self, data: list) -> None:
+        """Test sanitization of lists with random content.
+
+        Property: Should handle any list structure without crashing.
+        """
+        result = sanitize_output(data)
+        assert isinstance(result, list)
+
+    @given(st.text(min_size=10, max_size=100))
+    def test_mask_sensitive_data_idempotent(self, text: str) -> None:
+        """Test masking is idempotent.
+
+        Property: Masking already-masked data should not change it.
+        """
+        from mcp_common.security.sanitization import mask_sensitive_data
+
+        first_pass = mask_sensitive_data(text)
+        second_pass = mask_sensitive_data(first_pass)
+
+        # Should be idempotent
+        assert first_pass == second_pass
+
+    @given(st.text(min_size=0, max_size=500))
+    def test_sanitize_preserves_non_sensitive_data(self, text: str) -> None:
+        """Test sanitization preserves non-sensitive text.
+
+        Property: Text without sensitive patterns should remain unchanged.
+        """
+        # Only test text that's unlikely to contain sensitive patterns
+        if not any(pattern.search(text) for pattern in [
+            re.compile(r"sk-[A-Za-z0-9]{48}"),
+            re.compile(r"sk-ant-[A-Za-z0-9\-_]{95,}"),
+            re.compile(r"gh[ps]_[A-Za-z0-9]{36,255}"),
+        ]):
+            result = sanitize_output(text)
+            assert result == text
+
+    @given(st.tuples(
+        st.text(min_size=1, max_size=50, alphabet="abc"),
+        st.text(min_size=0, max_size=100),
+        st.text(min_size=0, max_size=100)
+    ))
+    def test_sanitize_dict_for_logging_keys(self, key_tuple: tuple) -> None:
+        """Test sanitize_dict_for_logging with random keys.
+
+        Property: Should handle any dict without crashing.
+        """
+        from mcp_common.security.sanitization import sanitize_dict_for_logging
+
+        key1, key2, value = key_tuple
+        data = {
+            key1: value,
+            f"{key2}_key": "secret",
+            "safe_field": "public"
+        }
+
+        result = sanitize_dict_for_logging(data)
+        assert isinstance(result, dict)
+
+    @given(st.text(min_size=0, max_size=200))
+    def test_sanitize_input_length_validation(self, text: str) -> None:
+        """Test sanitize_input with various lengths.
+
+        Property: Should handle any length up to max_length parameter.
+        """
+        from mcp_common.security.sanitization import sanitize_input
+
+        max_len = 100
+
+        if len(text) <= max_len:
+            result = sanitize_input(text, max_length=max_len)
+            assert isinstance(result, str)
+        else:
+            # Should raise ValueError for too long input
+            with pytest.raises(ValueError, match="exceeds maximum length"):
+                sanitize_input(text, max_length=max_len)
+
+    @given(st.text(min_size=1, max_size=100))
+    def test_sanitize_path_handling(self, path_str: str) -> None:
+        """Test path sanitization with various inputs.
+
+        Property: Should handle path traversal attempts safely.
+        """
+        from mcp_common.security.sanitization import sanitize_path
+        from pathlib import Path
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Test that .. in path raises error
+            if ".." in path_str:
+                with pytest.raises(ValueError, match="Path traversal"):
+                    sanitize_path(path_str, base_dir=tmpdir)
+            else:
+                # Valid paths should work
+                try:
+                    result = sanitize_path(path_str, base_dir=tmpdir)
+                    assert isinstance(result, Path)
+                except ValueError:
+                    # May fail for other reasons (absolute paths, etc.)
+                    pass

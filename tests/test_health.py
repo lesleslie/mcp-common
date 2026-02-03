@@ -8,7 +8,12 @@ Phase 10.1: Production Hardening - Health Check Tests
 
 from __future__ import annotations
 
+import json
 import time
+from datetime import datetime
+
+import pytest
+from hypothesis import given, strategies as st
 
 from mcp_common.health import ComponentHealth, HealthCheckResponse, HealthStatus
 
@@ -360,3 +365,166 @@ class TestHealthCheckIntegration:
         assert len([c for c in response.components if c.status == HealthStatus.UNHEALTHY]) == 1
         assert len([c for c in response.components if c.status == HealthStatus.DEGRADED]) == 1
         assert len([c for c in response.components if c.status == HealthStatus.HEALTHY]) == 2
+
+
+
+
+class TestHealthPropertyBased:
+    """Property-based tests for health checks.
+
+    Uses Hypothesis to test health check properties across many random inputs.
+    """
+
+    @given(st.text(min_size=1, max_size=50), st.text(min_size=1, max_size=50))
+    def test_component_health_creation(self, name: str, message: str) -> None:
+        """Test ComponentHealth can be created with any strings.
+
+        Property: ComponentHealth should accept any component name/message.
+        """
+        for status in HealthStatus:
+            health = ComponentHealth(
+                name=name,
+                status=status,
+                message=message
+            )
+            assert health.name == name
+            assert health.status == status
+            assert health.message == message
+
+    @given(
+        st.text(min_size=1, max_size=30),
+        st.sampled_from(["healthy", "degraded", "unhealthy"])
+    )
+    def test_health_response_serialization(self, name: str, status_str: str) -> None:
+        """Test health response can be serialized with random data.
+
+        Property: HealthCheckResponse should be JSON serializable for all inputs.
+        """
+        status = HealthStatus(status_str)
+        component = ComponentHealth(
+            name=name,
+            status=status,
+            message="test"
+        )
+
+        # Use to_dict() for proper serialization
+        component_dict = component.to_dict()
+        assert isinstance(component_dict, dict)
+        assert component_dict["name"] == name
+        assert component_dict["status"] == status_str
+
+        # Create response with component list converted to dicts
+        response = HealthCheckResponse(
+            status=status,
+            timestamp="2025-10-28T12:00:00Z",
+            version="1.0.0",
+            components=[component],
+            uptime_seconds=3600.0
+        )
+
+        # Verify response has correct status
+        assert response.status == status
+        assert len(response.components) == 1
+
+    @given(st.lists(
+        st.tuples(
+            st.text(min_size=1, max_size=30, alphabet="abc"),
+            st.sampled_from(["healthy", "degraded", "unhealthy"]),
+            st.text(min_size=0, max_size=100)
+        ),
+        min_size=0,
+        max_size=10
+    ))
+    def test_health_response_with_multiple_components(self, components_data: list) -> None:
+        """Test health response with variable number of components.
+
+        Property: Should handle any number of components.
+        """
+        components = []
+        for name, status_str, message in components_data:
+            components.append(ComponentHealth(
+                name=name,
+                status=HealthStatus(status_str),
+                message=message
+            ))
+
+        # Determine overall status
+        if components:
+            if any(c.status == HealthStatus.UNHEALTHY for c in components):
+                overall_status = HealthStatus.UNHEALTHY
+            elif any(c.status == HealthStatus.DEGRADED for c in components):
+                overall_status = HealthStatus.DEGRADED
+            else:
+                overall_status = HealthStatus.HEALTHY
+        else:
+            overall_status = HealthStatus.HEALTHY
+
+        response = HealthCheckResponse(
+            status=overall_status,
+            timestamp="2025-10-28T12:00:00Z",
+            version="1.0.0",
+            components=components,
+            uptime_seconds=3600.0
+        )
+
+        assert response.status == overall_status
+        assert len(response.components) == len(components_data)
+
+    @given(
+        st.text(min_size=1, max_size=50),
+        st.datetimes(min_value=datetime(2020, 1, 1), max_value=datetime(2030, 1, 1))
+    )
+    def test_component_health_with_timestamp(self, name: str, timestamp: datetime) -> None:
+        """Test ComponentHealth with various timestamps.
+
+        Property: Should handle any valid datetime via metadata.
+        """
+        health = ComponentHealth(
+            name=name,
+            status=HealthStatus.HEALTHY,
+            message="test",
+            metadata={"checked_at": timestamp.isoformat()}
+        )
+
+        assert health.name == name
+        assert "checked_at" in health.metadata
+
+    @given(st.dictionaries(
+        st.text(min_size=1, max_size=20, alphabet="abc"),
+        st.sampled_from(["healthy", "degraded", "unhealthy"]),
+        min_size=0,
+        max_size=5
+    ))
+    def test_health_response_empty_components(self, status_map: dict) -> None:
+        """Test health response with empty or minimal components.
+
+        Property: Should handle empty component list.
+        """
+        components = []
+        for name, status_str in status_map.items():
+            components.append(ComponentHealth(
+                name=name,
+                status=HealthStatus(status_str),
+                message="test"
+            ))
+
+        if not components:
+            # No components = healthy
+            overall_status = HealthStatus.HEALTHY
+        elif any(c.status == HealthStatus.UNHEALTHY for c in components):
+            overall_status = HealthStatus.UNHEALTHY
+        elif any(c.status == HealthStatus.DEGRADED for c in components):
+            overall_status = HealthStatus.DEGRADED
+        else:
+            overall_status = HealthStatus.HEALTHY
+
+        response = HealthCheckResponse(
+            status=overall_status,
+            timestamp="2025-10-28T12:00:00Z",
+            version="1.0.0",
+            components=components,
+            uptime_seconds=3600.0
+        )
+
+        assert response.status == overall_status
+        assert len(response.components) == len(status_map)

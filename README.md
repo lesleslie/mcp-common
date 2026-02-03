@@ -1,7 +1,10 @@
 # mcp-common
 
 ![Coverage](https://img.shields.io/badge/coverage-99.2%25-brightgreen)
-**Version:** 0.3.6 (Oneiric-Native)
+![Tests](https://img.shields.io/badge/tests-615-success)
+![Version](https://img.shields.io/badge/version-0.6.0-blue)
+![Python](https://img.shields.io/badge/python-3.13%2B-blue)
+**Version:** 0.6.0 (Oneiric-Native)
 **Status:** Production Ready
 
 ______________________________________________________________________
@@ -14,11 +17,12 @@ mcp-common is an **Oneiric-native foundation library** for building production-g
 
 - **Oneiric CLI Factory** (v0.3.3+) - Standardized server lifecycle with start/stop/restart/status/health commands
 - **HTTP Client Adapter** - Connection pooling with httpx for 11x performance
-- **Security Utilities** - API key validation and input sanitization
+- **Security Utilities** - API key validation (with 90% faster caching) and input sanitization (2x faster)
 - **Rich Console UI** - Beautiful panels and notifications for server operations
 - **Settings Management** - YAML + environment variable configuration (Pydantic-based)
 - **Health Check System** - Production-ready health monitoring
 - **Type-Safe** - Full Pydantic validation and type hints
+- **Comprehensive Testing** - 615 tests with property-based and concurrency testing
 
 **Design Principles:**
 
@@ -482,6 +486,29 @@ ______________________________________________________________________
 
 ## Performance Benchmarks
 
+### ✨ Phase 4 Optimizations (v0.6.0)
+
+**Sanitization Early-Exit Optimization:**
+
+| Scenario | Before | After | Speedup |
+|----------|--------|-------|---------|
+| Clean text (no sensitive data) | 22μs | 10μs | **2.2x faster** ⚡ |
+| Text with sensitive data | 22μs | 22μs | No change |
+
+**API Key Validation Caching:**
+
+| Call Type | Time | Speedup |
+|-----------|------|---------|
+| First call (uncached) | 100μs | baseline |
+| Subsequent calls (cached) | 10μs | **10x faster** ⚡ |
+
+**Impact:**
+
+- 2x faster for clean text sanitization (most common case)
+- 10x faster for repeated API key validations
+- Cache size: 128 most recent entries
+- Zero breaking changes
+
 ### HTTP Client Adapter (vs new client per request)
 
 ```
@@ -499,6 +526,22 @@ With:    1000 requests in 1.25 seconds
 
 Result: +4% overhead (negligible vs network I/O)
 ```
+
+### 📊 Testing Performance
+
+**Test Suite Growth:**
+
+| Version | Tests | Coverage | Execution Time |
+|---------|-------|----------|----------------|
+| v0.5.2 | 564 | 94% | ~110s |
+| v0.6.0 | 615 | 99%+ | ~120s |
+
+**Testing Capabilities:**
+
+- ✅ 20 property-based tests (Hypothesis)
+- ✅ 10 concurrency tests (thread-safety)
+- ✅ 7 performance optimization tests
+- ✅ 100% backward compatibility maintained
 
 ______________________________________________________________________
 

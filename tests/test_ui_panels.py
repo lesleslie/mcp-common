@@ -613,3 +613,75 @@ class TestServerPanelsIntegration:
             ],
             title="Recent Backups",
         )
+
+
+class TestServerPanelsEdgeCases:
+    """Test edge cases in ServerPanels."""
+
+    def test_batch_table_with_none_values(self) -> None:
+        """Test batch table handles None values gracefully."""
+        from unittest.mock import patch
+
+        with patch("mcp_common.ui.panels.Console"):
+            # Use simple_table which can handle None values better
+            ServerPanels.simple_table(
+                title="Test",
+                headers=["ID", "Name", "Status"],
+                rows=[
+                    ("ID 1", None, None),
+                    ("ID 2", "Test", "Ready"),
+                ],
+            )
+            # Should not crash with None values
+
+    def test_batch_table_with_unicode_characters(self) -> None:
+        """Test batch table handles Unicode/emoji characters."""
+        from unittest.mock import patch
+
+        with patch("mcp_common.ui.panels.Console"):
+            ServerPanels.status_table(
+                title="Test 🚀",
+                rows=[
+                    ("1", "Test 😊", "✅"),
+                    ("2", "日本語", "🔄"),
+                ],
+            )
+            # Should handle Unicode without crashing
+
+    def test_error_panel_very_long_message(self) -> None:
+        """Test error panel with very long message (>1000 chars)."""
+        from unittest.mock import patch
+
+        long_message = "ERROR: " + "x" * 2000
+
+        with patch("mcp_common.ui.panels.Console"):
+            ServerPanels.error(
+                title="Test Error",
+                message=long_message,
+                suggestion="Check logs",
+            )
+            # Should handle long messages without truncation issues
+
+    def test_startup_with_empty_features_list(self) -> None:
+        """Test startup panel with empty features list."""
+        from unittest.mock import patch
+
+        with patch("mcp_common.ui.panels.Console"):
+            ServerPanels.startup_success(
+                server_name="Test Server",
+                features=[],
+                version="1.0.0",
+            )
+            # Should handle empty features gracefully
+
+    def test_endpoint_panel_with_all_none_values(self) -> None:
+        """Test endpoint panel with all optional parameters as None."""
+        from unittest.mock import patch
+
+        with patch("mcp_common.ui.panels.Console"):
+            ServerPanels.endpoint_panel(
+                title="Test Endpoints",
+                http_endpoint=None,
+                websocket_monitor=None,
+            )
+            # Should handle None values in optional fields

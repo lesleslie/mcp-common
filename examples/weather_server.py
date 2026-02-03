@@ -200,39 +200,44 @@ async def main() -> None:
     # Display startup panel
     ServerPanels.startup_success(
         server_name=settings.server_name,
-        version="0.3.6",
+        version="0.7.0",
         features=[
             "Current weather by city",
             "5-day weather forecast",
             "Multiple temperature units",
-            "Connection pooling (11x faster)",
+            "Oneiric HTTP adapter with connection pooling",
         ],
         api_provider="OpenWeatherMap",
-        http_pooling=f"{settings.http_max_connections} connections",
+        http_pooling="Async connection pooling via httpx",
     )
 
-    # Configure HTTP client adapter with settings
+    # Configure HTTP client adapter with Oneiric's HTTPClientSettings
+    # Note: Oneiric handles base_url via BaseURLSettings, using string here
     http_settings = HTTPClientSettings(
-        timeout=settings.timeout,
-        max_connections=settings.http_max_connections,
-        max_keepalive_connections=settings.http_max_keepalive,
-        retry_attempts=settings.max_retries,
+        timeout=float(settings.timeout),
+        headers={"User-Agent": "mcp-common-weather-server/0.7.0"},
     )
+    # Set base_url if provided in settings
+    if settings.base_url:
+        http_settings.base_url = settings.base_url  # type: ignore
 
-    # Initialize HTTP adapter (Oneiric pattern - direct instantiation)
+    # Initialize HTTP adapter (Oneiric pattern - async lifecycle)
     http_adapter = HTTPClientAdapter(settings=http_settings)
+
+    # Initialize the adapter
+    await http_adapter.init()
 
     # Create weather tools with access to settings and http_adapter
     create_weather_tools(mcp, settings, http_adapter)
 
-    # Show server status
+    # Server Status
     ServerPanels.status_table(
         title="Server Status",
         rows=[
             (
                 "HTTP Client",
-                "✅ Ready",
-                f"Pool: {settings.http_max_connections} connections",
+                "✅ Ready (Oneiric)",
+                "Connection pooling enabled",
             ),
             ("Configuration", "✅ Loaded", f"API: {settings.base_url}"),
             ("MCP Tools", "✅ Registered", "2 tools available"),
@@ -258,8 +263,8 @@ async def main() -> None:
     try:
         await mcp.run()  # type: ignore[func-returns-value]
     finally:
-        # Cleanup: Close HTTP client connections
-        await http_adapter._cleanup_resources()
+        # Cleanup: Close HTTP client connections (Oneiric lifecycle)
+        await http_adapter.cleanup()
         ServerPanels.simple_message("Server shutdown complete", style="yellow")
 
 

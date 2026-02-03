@@ -292,5 +292,84 @@ def test_analyzer_initialization() -> None:
     assert len(analyzer.nodes) == 0
 
 
+class TestCodeGraphErrorPaths:
+    """Test error handling in code graph analyzer."""
+
+    @pytest.mark.asyncio
+    async def test_analyze_nonexistent_repository(self, tmp_path: Path) -> None:
+        """Test analyzing a repository that doesn't exist."""
+        analyzer = CodeGraphAnalyzer(tmp_path)
+
+        with pytest.raises(FileNotFoundError, match="Repository not found"):
+            await analyzer.analyze_repository(str(tmp_path / "nonexistent"))
+
+    @pytest.mark.asyncio
+    async def test_analyze_unsupported_language(self, tmp_path: Path) -> None:
+        """Test analyzing repository with unsupported language files."""
+        # Create a Go file (unsupported)
+        (tmp_path / "main.go").write_text(
+            """
+package main
+func main() {}
+        """
+        )
+
+        analyzer = CodeGraphAnalyzer(tmp_path)
+        stats = await analyzer.analyze_repository(str(tmp_path), languages=["go"])
+
+        # Should return empty stats, not crash
+        assert stats["files_indexed"] == 0
+        assert stats["functions_indexed"] == 0
+
+    @pytest.mark.asyncio
+    async def test_skip_non_source_directories(self, tmp_path: Path) -> None:
+        """Test that non-source directories are skipped."""
+        # Create Python file
+        (tmp_path / "main.py").write_text("def main(): pass")
+
+        # Create non-source directories
+        (tmp_path / ".venv").mkdir()
+        (tmp_path / ".venv" / "lib.py").write_text("def lib_func(): pass")
+
+        (tmp_path / "node_modules").mkdir()
+        (tmp_path / "node_modules" / "index.js").write_text("() => {}")
+
+        analyzer = CodeGraphAnalyzer(tmp_path)
+        stats = await analyzer.analyze_repository(str(tmp_path), include_tests=False)
+
+        # Should only index main.py, not .venv or node_modules
+        assert stats["files_indexed"] == 1
+
+    @pytest.mark.asyncio
+    async def test_analyze_repository_with_syntax_errors(self, tmp_path: Path) -> None:
+        """Test analyzing repository with malformed Python files."""
+        # Create file with syntax error
+        (tmp_path / "broken.py").write_text(
+            """
+def main(
+    # Missing closing parenthesis - syntax error
+        """
+        )
+
+        analyzer = CodeGraphAnalyzer(tmp_path)
+
+        # Should index file but skip functions due to syntax error
+        stats = await analyzer.analyze_repository(str(tmp_path))
+        # File is indexed but no functions extracted
+        assert stats["files_indexed"] >= 1
+
+    @pytest.mark.asyncio
+    async def test_get_function_context_nonexistent(self, tmp_path: Path) -> None:
+        """Test getting context for function that doesn't exist."""
+        (tmp_path / "main.py").write_text("def existing_func(): pass")
+
+        analyzer = CodeGraphAnalyzer(tmp_path)
+        await analyzer.analyze_repository(str(tmp_path))
+
+        # Should raise ValueError for nonexistent function
+        with pytest.raises(ValueError, match="Function not found"):
+            await analyzer.get_function_context("nonexistent_func")
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

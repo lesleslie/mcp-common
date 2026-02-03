@@ -9,11 +9,13 @@ Version: 0.4.0
 """
 
 from enum import Enum
+
 from pydantic import BaseModel
 
 # =============================================================================
 # Shared Enums (Condition 2: Messaging Types)
 # =============================================================================
+
 
 class Priority(str, Enum):
     """
@@ -27,6 +29,7 @@ class Priority(str, Enum):
             ...
         )
     """
+
     LOW = "low"
     NORMAL = "normal"
     HIGH = "high"
@@ -50,6 +53,7 @@ class MessageType(str, Enum):
             ...
         )
     """
+
     REQUEST = "request"
     RESPONSE = "response"
     NOTIFICATION = "notification"
@@ -60,6 +64,7 @@ class MessageStatus(str, Enum):
     """
     Message status - SHARED ACROSS ECOSYSTEM
     """
+
     UNREAD = "unread"
     READ = "read"
     ARCHIVED = "archived"
@@ -68,6 +73,7 @@ class MessageStatus(str, Enum):
 # =============================================================================
 # Base Message Content Model
 # =============================================================================
+
 
 class MessageContent(BaseModel):
     """
@@ -79,6 +85,7 @@ class MessageContent(BaseModel):
         context: Additional metadata/context (optional)
         attachments: File attachments (optional)
     """
+
     type: MessageType
     message: str
     context: dict[str, object] | None = None
@@ -88,6 +95,7 @@ class MessageContent(BaseModel):
 # =============================================================================
 # Forwarded Message Structure
 # =============================================================================
+
 
 class ForwardedFrom(BaseModel):
     """
@@ -104,6 +112,7 @@ class ForwardedFrom(BaseModel):
         forwarded_at: When forwarded
         forward_note: Optional note added when forwarding
     """
+
     original_message_id: str
     original_from: str
     original_to: str
@@ -116,6 +125,7 @@ class ForwardedFrom(BaseModel):
 # =============================================================================
 # Session Buddy: Project-to-Project Message
 # =============================================================================
+
 
 class ProjectMessage(BaseModel):
     """
@@ -139,6 +149,7 @@ class ProjectMessage(BaseModel):
         in_reply_to: ID of message being replied to (optional)
         session_id: Session Buddy session ID (optional)
     """
+
     id: str
     from_project: str
     to_project: str
@@ -157,6 +168,7 @@ class ProjectMessage(BaseModel):
 # =============================================================================
 # Mahavishnu: Repository-to-Repository Message
 # =============================================================================
+
 
 class RepositoryMessage(BaseModel):
     """
@@ -182,6 +194,7 @@ class RepositoryMessage(BaseModel):
         workflow_id: Associated workflow ID (optional)
         forwarded_from: Forwarded message metadata (optional)
     """
+
     id: str
     from_repository: str
     from_adapter: str | None  # 'prefect', 'llamaindex', 'agno'
@@ -204,7 +217,7 @@ class RepositoryMessage(BaseModel):
 # =============================================================================
 
 # Session Buddy Example
-from messaging.types import ProjectMessage, Priority, MessageType, MessageStatus
+from messaging.types import MessageStatus, MessageType, Priority, ProjectMessage
 
 project_message = ProjectMessage(
     id="msg-1234567890",
@@ -216,11 +229,11 @@ project_message = ProjectMessage(
     status=MessageStatus.UNREAD,
     content_type=MessageType.NOTIFICATION,
     content_message="Session quality score: 87/100",
-    content_context={"session_id": "session-buddy-main"}
+    content_context={"session_id": "session-buddy-main"},
 )
 
 # Mahavishnu Example
-from messaging.types import RepositoryMessage, Priority, MessageType, MessageStatus
+from messaging.types import MessageStatus, MessageType, Priority, RepositoryMessage
 
 repository_message = RepositoryMessage(
     id="msg-1234567891",
@@ -236,7 +249,7 @@ repository_message = RepositoryMessage(
     content_context={
         "endpoint": "/api/stats",
         "cache_ttl": 300,
-        "rate_limit": "100/hour"
+        "rate_limit": "100/hour",
     },
-    workflow_id="wf-stats-api-123"
+    workflow_id="wf-stats-api-123",
 )
