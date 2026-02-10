@@ -8,11 +8,13 @@ Oneiric Design Patterns:
     - Rich console UI for beautiful terminal output
     - Type-safe settings with Pydantic validation
     - CLI factory for standardized server lifecycle
+    - Usage profiles for different server modes
 
 Usage:
     >>> from mcp_common.ui import ServerPanels
     >>> from mcp_common.config import MCPBaseSettings
     >>> from mcp_common.cli import MCPServerCLIFactory
+    >>> from mcp_common.profiles import MinimalServer, StandardServer, FullServer
     >>>
     >>> # Display startup panel
     >>> ServerPanels.startup_success(
@@ -22,6 +24,9 @@ Usage:
     >>>
     >>> # Load configuration
     >>> settings = MCPBaseSettings.load("my-server")
+    >>>
+    >>> # Or use a pre-configured profile
+    >>> server = StandardServer(name="my-server")
 """
 
 from __future__ import annotations
@@ -41,11 +46,12 @@ from mcp_common.exceptions import (
     ServerInitializationError,
 )
 from mcp_common.interfaces import DualUseTool, ensure_dual_use
+from mcp_common.profiles import FullServer, MinimalServer, StandardServer
 from mcp_common.schemas import ToolInput, ToolResponse
 from mcp_common.ui import ServerPanels
 from mcp_common.validation import validate_input, validate_output
 
-__version__ = "0.4.4"  # Server module + enhanced CLI factory
+__version__ = "0.5.0"  # Usage profiles
 
 __all__: list[str] = [
     "APIKeyFormatError",
@@ -67,6 +73,9 @@ __all__: list[str] = [
     "ToolInput",
     "ToolResponse",
     "ValidationMixin",
+    "FullServer",
+    "MinimalServer",
+    "StandardServer",
     "__version__",
     "ensure_dual_use",
     "validate_input",

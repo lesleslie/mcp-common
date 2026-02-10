@@ -5,11 +5,10 @@ from typing import TYPE_CHECKING, Literal
 
 from mcp_common.prompting.base import PromptBackend
 from mcp_common.prompting.exceptions import BackendUnavailableError
-from mcp_common.prompting.models import PromptAdapterSettings, PromptConfig
+from mcp_common.prompting.models import PromptAdapterSettings
 
 if TYPE_CHECKING:
-    from mcp_common.backends.pyobjc import PyObjCPromptBackend
-    from mcp_common.backends.toolkit import PromptToolkitBackend
+    pass
 
 
 def create_prompt_adapter(

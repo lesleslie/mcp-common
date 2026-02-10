@@ -13,16 +13,19 @@ Dependencies: pyobjc-core, pyobjc-framework-Cocoa (optional)
 import asyncio
 import sys
 from concurrent.futures import ThreadPoolExecutor
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 from mcp_common.prompting.base import PromptBackend
 from mcp_common.prompting.exceptions import (
     BackendUnavailableError,
     DialogDisplayError,
     NotificationError,
-    UserCancelledError,
 )
-from mcp_common.prompting.models import DialogResult, NotificationLevel, PromptAdapterSettings, PromptConfig
+from mcp_common.prompting.models import (
+    DialogResult,
+    NotificationLevel,
+    PromptAdapterSettings,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -66,7 +69,9 @@ class PyObjCPromptBackend(PromptBackend):
             )
 
         self.config = config
-        self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="pyobjc_gui")
+        self._executor = ThreadPoolExecutor(
+            max_workers=1, thread_name_prefix="pyobjc_gui"
+        )
         self._initialized = False
 
     @staticmethod
@@ -203,7 +208,9 @@ class PyObjCPromptBackend(PromptBackend):
         buttons = [yes_label, no_label]
         default_button = yes_label if default else no_label
 
-        result = await self.alert(title, message, buttons=buttons, default_button=default_button)
+        result = await self.alert(
+            title, message, buttons=buttons, default_button=default_button
+        )
 
         return result.button_clicked == yes_label
 

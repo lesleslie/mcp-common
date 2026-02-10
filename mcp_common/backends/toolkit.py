@@ -12,15 +12,17 @@ Platform: Cross-platform (Linux, macOS, Windows)
 Dependencies: prompt-toolkit>=3.0 (optional)
 """
 
-import sys
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 from mcp_common.prompting.base import PromptBackend
 from mcp_common.prompting.exceptions import (
     DialogDisplayError,
-    UserCancelledError,
 )
-from mcp_common.prompting.models import DialogResult, NotificationLevel, PromptAdapterSettings, PromptConfig
+from mcp_common.prompting.models import (
+    DialogResult,
+    NotificationLevel,
+    PromptAdapterSettings,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -232,8 +234,6 @@ class PromptToolkitBackend(PromptBackend):
     ) -> str | None:
         """Prompt user to select from choices."""
         try:
-            display_text = f"{title}\n\n{message}\n"
-
             # Display choices
             for i, choice in enumerate(choices, 1):
                 choice_text = f"{i}. {choice}"
@@ -342,7 +342,9 @@ class PromptToolkitBackend(PromptBackend):
 
         except Exception:
             raise DialogDisplayError(
-                backend="prompt-toolkit", dialog_type="file selection", reason="File selection failed"
+                backend="prompt-toolkit",
+                dialog_type="file selection",
+                reason="File selection failed",
             )
 
     async def select_directory(

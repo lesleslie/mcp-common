@@ -1,13 +1,12 @@
 """Data models for prompting adapter."""
 
-from enum import Enum
-from typing import Any
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class NotificationLevel(str, Enum):
+class NotificationLevel(StrEnum):
     """Notification severity levels."""
 
     INFO = "info"
@@ -16,7 +15,7 @@ class NotificationLevel(str, Enum):
     SUCCESS = "success"
 
 
-class PromptStyle(str, Enum):
+class PromptStyle(StrEnum):
     """Predefined prompt styles."""
 
     DEFAULT = "default"
@@ -68,15 +67,15 @@ class PromptAdapterSettings(BaseSettings):
     )
 
     # macOS-specific settings
-    macos_icon: str | None = Field(default=None, description="Path to icon file for macOS dialogs")
+    macos_icon: str | None = Field(
+        default=None, description="Path to icon file for macOS dialogs"
+    )
     macos_sound: str = Field(
         default="default", description="macOS notification sound name"
     )
 
     # Terminal UI settings
-    tui_theme: str = Field(
-        default="default", description="prompt-toolkit theme name"
-    )
+    tui_theme: str = Field(default="default", description="prompt-toolkit theme name")
 
     # Styling
     default_style: PromptStyle = Field(
@@ -128,5 +127,7 @@ class PromptRequest(BaseModel):
     multiple_files: bool = Field(False, description="Allow multiple file selection")
 
     # Notification options
-    level: NotificationLevel = Field(NotificationLevel.INFO, description="Notification level")
+    level: NotificationLevel = Field(
+        NotificationLevel.INFO, description="Notification level"
+    )
     sound: bool = Field(True, description="Play notification sound")

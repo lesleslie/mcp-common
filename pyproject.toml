@@ -34,6 +34,7 @@ classifiers = [
 dependencies = [
     "oneiric>=0.3.6",
     "pydantic>=2.12.5",
+    "pydantic-settings>=2.0",
     "psutil>=7.2.1",
     "pyyaml>=6.0.3",
     "rich>=14.2.0",
@@ -41,10 +42,28 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Prompting/notification backends
+macos-prompts = [
+    "pyobjc-core>=10.0",
+    "pyobjc-framework-Cocoa>=10.0",
+]
+terminal-prompts = [
+    "prompt-toolkit>=3.0",
+]
+all-prompts = [
+    "mcp-common[macos-prompts,terminal-prompts]",
+]
+
+# Development dependencies
 dev = [
     "crackerjack>=0.47.0",
     "pytest-benchmark>=4.0.0",
     "uv-bump>=0.4.0",
+]
+
+# All optional features
+all = [
+    "mcp-common[all-prompts,dev]",
 ]
 
 [project.license]

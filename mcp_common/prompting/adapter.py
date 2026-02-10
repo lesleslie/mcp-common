@@ -6,9 +6,12 @@ class-based instantiation over factory functions.
 
 from typing import TYPE_CHECKING
 
-from mcp_common.prompting.base import PromptBackend
 from mcp_common.prompting.factory import create_prompt_adapter
-from mcp_common.prompting.models import DialogResult, NotificationLevel, PromptAdapterSettings
+from mcp_common.prompting.models import (
+    DialogResult,
+    NotificationLevel,
+    PromptAdapterSettings,
+)
 
 if TYPE_CHECKING:
     from pathlib import Path

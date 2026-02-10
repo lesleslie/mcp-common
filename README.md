@@ -17,6 +17,7 @@ mcp-common is an **Oneiric-native foundation library** for building production-g
 
 - **Oneiric CLI Factory** (v0.3.3+) - Standardized server lifecycle with start/stop/restart/status/health commands
 - **HTTP Client Adapter** - Connection pooling with httpx for 11x performance
+- **Prompting/Notification Adapter** 🆕 - Unified cross-platform user interaction with automatic backend detection
 - **Security Utilities** - API key validation (with 90% faster caching) and input sanitization (2x faster)
 - **Rich Console UI** - Beautiful panels and notifications for server operations
 - **Settings Management** - YAML + environment variable configuration (Pydantic-based)

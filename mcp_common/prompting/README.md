@@ -5,18 +5,21 @@ Unified cross-platform user interaction for MCP servers with automatic backend d
 ## Features
 
 - ✅ **Native macOS dialogs** (PyObjC backend)
+
   - NSAlert for dialog boxes
   - NSUserNotification for system notifications
   - NSOpenPanel/NSSavePanel for file selection
   - NSTextField for text/password input
 
 - ✅ **Terminal UI prompts** (prompt-toolkit backend)
+
   - Cross-platform (Linux, macOS, Windows)
   - Rich formatting and syntax highlighting
   - Async/await support
   - Full-screen application support
 
 - ✅ **Automatic backend detection**
+
   - Platform-aware selection
   - Graceful fallback
   - Optional dependencies (no bloat)
@@ -114,16 +117,19 @@ async with create_prompt_adapter() as adapter:
 ## Backend Selection
 
 ### Auto Mode (Recommended)
+
 ```python
 adapter = create_prompt_adapter(backend="auto")
 ```
 
 **Platform detection:**
+
 - macOS → PyObjC backend (native dialogs)
 - Linux/Windows → prompt-toolkit backend (terminal UI)
 - Fallback → If preferred backend unavailable
 
 ### Manual Backend Selection
+
 ```python
 # Force macOS native (even on Linux/Windows, will error)
 macos_adapter = create_prompt_adapter(backend="pyobjc")
@@ -146,6 +152,7 @@ def create_prompt_adapter(
 Create a prompt adapter with automatic backend detection.
 
 **Parameters:**
+
 - `backend`: Backend preference (default: "auto")
   - `"auto"`: Automatically detect best available backend
   - `"pyobjc"`: Force PyObjC backend (macOS only)
@@ -153,9 +160,11 @@ Create a prompt adapter with automatic backend detection.
 - `config`: Optional configuration (if None, loads from Oneiric settings or environment variables)
 
 **Returns:**
+
 - Configured prompt backend instance (must call `await adapter.initialize()` before use)
 
 **Example:**
+
 ```python
 adapter = create_prompt_adapter(backend="auto")
 await adapter.initialize()
@@ -177,10 +186,12 @@ class PromptAdapter:
 Convenient wrapper class for direct instantiation.
 
 **Parameters:**
+
 - `backend`: Backend preference (default: "auto")
 - `settings`: Optional settings object
 
 **Example:**
+
 ```python
 # Direct instantiation
 adapter = PromptAdapter()
@@ -205,6 +216,7 @@ Configuration for prompt adapters following Oneiric patterns.
 
 **Environment Variables:**
 Set via environment variables with `MCP_COMMON_PROMPT_` prefix:
+
 ```bash
 export MCP_COMMON_PROMPT_BACKEND=pyobjc
 export MCP_COMMON_PROMPT_TIMEOUT=60
@@ -212,6 +224,7 @@ export MCP_COMMON_PROMPT_TUI_THEME=dark
 ```
 
 **Loading from Oneiric:**
+
 ```python
 from mcp_common.prompting import PromptAdapterSettings
 
@@ -220,6 +233,7 @@ settings = PromptAdapterSettings.from_settings()
 ```
 
 **Backward Compatibility:**
+
 ```python
 from mcp_common.prompting import PromptConfig  # Alias for PromptAdapterSettings
 
@@ -230,6 +244,7 @@ config = PromptConfig(backend="pyobjc")
 ### Lifecycle Methods
 
 #### initialize()
+
 ```python
 async def initialize(self) -> None
 ```
@@ -240,6 +255,7 @@ Initialize backend resources. Must be called before using the adapter.
 **prompt-toolkit Backend**: No-op (no resources to initialize)
 
 #### shutdown()
+
 ```python
 async def shutdown(self) -> None
 ```
@@ -250,6 +266,7 @@ Cleanup backend resources. Should be called when done with the adapter.
 **prompt-toolkit Backend**: No-op
 
 #### Context Manager Support
+
 ```python
 async def __aenter__(self) -> "PromptBackend"
 async def __aexit__(self, *args) -> None
@@ -266,6 +283,7 @@ async with create_prompt_adapter() as adapter:
 ### PromptBackend Methods
 
 #### alert()
+
 ```python
 async def alert(
     title: str,
@@ -282,6 +300,7 @@ Display an alert dialog with optional buttons.
 **Returns:** DialogResult with clicked button
 
 #### confirm()
+
 ```python
 async def confirm(
     title: str,
@@ -297,6 +316,7 @@ Display a confirmation dialog (Yes/No).
 **Returns:** True if user clicked Yes, False if No
 
 #### prompt_text()
+
 ```python
 async def prompt_text(
     title: str,
@@ -312,6 +332,7 @@ Prompt user for text input.
 **Returns:** User input text, or None if cancelled
 
 #### prompt_choice()
+
 ```python
 async def prompt_choice(
     title: str,
@@ -326,6 +347,7 @@ Prompt user to select from a list of choices.
 **Returns:** Selected choice, or None if cancelled
 
 #### notify()
+
 ```python
 async def notify(
     title: str,
@@ -340,6 +362,7 @@ Send a system notification.
 **Returns:** True if notification was delivered successfully
 
 #### select_file()
+
 ```python
 async def select_file(
     title: str,
@@ -353,6 +376,7 @@ Display file selection dialog.
 **Returns:** List of selected file paths, or None if cancelled
 
 #### select_directory()
+
 ```python
 async def select_directory(
     title: str,
@@ -484,12 +508,14 @@ print(f"Selected backend: {adapter.backend_name}")
 ## Platform-Specific Notes
 
 ### macOS (PyObjC Backend)
+
 - Requires macOS 10.8+ for NSUserNotification
 - Requires PyObjC 10.0+ for Python 3.13 compatibility
 - All GUI operations run on main thread (handled automatically)
 - System notifications require app to be in Notification Center preferences
 
 ### Terminal UI (prompt-toolkit Backend)
+
 - Works on all platforms with a terminal
 - Supports mouse interaction in compatible terminals
 - Rich formatting with ANSI colors
@@ -500,10 +526,10 @@ print(f"Selected backend: {adapter.backend_name}")
 When adding new backends:
 
 1. Create a new file in `mcp_common/backends/`
-2. Implement the `PromptBackend` protocol
-3. Add static `is_available_static()` method
-4. Update `factory.py` to include the new backend
-5. Add optional dependencies to `pyproject.toml`
+1. Implement the `PromptBackend` protocol
+1. Add static `is_available_static()` method
+1. Update `factory.py` to include the new backend
+1. Add optional dependencies to `pyproject.toml`
 
 Example new backend:
 

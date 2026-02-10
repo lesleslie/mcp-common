@@ -1,15 +1,17 @@
 # MCP Tool Contracts for Code Graph Operations
 
 # Version: 0.4.0
+
 # Purpose: Define schemas for code graph tools shared across Session Buddy and Mahavishnu
 
----
+______________________________________________________________________
 
 ## Tool: `index_code_graph`
 
 Description: Analyze and index codebase structure for better context compaction and RAG enhancement.
 
 Parameters:
+
 ```yaml
 project_path:
   type: string
@@ -31,6 +33,7 @@ include_tests:
 ```
 
 Returns:
+
 ```yaml
 success:
   type: boolean
@@ -52,17 +55,19 @@ stats:
 ```
 
 Error Cases:
+
 - `project_path` does not exist → Return `{success: false, error: "Directory not found"}`
 - No supported language files found → Return `{success: false, error: "No code files found"}`
 - Parse errors during indexing → Log warning, continue with successfully parsed files
 
----
+______________________________________________________________________
 
 ## Tool: `get_function_context`
 
 Description: Get comprehensive context for a function including callers, callees, and related code.
 
 Parameters:
+
 ```yaml
 project_path:
   type: string
@@ -91,6 +96,7 @@ max_depth:
 ```
 
 Returns:
+
 ```yaml
 success:
   type: boolean
@@ -137,16 +143,18 @@ context:
 ```
 
 Error Cases:
+
 - Function not found → Return `{success: false, error: "Function not found"}`
 - Code graph not indexed → Return `{success: false, error: "Code graph not indexed. Run index_code_graph first."}`
 
----
+______________________________________________________________________
 
 ## Tool: `find_related_code`
 
 Description: Find code related to a specific file based on imports and call relationships.
 
 Parameters:
+
 ```yaml
 project_path:
   type: string
@@ -171,6 +179,7 @@ limit:
 ```
 
 Returns:
+
 ```yaml
 success:
   type: boolean
@@ -190,10 +199,11 @@ related_files:
 ```
 
 Error Cases:
+
 - File not found → Return `{success: false, error: "File not found"}`
 - File not indexed → Return `{success: false, error: "File not in code graph. Run index_code_graph first."}`
 
----
+______________________________________________________________________
 
 ## Implementation Notes
 
@@ -341,7 +351,7 @@ context = await sb_client.call_tool(
 # Use context in workflow execution
 ```
 
----
+______________________________________________________________________
 
 ## Version History
 
@@ -349,7 +359,7 @@ context = await sb_client.call_tool(
 - Planned: Documentation indexing tools
 - Planned: Complexity analysis tools
 
----
+______________________________________________________________________
 
 Contract Status: ✅ Ready for implementation
 Implement by: End of Phase 0 (Week 2)

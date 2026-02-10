@@ -12,10 +12,10 @@ import time
 import typing as t
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 
 
-class HealthStatus(str, Enum):
+class HealthStatus(StrEnum):
     """Health check status values.
 
     Attributes:

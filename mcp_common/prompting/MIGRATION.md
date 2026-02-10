@@ -5,19 +5,23 @@ This guide explains how to migrate code from the old API to the new improved API
 ## Overview of Changes
 
 ### 1. Renamed Types
+
 - **Old**: `PromptConfig` → **New**: `PromptAdapterSettings`
 - Rationale: Align with Oneiric adapter naming conventions
 
 ### 2. Base Class Changed
+
 - **Old**: `BaseModel` → **New**: `BaseSettings` (from pydantic-settings)
 - Benefit: Environment variable support, Oneiric integration
 
 ### 3. Lifecycle Methods Added
+
 - **New**: `initialize()` and `shutdown()` methods
 - **New**: Context manager support (`async with`)
 - Benefit: Explicit resource management
 
 ### 4. New Wrapper Class
+
 - **New**: `PromptAdapter` class for direct instantiation
 - Benefit: Simpler API for users who prefer class-based patterns
 
@@ -26,6 +30,7 @@ This guide explains how to migrate code from the old API to the new improved API
 ### Example 1: Basic Adapter Creation
 
 #### Old Code
+
 ```python
 from mcp_common.prompting import create_prompt_adapter, PromptConfig
 
@@ -38,6 +43,7 @@ adapter = create_prompt_adapter(config=config)
 ```
 
 #### New Code (Option A: Still Works)
+
 ```python
 from mcp_common.prompting import create_prompt_adapter, PromptConfig
 
@@ -50,6 +56,7 @@ adapter = create_prompt_adapter(config=config)
 ```
 
 #### New Code (Option B: Recommended)
+
 ```python
 from mcp_common.prompting import create_prompt_adapter, PromptAdapterSettings
 
@@ -69,6 +76,7 @@ await adapter.shutdown()
 ### Example 2: Using Context Manager (Recommended)
 
 #### Old Code
+
 ```python
 from mcp_common.prompting import create_prompt_adapter
 
@@ -78,6 +86,7 @@ result = await adapter.confirm("Continue?")
 ```
 
 #### New Code (Recommended)
+
 ```python
 from mcp_common.prompting import create_prompt_adapter
 
@@ -90,6 +99,7 @@ async with create_prompt_adapter() as adapter:
 ### Example 3: Configuration from Environment Variables
 
 #### Old Code
+
 ```python
 from mcp_common.prompting import PromptConfig
 
@@ -101,6 +111,7 @@ config = PromptConfig(backend=backend, timeout=timeout)
 ```
 
 #### New Code (Automatic)
+
 ```python
 from mcp_common.prompting import PromptAdapterSettings
 
@@ -114,6 +125,7 @@ settings = PromptAdapterSettings()
 ### Example 4: Direct Class Instantiation
 
 #### Old Code
+
 ```python
 from mcp_common.prompting import create_prompt_adapter
 
@@ -122,6 +134,7 @@ adapter = create_prompt_adapter(backend="pyobjc")
 ```
 
 #### New Code (New Feature)
+
 ```python
 from mcp_common.prompting import PromptAdapter, PromptAdapterSettings
 
@@ -142,6 +155,7 @@ await adapter.shutdown()
 ### Example 5: Oneiric Integration
 
 #### Old Code
+
 ```python
 from mcp_common.prompting import PromptConfig
 from oneiric import load_config
@@ -153,6 +167,7 @@ config = PromptConfig(**prompt_config)
 ```
 
 #### New Code (Built-in)
+
 ```python
 from mcp_common.prompting import PromptAdapterSettings
 
@@ -168,17 +183,17 @@ settings = PromptAdapterSettings.from_settings()
 All old code continues to work:
 
 1. **`PromptConfig` alias**: Still available, maps to `PromptAdapterSettings`
-2. **Factory function**: `create_prompt_adapter()` still works the same
-3. **No required changes**: Existing code works without modifications
+1. **Factory function**: `create_prompt_adapter()` still works the same
+1. **No required changes**: Existing code works without modifications
 
 ### Recommended Updates (Optional)
 
 While old code works, we recommend:
 
 1. **Use lifecycle methods**: Call `initialize()` and `shutdown()` for explicit resource management
-2. **Use context managers**: Prefer `async with` for automatic cleanup
-3. **Update type names**: Use `PromptAdapterSettings` instead of `PromptConfig` in new code
-4. **Leverage env vars**: Use environment variables for configuration
+1. **Use context managers**: Prefer `async with` for automatic cleanup
+1. **Update type names**: Use `PromptAdapterSettings` instead of `PromptConfig` in new code
+1. **Leverage env vars**: Use environment variables for configuration
 
 ## Checklist for Migration
 
@@ -193,6 +208,7 @@ While old code works, we recommend:
 ## API Quick Reference
 
 ### Old API (Still Supported)
+
 ```python
 from mcp_common.prompting import create_prompt_adapter, PromptConfig
 
@@ -202,6 +218,7 @@ result = await adapter.confirm("Continue?")
 ```
 
 ### New API (Recommended)
+
 ```python
 from mcp_common.prompting import create_prompt_adapter, PromptAdapterSettings
 
