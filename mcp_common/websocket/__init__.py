@@ -16,6 +16,7 @@ from .protocol import (
 )
 from .auth import WebSocketAuthenticator, generate_test_token
 from . import tls
+from . import metrics
 
 __all__ = [
     "WebSocketServer",
@@ -27,4 +28,5 @@ __all__ = [
     "WebSocketAuthenticator",
     "generate_test_token",
     "tls",
+    "metrics",
 ]

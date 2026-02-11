@@ -6,7 +6,9 @@ services can extend for real-time communication.
 
 from __future__ import annotations
 
+import logging
 import ssl
+import time
 import uuid
 from abc import ABC, abstractmethod
 from logging import Logger
@@ -31,6 +33,7 @@ from .tls import (
     get_tls_config_from_env,
     validate_certificate,
 )
+from .metrics import WebSocketMetrics
 
 logger: Logger = logging.getLogger(__name__)
 
@@ -46,6 +49,7 @@ class WebSocketServer(ABC):
     - JWT authentication integration
     - TLS/WSS support for secure connections
     - Message rate limiting
+    - Prometheus metrics
     - Graceful shutdown
 
     Usage:
@@ -73,6 +77,15 @@ class WebSocketServer(ABC):
     With auto-generated development certificate:
         server = MyServiceWebSocket(host="127.0.0.1", port=8688, tls_enabled=True)
         await server.start()
+
+    With Prometheus metrics:
+        server = MyServiceWebSocket(
+            host="127.0.0.1",
+            port=8688,
+            enable_metrics=True,
+            metrics_port=9090
+        )
+        await server.start()
     """
 
     def __init__(
@@ -90,6 +103,9 @@ class WebSocketServer(ABC):
         tls_enabled: bool = False,
         verify_client: bool = False,
         auto_cert: bool = False,
+        server_name: str | None = None,  # For metrics
+        enable_metrics: bool = False,  # Enable Prometheus metrics
+        metrics_port: int = 9090,  # Prometheus metrics port
     ):
         """Initialize WebSocket server.
 
@@ -107,6 +123,9 @@ class WebSocketServer(ABC):
             tls_enabled: Enable TLS (generates self-signed cert if no cert provided)
             verify_client: Verify client certificates
             auto_cert: Auto-generate self-signed certificate for development
+            server_name: Server name for metrics (defaults to class name)
+            enable_metrics: Enable Prometheus metrics collection
+            metrics_port: Port for Prometheus metrics server
         """
         if not WEBSOCKETS_AVAILABLE:
             raise ImportError(
@@ -146,9 +165,23 @@ class WebSocketServer(ABC):
         self.server: Any | None = None
         self.is_running = False
 
+        # Metrics
+        self.enable_metrics = enable_metrics
+        self.metrics_port = metrics_port
+        self.server_name = server_name or self.__class__.__name__
+        self.metrics: WebSocketMetrics | None = None
+
         # Initialize SSL context if TLS enabled
         if self.tls_enabled and self.ssl_context is None:
             self._initialize_ssl_context()
+
+        # Initialize metrics
+        if self.enable_metrics:
+            self.metrics = WebSocketMetrics(
+                server_name=self.server_name,
+                tls_enabled=bool(self.ssl_context),
+                enabled=True
+            )
 
     def _initialize_ssl_context(self) -> None:
         """Initialize SSL context from certificates or auto-generate.
@@ -268,10 +301,16 @@ class WebSocketServer(ABC):
 
         logger.info(f"Starting WebSocket server on {self.uri}")
 
+        # Start metrics server if enabled
+        if self.enable_metrics and self.metrics:
+            self.metrics.start_metrics_server(self.metrics_port)
+
         async def handler(websocket):
             # Check connection limit
             if len(self.connections) >= self.max_connections:
                 await websocket.close(1013, "Server at maximum capacity")
+                if self.metrics:
+                    self.metrics.on_connection_error("max_connections")
                 return
 
             connection_id = str(uuid.uuid4())
@@ -296,6 +335,8 @@ class WebSocketServer(ABC):
                             )
                             await websocket.send(WebSocketProtocol.encode(error))
                             await websocket.close(1008, "Authentication failed")
+                            if self.metrics:
+                                self.metrics.on_connection_error("auth_failed")
                             return
 
                         # Store user on websocket object
@@ -320,23 +361,44 @@ class WebSocketServer(ABC):
                         )
                         await websocket.send(WebSocketProtocol.encode(error))
                         await websocket.close(1008, "Authentication required")
+                        if self.metrics:
+                            self.metrics.on_connection_error("auth_required")
                         return
 
                 except Exception as e:
                     logger.error(f"Authentication error: {e}")
                     await websocket.close(1011, "Authentication error")
+                    if self.metrics:
+                        self.metrics.on_connection_error("auth_error")
                     return
 
             try:
+                # Record connection metrics
+                if self.metrics:
+                    self.metrics.on_connect(connection_id)
+
                 await self.on_connect(websocket, connection_id)
                 self.connections[connection_id] = websocket
 
                 # Message loop
                 async for message in websocket:
                     # Rate limiting check could go here
+                    start_time = time.time()
                     try:
                         decoded = WebSocketProtocol.decode(message)
+
+                        # Record received message metric
+                        if self.metrics:
+                            self.metrics.on_message_received(str(decoded.type))
+
                         await self.on_message(websocket, decoded)
+
+                        # Record latency
+                        if self.metrics:
+                            self.metrics.observe_latency(
+                                str(decoded.type),
+                                time.time() - start_time
+                            )
                     except Exception as e:
                         logger.error(f"Error decoding message: {e}")
                         error_msg = WebSocketProtocol.create_error(
@@ -345,12 +407,19 @@ class WebSocketServer(ABC):
                         )
                         await websocket.send(WebSocketProtocol.encode(error_msg))
 
+                        if self.metrics:
+                            self.metrics.on_message_error("decode_error")
+
             except websockets.exceptions.ConnectionClosed:
                 logger.info(f"Connection {connection_id} closed")
             finally:
                 await self.on_disconnect(websocket, connection_id)
                 if connection_id in self.connections:
                     del self.connections[connection_id]
+
+                # Record disconnection metrics
+                if self.metrics:
+                    self.metrics.on_disconnect(connection_id)
 
         # Start server with or without SSL
         self.server = await websockets.serve(
@@ -361,10 +430,11 @@ class WebSocketServer(ABC):
         )
         self.is_running = True
 
-        if self.ssl_context:
-            logger.info(f"WebSocket server listening on wss://{self.host}:{self.port}")
-        else:
-            logger.info(f"WebSocket server listening on ws://{self.host}:{self.port}")
+        tls_mode = "WSS" if self.ssl_context else "WS"
+        logger.info(
+            f"WebSocket server listening on {self.uri} "
+            f"({tls_mode}, {len(self.connections)} connections)"
+        )
 
     async def stop(self):
         """Stop the WebSocket server."""
@@ -451,6 +521,9 @@ class WebSocketServer(ABC):
         message.room = room_id
         encoded = WebSocketProtocol.encode(message)
 
+        # Track broadcast duration for metrics
+        start_time = time.time()
+
         # Send to all connections in the room
         for connection_id in list(self.connection_rooms[room_id]):
             if connection_id in self.connections:
@@ -459,6 +532,11 @@ class WebSocketServer(ABC):
                     await websocket.send(encoded)
                 except Exception as e:
                     logger.error(f"Error sending to {connection_id}: {e}")
+
+        # Record broadcast metrics
+        if self.metrics:
+            duration = time.time() - start_time
+            self.metrics.on_broadcast(room_id, duration)
 
     async def send_to_connection(
         self,
@@ -481,8 +559,15 @@ class WebSocketServer(ABC):
         try:
             websocket = self.connections[connection_id]
             await websocket.send(encoded)
+
+            # Record sent message metric
+            if self.metrics:
+                self.metrics.on_message_sent(str(message.type))
         except Exception as e:
             logger.error(f"Error sending to {connection_id}: {e}")
+
+            if self.metrics:
+                self.metrics.on_message_error("send_failed")
 
     def on_event(self, event_type: str):
         """
