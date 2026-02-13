@@ -35,6 +35,7 @@ These dependencies are **automatically installed** with `pip install mcp-common`
 **Purpose**: Provides `MCPBaseSettings` configuration patterns and `HTTPClientAdapter` connection pooling.
 
 **What it provides**:
+
 - `MCPBaseSettings` - Base class for YAML + environment variable configuration
 - `HTTPClientAdapter` - HTTP client with connection pooling (11x performance)
 - `HTTPClientSettings` - Configuration for HTTP adapter
@@ -43,6 +44,7 @@ These dependencies are **automatically installed** with `pip install mcp-common`
 **Why it's extracted**: Shared across 9 production MCP servers for consistent patterns.
 
 **Usage in mcp-common**:
+
 ```python
 from oneiric.adapters.http import HTTPClientAdapter, HTTPClientSettings
 from mcp_common.config import MCPBaseSettings
@@ -53,6 +55,7 @@ from mcp_common.config import MCPBaseSettings
 **Purpose**: Type-safe settings with validation, coercion, and serialization.
 
 **What it provides**:
+
 - `BaseModel` - Base class for settings models
 - `Field()` - Field configuration with validators
 - Type validation and coercion
@@ -61,6 +64,7 @@ from mcp_common.config import MCPBaseSettings
 **Why it's required**: All configuration classes use Pydantic for validation.
 
 **Usage in mcp-common**:
+
 ```python
 from pydantic import Field, field_validator
 
@@ -74,6 +78,7 @@ class Settings(MCPBaseSettings):
 **Purpose**: Beautiful console output for server operations.
 
 **What it provides**:
+
 - `Console` - Rich console output
 - `Panel` - Decorated panels
 - `Table` - Formatted tables
@@ -82,6 +87,7 @@ class Settings(MCPBaseSettings):
 **Why it's required**: `ServerPanels` uses Rich for all UI components.
 
 **Usage in mcp-common**:
+
 ```python
 from rich.console import Console
 from rich.panel import Panel
@@ -95,6 +101,7 @@ console.print(Panel("Hello!", title="Server"))
 **Purpose**: Type-safe CLI command creation for server lifecycle management.
 
 **What it provides**:
+
 - `Typer` - CLI app creation
 - Command decorators (`@app.command()`)
 - Automatic help generation
@@ -103,6 +110,7 @@ console.print(Panel("Hello!", title="Server"))
 **Why it's required**: `MCPServerCLIFactory` uses Typer for CLI commands.
 
 **Usage in mcp-common**:
+
 ```python
 import typer
 
@@ -122,6 +130,7 @@ if __name__ == "__main__":
 **Purpose**: Process monitoring and management for PID file handling.
 
 **What it provides**:
+
 - `Process` - Process information and control
 - PID validation
 - Process existence checking
@@ -130,6 +139,7 @@ if __name__ == "__main__":
 **Why it's required**: CLI factory needs to verify process identity and detect stale PIDs.
 
 **Usage in mcp-common**:
+
 ```python
 import psutil
 
@@ -190,6 +200,7 @@ mcp-common (0.7.0)
 **Required**: Python >=3.13
 
 **Why**: mcp-common uses modern Python features:
+
 - Type hint improvements (PEP 695)
 - Match statements (PEP 634)
 - Pydantic V2 features
@@ -209,6 +220,7 @@ dependencies = [
 ```
 
 **Why not `~=` (compatible release)**:
+
 - Allows security updates without version bumps
 - Dependencies are stable with backward compatibility
 - More flexible for downstream consumers
@@ -240,6 +252,7 @@ mcp-common is the **foundation library** for the Mahavishnu ecosystem. These pro
 ### Dependency Impact
 
 When mcp-common updates, these projects benefit from:
+
 - **Bug fixes**: Applied to all ecosystem projects
 - **Performance improvements**: HTTP client optimizations, validation caching
 - **New features**: CLI enhancements, security improvements
@@ -273,6 +286,7 @@ mcp-common follows **semantic versioning** for breaking changes:
 - **Major releases** (0.7.0 → 1.0.0): Breaking changes (documented in CHANGELOG)
 
 **Update Policy**:
+
 - Dependencies are updated for security patches within 7 days
 - Minor updates are tested in CI before release
 - Breaking changes are documented in migration guides
@@ -348,6 +362,7 @@ pip install "mcp-common>=0.7.0"
 **Problem**: `ImportError: cannot import name 'HTTPClientAdapter'`
 
 **Solution**:
+
 ```bash
 # HTTPClientAdapter is from oneiric, re-exported by mcp-common
 pip install --upgrade mcp-common oneiric
@@ -358,6 +373,7 @@ pip install --upgrade mcp-common oneiric
 **Problem**: `ERROR: pip's dependency resolver does not currently take into account all the packages that are installed`
 
 **Solution**:
+
 ```bash
 # Create virtual environment
 python -m venv .venv
@@ -373,6 +389,7 @@ pip install mcp-common
 **Problem**: `ModuleNotFoundError: No module named 'fastmcp'`
 
 **Solution**:
+
 ```bash
 # fastmcp is optional, install separately
 pip install fastmcp
@@ -383,10 +400,10 @@ pip install fastmcp
 When contributing to mcp-common:
 
 1. **Keep dependencies minimal**: Only add if absolutely necessary
-2. **Document new dependencies**: Update this file with rationale
-3. **Check ecosystem impact**: Test with Mahavishnu, Session-Buddy, etc.
-4. **Run security scans**: Ensure no vulnerabilities introduced
-5. **Update requirements**: Pin versions in `pyproject.toml`
+1. **Document new dependencies**: Update this file with rationale
+1. **Check ecosystem impact**: Test with Mahavishnu, Session-Buddy, etc.
+1. **Run security scans**: Ensure no vulnerabilities introduced
+1. **Update requirements**: Pin versions in `pyproject.toml`
 
 ## See Also
 

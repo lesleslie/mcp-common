@@ -13,6 +13,7 @@ MCP Common provides **three usage profiles** for different needs:
 | **FullServer** | All features (auth, telemetry, prompts) | Enterprise, multi-user, high-traffic |
 
 **Quick decision:**
+
 - New to MCP? Start with **MinimalServer**
 - Building a production server? Use **StandardServer** (recommended default)
 - Need auth, telemetry, or multi-user? Use **FullServer**
@@ -315,9 +316,9 @@ server = FullServer(name="my-server", auth=auth, telemetry=telemetry)
 Layered configuration loading (priority order):
 
 1. `settings/local.yaml` (gitignored, local dev)
-2. `settings/{server-name}.yaml` (committed)
-3. Environment variables `{SERVER_NAME}_*`
-4. Default values in code
+1. `settings/{server-name}.yaml` (committed)
+1. Environment variables `{SERVER_NAME}_*`
+1. Default values in code
 
 ```yaml
 # settings/my-server.yaml
@@ -558,10 +559,10 @@ See mcp-common in action:
 ## Performance Tips
 
 1. **Choose the Right Profile** - Start with Minimal, upgrade as needed
-2. **Use HTTP Client Adapter** - 11x faster than creating clients per request
-3. **Enable API Key Caching** - 90% faster validation (automatic)
-4. **Use Early-Exit Sanitization** - 2x faster for clean text (automatic)
-5. **Configure Connection Pools** - Match pool size to expected load
+1. **Use HTTP Client Adapter** - 11x faster than creating clients per request
+1. **Enable API Key Caching** - 90% faster validation (automatic)
+1. **Use Early-Exit Sanitization** - 2x faster for clean text (automatic)
+1. **Configure Connection Pools** - Match pool size to expected load
 
 ## Common Patterns
 

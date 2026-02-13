@@ -5,15 +5,15 @@ This comprehensive guide covers everything you need to build production-ready MC
 ## Table of Contents
 
 1. [Project Setup](#project-setup)
-2. [Configuration Management](#configuration-management)
-3. [HTTP Client Integration](#http-client-integration)
-4. [Tool Development](#tool-development)
-5. [Rich UI Integration](#rich-ui-integration)
-6. [CLI Lifecycle Management](#cli-lifecycle-management)
-7. [Testing Strategies](#testing-strategies)
-8. [Production Deployment](#production-deployment)
-9. [Best Practices](#best-practices)
-10. [Common Patterns](#common-patterns)
+1. [Configuration Management](#configuration-management)
+1. [HTTP Client Integration](#http-client-integration)
+1. [Tool Development](#tool-development)
+1. [Rich UI Integration](#rich-ui-integration)
+1. [CLI Lifecycle Management](#cli-lifecycle-management)
+1. [Testing Strategies](#testing-strategies)
+1. [Production Deployment](#production-deployment)
+1. [Best Practices](#best-practices)
+1. [Common Patterns](#common-patterns)
 
 ## Project Setup
 
@@ -1337,12 +1337,12 @@ settings = Settings.load(f"my-server-{env}")
 Building production-ready MCP servers with mcp-common:
 
 1. **Setup**: Create project structure with virtual environment
-2. **Configuration**: Use Oneiric pattern for YAML + env var config
-3. **HTTP Client**: Use connection pooling for 11x performance
-4. **Tools**: Add input validation, error handling, and documentation
-5. **UI**: Integrate Rich panels for beautiful console output
-6. **CLI**: Add lifecycle management with CLI factory
-7. **Testing**: Write unit and integration tests with mocks
-8. **Production**: Enable health checks, logging, graceful shutdown
+1. **Configuration**: Use Oneiric pattern for YAML + env var config
+1. **HTTP Client**: Use connection pooling for 11x performance
+1. **Tools**: Add input validation, error handling, and documentation
+1. **UI**: Integrate Rich panels for beautiful console output
+1. **CLI**: Add lifecycle management with CLI factory
+1. **Testing**: Write unit and integration tests with mocks
+1. **Production**: Enable health checks, logging, graceful shutdown
 
 **Ready to deploy?** See [QUICKSTART.md](../QUICKSTART.md) for quick reference!

@@ -17,12 +17,14 @@ MCP Common provides three pre-configured server profiles for different use cases
 ### MinimalServer
 
 **Features:**
+
 - Basic tool registration
 - Simple configuration
 - Fast startup
 - Minimal dependencies
 
 **What's Included:**
+
 - Tools: Yes
 - Resources: No
 - Prompts: No
@@ -31,6 +33,7 @@ MCP Common provides three pre-configured server profiles for different use cases
 - Health checks: Basic
 
 **Best For:**
+
 - Quick prototypes
 - Simple utility servers
 - Stateless tools
@@ -38,6 +41,7 @@ MCP Common provides three pre-configured server profiles for different use cases
 - Learning MCP basics
 
 **Example:**
+
 ```python
 from mcp_common.profiles import MinimalServer
 
@@ -51,6 +55,7 @@ server.run()
 ```
 
 **When to Choose Minimal:**
+
 - You only need to expose a few simple functions
 - You don't need dynamic resources or configuration management
 - You want the fastest possible startup time
@@ -60,12 +65,14 @@ server.run()
 ### StandardServer
 
 **Features:**
+
 - Tool registration
 - Resource management
 - Enhanced configuration
 - Rich UI support
 
 **What's Included:**
+
 - Tools: Yes
 - Resources: Yes
 - Prompts: No
@@ -74,6 +81,7 @@ server.run()
 - Health checks: Enhanced
 
 **Best For:**
+
 - Production servers (most common)
 - Servers with dynamic resources
 - Servers needing configuration management
@@ -81,6 +89,7 @@ server.run()
 - API integration servers
 
 **Example:**
+
 ```python
 from mcp_common.profiles import StandardServer
 
@@ -101,6 +110,7 @@ server.run()
 ```
 
 **When to Choose Standard:**
+
 - You need to expose dynamic resources (config, data, status)
 - You want a good balance of features and simplicity
 - You're building a production server for internal use
@@ -110,6 +120,7 @@ server.run()
 ### FullServer
 
 **Features:**
+
 - Tool registration
 - Resource management
 - Prompt templates
@@ -118,6 +129,7 @@ server.run()
 - Multi-worker support
 
 **What's Included:**
+
 - Tools: Yes
 - Resources: Yes
 - Prompts: Yes
@@ -127,6 +139,7 @@ server.run()
 - Workers: Multi-worker support
 
 **Best For:**
+
 - Production servers
 - Multi-user environments
 - Servers requiring authentication
@@ -135,6 +148,7 @@ server.run()
 - Enterprise environments
 
 **Example:**
+
 ```python
 from mcp_common.profiles import FullServer
 from mcp_common.auth import JWTAuth
@@ -165,6 +179,7 @@ server.run(workers=4)
 ```
 
 **When to Choose Full:**
+
 - You need multiple users with authentication
 - You require observability (tracing, metrics)
 - You need to handle high traffic
@@ -250,6 +265,7 @@ server = FullServer(
 ### Minimal Server Configuration
 
 `settings/minimal-server.yaml`:
+
 ```yaml
 server_name: "Minimal MCP Server"
 log_level: INFO
@@ -258,6 +274,7 @@ log_level: INFO
 ### Standard Server Configuration
 
 `settings/standard-server.yaml`:
+
 ```yaml
 server_name: "Standard MCP Server"
 description: "My standard server"
@@ -269,6 +286,7 @@ http_port: 8000
 ### Full Server Configuration
 
 `settings/full-server.yaml`:
+
 ```yaml
 server_name: "Full MCP Server"
 description: "Production-ready server"
@@ -289,6 +307,7 @@ workers: 4
 | Full | Slowest | Highest | Highest (with workers) |
 
 **Recommendations:**
+
 - Use **Minimal** for development and testing
 - Use **Standard** for most production servers
 - Use **Full** for high-traffic or multi-user scenarios
@@ -315,6 +334,7 @@ server = FullServer(name="my-server", auth=auth, telemetry=telemetry)
 Each profile has unique features - use them:
 
 **Minimal:**
+
 ```python
 @server.tool()
 def simple_function(arg: str) -> str:
@@ -322,6 +342,7 @@ def simple_function(arg: str) -> str:
 ```
 
 **Standard:**
+
 ```python
 @server.resource("config://{name}")
 def get_config(name: str) -> str:
@@ -329,6 +350,7 @@ def get_config(name: str) -> str:
 ```
 
 **Full:**
+
 ```python
 @server.prompt("analyze")
 def analyze_prompt(data: str) -> str:
@@ -398,5 +420,6 @@ Choose your profile based on your needs:
 All profiles share the same basic API, making it easy to migrate as your needs evolve.
 
 For more information, see:
+
 - [README.md](../../README.md) - Main documentation
 - [examples/README.md](../../examples/README.md) - Example servers
