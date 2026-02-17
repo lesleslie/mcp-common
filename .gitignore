@@ -27,6 +27,22 @@ ENV/
 env/
 .venv/
 
+# XDG - Cache directories
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.oneiric_cache/
+.complexipy_cache/
+.cache/
+
+# XDG - State directories
+.claude/
+.session-buddy/
+.crackerjack/
+
+# XDG - DELETE candidates
+.obsidian/
+
 # Testing
 .pytest_cache/
 .coverage
