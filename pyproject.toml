@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-common"
-version = "0.9.2"
+version = "0.9.3"
 description = "Oneiric-Native foundation library providing battle-tested patterns for MCP (Model Context Protocol) servers, with YAML configuration, Rich UI, and CLI lifecycle management"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -39,7 +39,7 @@ dependencies = [
     "pyyaml>=6.0.3",
     "rich>=14.2.0",
     "typer>=0.21.0",
-    "python-jose[cryptography]>=3.3.0",
+    "PyJWT>=2.8.0",
     "cryptography>=41.0.0",
     "websockets>=12.0",
 ]

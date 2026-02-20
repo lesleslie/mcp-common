@@ -12,11 +12,11 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 try:
-    from jose import jwt
-    from jose.exceptions import ExpiredSignatureError, JWTError
-    JOSE_AVAILABLE = True
+    import jwt
+    from jwt import ExpiredSignatureError, InvalidTokenError
+    JWT_AVAILABLE = True
 except ImportError:
-    JOSE_AVAILABLE = False
+    JWT_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -47,12 +47,12 @@ class WebSocketAuthenticator:
             token_expiry: Token expiry time in seconds (default: 1 hour)
 
         Raises:
-            ImportError: If python-jose is not installed
+            ImportError: If PyJWT is not installed
         """
-        if not JOSE_AVAILABLE:
+        if not JWT_AVAILABLE:
             raise ImportError(
-                "python-jose is required for JWT authentication. "
-                "Install it with: pip install python-jose[cryptography]"
+                "PyJWT is required for JWT authentication. "
+                "Install it with: pip install PyJWT"
             )
 
         self.secret = secret
@@ -101,8 +101,8 @@ class WebSocketAuthenticator:
             >>> if payload:
             ...     print(f"User: {payload['user_id']}")
         """
-        if not JOSE_AVAILABLE:
-            logger.error("python-jose not available for token verification")
+        if not JWT_AVAILABLE:
+            logger.error("PyJWT not available for token verification")
             return None
 
         try:
@@ -115,7 +115,7 @@ class WebSocketAuthenticator:
         except ExpiredSignatureError:
             logger.warning("Token expired")
             return None
-        except JWTError as e:
+        except InvalidTokenError as e:
             logger.warning(f"Invalid token: {e}")
             return None
 
