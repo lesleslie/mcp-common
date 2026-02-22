@@ -57,6 +57,13 @@ all-prompts = [
     "mcp-common[macos-prompts,terminal-prompts]",
 ]
 
+# Tree-sitter parsing support
+treesitter = [
+    "tree-sitter>=0.24.0",
+    "tree-sitter-python>=0.23.0",
+    "tree-sitter-go>=0.23.0",
+]
+
 # Development dependencies
 dev = [
     "crackerjack>=0.47.0",
@@ -66,7 +73,7 @@ dev = [
 
 # All optional features
 all = [
-    "mcp-common[all-prompts,dev]",
+    "mcp-common[all-prompts,dev,treesitter]",
 ]
 
 [project.license]
