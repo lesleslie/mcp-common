@@ -77,7 +77,7 @@ all = [
 ]
 
 [project.license]
-text = "BSD-3-Clause"
+text = "BSD-3-CLAUSE"
 
 [project.urls]
 Homepage = "https://github.com/lesleslie/mcp-common"
