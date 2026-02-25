@@ -172,3 +172,9 @@ site/
 var/
 venv/
 wheels/
+
+# Archive directories
+.archive/
+.archives/
+.backup/
+.backups/
