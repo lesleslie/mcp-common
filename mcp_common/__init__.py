@@ -45,23 +45,41 @@ from mcp_common.exceptions import (
     ServerConfigurationError,
     ServerInitializationError,
 )
+from mcp_common.health import (
+    ComponentHealth,
+    DependencyConfig,
+    DependencyWaiter,
+    HealthChecker,
+    HealthCheckResponse,
+    HealthCheckResult,
+    HealthStatus,
+    WaitResult,
+    register_health_tools,
+)
 from mcp_common.interfaces import DualUseTool, ensure_dual_use
 from mcp_common.profiles import FullServer, MinimalServer, StandardServer
 from mcp_common.schemas import ToolInput, ToolResponse
 from mcp_common.ui import ServerPanels
 from mcp_common.validation import validate_input, validate_output
 
-__version__ = "0.5.0"  # Usage profiles
+__version__ = "0.5.1"  # Added health dependency checking
 
 __all__: list[str] = [
     "APIKeyFormatError",
     "APIKeyLengthError",
     "APIKeyMissingError",
+    "ComponentHealth",
     "CredentialValidationError",
+    "DependencyConfig",
     "DependencyMissingError",
+    "DependencyWaiter",
     "DualUseTool",
     "HTTPClientAdapter",
     "HTTPClientSettings",
+    "HealthChecker",
+    "HealthCheckResponse",
+    "HealthCheckResult",
+    "HealthStatus",
     "MCPBaseSettings",
     "MCPServerCLIFactory",
     "MCPServerError",
@@ -73,11 +91,13 @@ __all__: list[str] = [
     "ToolInput",
     "ToolResponse",
     "ValidationMixin",
+    "WaitResult",
     "FullServer",
     "MinimalServer",
     "StandardServer",
     "__version__",
     "ensure_dual_use",
+    "register_health_tools",
     "validate_input",
     "validate_output",
 ]
