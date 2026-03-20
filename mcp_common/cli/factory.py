@@ -91,6 +91,7 @@ class MCPServerCLIFactory:
         name: str,
         _description: str = "MCP Server",
         _use_subcommands: bool = True,
+        use_mcp_subcommand: bool = False,
     ) -> "MCPServerCLIFactory":
         """Create CLI factory for server-class pattern.
 
@@ -252,6 +253,7 @@ class MCPServerCLIFactory:
             start_handler=start_handler,
             stop_handler=stop_handler,
             health_probe_handler=health_probe_handler,
+            use_mcp_subcommand=use_mcp_subcommand,
         )
 
     def __init__(
@@ -261,6 +263,7 @@ class MCPServerCLIFactory:
         start_handler: Callable[[], None] | None = None,
         stop_handler: Callable[[int], None] | None = None,
         health_probe_handler: Callable[[], RuntimeHealthSnapshot] | None = None,
+        use_mcp_subcommand: bool = False,
     ) -> None:
         """Initialize CLI factory.
 
@@ -270,12 +273,15 @@ class MCPServerCLIFactory:
             start_handler: Optional custom start logic (called after PID created)
             stop_handler: Optional custom stop logic (called before PID removed)
             health_probe_handler: Optional health probe logic (for --health --probe)
+            use_mcp_subcommand: If True, commands are under 'mcp' subcommand
+                (e.g., 'server mcp start' instead of 'server start')
         """
         self.server_name = server_name
         self.settings = settings or MCPServerSettings.load(server_name)
         self.start_handler = start_handler
         self.stop_handler = stop_handler
         self.health_probe_handler = health_probe_handler
+        self.use_mcp_subcommand = use_mcp_subcommand
         self._app: typer.Typer | None = None
 
     def create_app(self) -> typer.Typer:
@@ -283,6 +289,13 @@ class MCPServerCLIFactory:
 
         Returns:
             Configured Typer app with start, stop, restart, status, health commands
+
+        Note:
+            If use_mcp_subcommand=True, commands are registered under 'mcp' subcommand:
+            - 'server mcp start' instead of 'server start'
+            - 'server mcp status' instead of 'server status'
+
+            This is useful for CLIs that have many other commands beyond MCP lifecycle.
         """
         if self._app is not None:
             return self._app
@@ -292,12 +305,24 @@ class MCPServerCLIFactory:
             add_completion=False,
         )
 
-        # Register standard commands
-        app.command("start")(self._cmd_start)
-        app.command("stop")(self._cmd_stop)
-        app.command("restart")(self._cmd_restart)
-        app.command("status")(self._cmd_status)
-        app.command("health")(self._cmd_health)
+        if self.use_mcp_subcommand:
+            # Create 'mcp' subcommand group
+            mcp_app = typer.Typer(help="MCP server lifecycle management")
+            app.add_typer(mcp_app, name="mcp")
+
+            # Register commands under 'mcp' subcommand
+            mcp_app.command("start")(self._cmd_start)
+            mcp_app.command("stop")(self._cmd_stop)
+            mcp_app.command("restart")(self._cmd_restart)
+            mcp_app.command("status")(self._cmd_status)
+            mcp_app.command("health")(self._cmd_health)
+        else:
+            # Register commands at root level (default behavior)
+            app.command("start")(self._cmd_start)
+            app.command("stop")(self._cmd_stop)
+            app.command("restart")(self._cmd_restart)
+            app.command("status")(self._cmd_status)
+            app.command("health")(self._cmd_health)
 
         self._app = app
         return app
