@@ -572,10 +572,11 @@ def register_health_tools(
         port: int = 8080,
         timeout: int = 5,
         use_tls: bool = False,
+        health_path: str = "/health",
     ) -> dict[str, t.Any]:
         """Check health of a specific service.
 
-        Performs an HTTP GET request to the service's /health endpoint.
+        Performs an HTTP GET request to the service's health endpoint.
 
         Args:
             service_name_arg: Name of the service to check
@@ -583,11 +584,14 @@ def register_health_tools(
             port: Port number
             timeout: Request timeout in seconds
             use_tls: Use HTTPS instead of HTTP
+            health_path: Path to health endpoint (default: /health, MCP servers use /mcp)
 
         Returns:
             Health status dictionary with status, latency, and any errors
         """
-        config = DependencyConfig(host=host, port=port, use_tls=use_tls)
+        config = DependencyConfig(
+            host=host, port=port, use_tls=use_tls, health_path=health_path
+        )
         result = await checker.check(
             config.to_url(),
             timeout=timeout,
@@ -648,6 +652,7 @@ def register_health_tools(
         timeout: int = 30,
         required: bool = True,
         use_tls: bool = False,
+        health_path: str = "/health",
     ) -> dict[str, t.Any]:
         """Wait for a specific dependency to become healthy.
 
@@ -660,6 +665,7 @@ def register_health_tools(
             timeout: Maximum wait time in seconds
             required: Whether this is a required dependency
             use_tls: Use HTTPS instead of HTTP
+            health_path: Path to health endpoint (default: /health, MCP servers use /mcp)
 
         Returns:
             Result indicating success or timeout
@@ -670,6 +676,7 @@ def register_health_tools(
             required=required,
             timeout_seconds=timeout,
             use_tls=use_tls,
+            health_path=health_path,
         )
 
         start = time.time()

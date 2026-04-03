@@ -1,17 +1,30 @@
 # mcp-common
 
-![Coverage](https://img.shields.io/badge/coverage-99.2%25-brightgreen)
-![Tests](https://img.shields.io/badge/tests-615-success)
-![Version](https://img.shields.io/badge/version-0.6.0-blue)
-![Python](https://img.shields.io/badge/python-3.13%2B-blue)
+[![Code style: crackerjack](https://img.shields.io/badge/code%20style-crackerjack-000042)](https://github.com/lesleslie/crackerjack)
+[![Runtime: oneiric](https://img.shields.io/badge/runtime-oneiric-6e5494)](https://github.com/lesleslie/oneiric)
+[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
+[![Python: 3.13+](https://img.shields.io/badge/python-3.13%2B-green)](https://www.python.org/downloads/)
+
 **Version:** 0.6.0 (Oneiric-Native)
 **Status:** Production Ready
 
-______________________________________________________________________
+---
+
+## Quick Links
+
+- [Overview](#overview)
+- [Examples](#-examples)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Testing](#testing)
 
 ## Overview
 
-mcp-common is an **Oneiric-native foundation library** for building production-grade MCP (Model Context Protocol) servers. It provides battle-tested patterns extracted from 9 production servers including crackerjack, session-mgmt-mcp, and fastblocks.
+mcp-common is a **Oneiric-native foundation library** for building production-grade MCP (Model Context Protocol) servers. It provides battle-tested patterns extracted from production servers including Crackerjack, Session Buddy, and FastBlocks.
+
+## Quality & CI
+
+Crackerjack is the standard quality-control and CI/CD gate for changes to this library and the downstream MCP servers that build on it.
 
 **🎯 What This Library Provides:**
 
@@ -34,7 +47,7 @@ mcp-common is an **Oneiric-native foundation library** for building production-g
 1. **Type-safe** - Full type hints with strict MyPy checking
 1. **Well-Tested** - 90% coverage minimum
 
-______________________________________________________________________
+---
 
 ## 📚 Examples
 
@@ -75,7 +88,7 @@ python weather_server.py
 
 **Full documentation:** [`examples/README.md`](./examples/README.md)
 
-______________________________________________________________________
+---
 
 ## Quick Start
 
@@ -151,7 +164,7 @@ if __name__ == "__main__":
     mcp.run()
 ```
 
-______________________________________________________________________
+---
 
 ## Core Features
 
@@ -460,14 +473,14 @@ async def test_tool():
     assert result["success"]
 ```
 
-______________________________________________________________________
+---
 
 ## Documentation
 
 - **[examples/README.md](./examples/README.md)** - **START HERE** - Example servers and usage patterns
 - **[ONEIRIC_CLI_FACTORY\_\*.md](./docs/)** - CLI factory documentation and implementation guides
 
-______________________________________________________________________
+---
 
 ## Complete Example
 
@@ -483,7 +496,7 @@ See [`examples/`](./examples/) for a complete production-ready Weather MCP serve
 1. **Type Safety** - Full Pydantic validation throughout
 1. **Error Handling** - Graceful error display with ServerPanels
 
-______________________________________________________________________
+---
 
 ## Performance Benchmarks
 
@@ -544,7 +557,7 @@ Result: +4% overhead (negligible vs network I/O)
 - ✅ 7 performance optimization tests
 - ✅ 100% backward compatibility maintained
 
-______________________________________________________________________
+---
 
 ## Usage Patterns
 
@@ -624,7 +637,7 @@ ServerPanels.status_table(
 )
 ```
 
-______________________________________________________________________
+---
 
 ## Development
 
@@ -665,7 +678,7 @@ mypy mcp_common tests
 crackerjack --all
 ```
 
-______________________________________________________________________
+---
 
 ## Versioning
 
@@ -681,7 +694,7 @@ ______________________________________________________________________
 - Optional: compatible with FastMCP 2.0+
 - Uses Pydantic 2.12+, Rich 14.2+
 
-______________________________________________________________________
+---
 
 ## Success Metrics
 
@@ -694,13 +707,13 @@ ______________________________________________________________________
 1. ✅ Standardized CLI lifecycle management
 1. ✅ Clean dependency tree (no framework lock-in)
 
-______________________________________________________________________
+---
 
 ## License
 
 BSD-3-Clause License - See [LICENSE](./LICENSE) for details
 
-______________________________________________________________________
+---
 
 ## Contributing
 
@@ -713,7 +726,7 @@ Contributions are welcome! Please:
 1. Ensure all quality checks pass (`ruff format && ruff check && mypy && pytest`)
 1. Submit pull request
 
-______________________________________________________________________
+---
 
 ## Acknowledgments
 
@@ -722,7 +735,7 @@ Built with patterns extracted from 9 production MCP servers:
 **Primary Pattern Sources:**
 
 - **crackerjack** - MCP server structure, Rich UI panels, CLI patterns
-- **session-mgmt-mcp** - Configuration patterns, health checks
+- **session-buddy** - Configuration patterns, health checks
 - **fastblocks** - Adapter organization, settings management
 
 **Additional Contributors:**
@@ -733,12 +746,12 @@ Built with patterns extracted from 9 production MCP servers:
 - mailgun-mcp
 - unifi-mcp
 
-______________________________________________________________________
+---
 
 ## Support
 
 For support, please check the documentation in the `docs/` directory or create an issue in the repository.
 
-______________________________________________________________________
+---
 
 **Ready to get started?** Check out [`examples/`](./examples/) for working examples demonstrating all features!

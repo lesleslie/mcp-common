@@ -2,9 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+For a shorter, tool-neutral bootstrap document, start with `AGENTS.md`.
+
 ## Project Overview
 
-**mcp-common** is an Oneiric-native foundation library for building production-grade MCP (Model Context Protocol) servers. It provides battle-tested patterns extracted from 9 production servers including crackerjack, session-mgmt-mcp, and fastblocks.
+**mcp-common** is a Oneiric-native foundation library for building production-grade MCP (Model Context Protocol) servers. It provides battle-tested patterns extracted from 9 production servers including crackerjack, session-buddy, and fastblocks.
 
 **Current Status:** v0.3.6 - **Oneiric-Native (Production Ready)**
 
@@ -49,7 +51,7 @@ The design is extracted from these production servers (located in `../` relative
 **Primary Pattern Sources:**
 
 - **crackerjack** (`../crackerjack/mcp/`) - Rich UI panels (ServerPanels), MCP server structure, tool organization
-- **session-mgmt-mcp** (`../session-mgmt-mcp/`) - YAML configuration patterns, settings management
+- **session-buddy** (`../session-buddy/`) - YAML configuration patterns, settings management
 - **fastblocks** (`../fastblocks/`) - Adapter organization, module structure
 
 **Key Patterns from Production Servers:**
@@ -288,9 +290,9 @@ class MyAdapter:
 ### When Implementing a New Feature
 
 1. **Read relevant documentation** in `docs/` or `README.md` for the specific feature
-1. **Reference production code** in `../crackerjack`, `../session-mgmt-mcp`, or `../fastblocks`
+1. **Reference production code** in `../crackerjack`, `../session-buddy`, or `../fastblocks`
    - For Rich UI: Study `crackerjack/ui/panels.py`
-   - For configuration: Study `session-mgmt-mcp` settings patterns
+   - For configuration: Study `session-buddy` settings patterns
    - For HTTP clients: Study `examples/weather_server.py`
 1. **Implement with type safety** - Full type hints required
 1. **Write tests first** (TDD approach, target 90%+ coverage)
@@ -623,7 +625,7 @@ python weather_server.py
 - **bandit>=1.8.0** - Security scanning
 - **respx>=0.21.0** - HTTP mocking for httpx
 - **crackerjack** - Reference implementation
-- **session-mgmt-mcp** - Reference implementation
+- **session-buddy** - Reference implementation
 
 <!-- CRACKERJACK INTEGRATION START -->
 
@@ -680,17 +682,10 @@ This project follows crackerjack's clean code philosophy:
 - **Python 3.13+ modern patterns**: Use `|` unions, pathlib over os.path
 
 ```bash
-
 python -m crackerjack
-
-
-python -m crackerjack - t
-
-
-python -m crackerjack - - ai - agent - t
-
-
-python -m crackerjack - a patch
+python -m crackerjack -t
+python -m crackerjack --ai-agent -t
+python -m crackerjack -a patch
 ```
 
 1. **Plan with crackerjack-architect**: Ensure proper architecture from the start
