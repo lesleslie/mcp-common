@@ -64,6 +64,11 @@ treesitter = [
     "tree-sitter-go>=0.23.0",
 ]
 
+# LLM provider support
+llm = [
+    "openai>=1.0.0",
+]
+
 # Development dependencies
 dev = [
     "crackerjack>=0.47.0",
@@ -73,7 +78,7 @@ dev = [
 
 # All optional features
 all = [
-    "mcp-common[all-prompts,dev,treesitter]",
+    "mcp-common[all-prompts,dev,treesitter,llm]",
 ]
 
 [project.license]
