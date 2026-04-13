@@ -118,11 +118,7 @@ fixable = [
 max-complexity = 15
 
 [tool.pytest.ini_options]
-asyncio_mode = "auto"
-timeout = 600
-testpaths = [
-    "tests",
-]
+minversion = "8.0"
 addopts = [
     "--cov=mcp-common",
     "--cov-report=term-missing:skip-covered",
@@ -132,18 +128,27 @@ addopts = [
     "--strict-config",
     "-ra",
     "--tb=short",
+    "--cov-branch",
+    "--cov-fail-under=80",
 ]
+testpaths = ["tests"]
 markers = [
     "unit: Unit tests",
     "integration: Integration tests",
+    "property: Property-based tests",
     "e2e: End-to-end tests",
-    "security: Security-focused tests",
-    "performance: Performance and load tests",
     "slow: Slow tests (>2s)",
     "benchmark: Benchmark tests (deferred)",
     "smoke: Quick smoke tests",
     "regression: Regression tests",
     "api: API endpoint tests",
+    "unit_async: Async unit tests",
+]
+asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::DeprecationWarning:websockets.*:",
+    "ignore::DeprecationWarning:networkx.*:",
+    "ignore::pytest.PytestUnknownMarkWarning:",
 ]
 
 [tool.coverage.run]
