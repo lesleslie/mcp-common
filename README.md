@@ -28,6 +28,8 @@ Crackerjack is the standard quality-control and CI/CD gate for changes to this l
 
 **🎯 What This Library Provides:**
 
+- **Tool Profile System** (v0.6.0+) - Gated tool registration to reduce MCP context overhead (391 tools across 5 servers)
+- **Description Trimming** (v0.6.0+) - Utility to trim tool docstrings to 200 chars for token efficiency
 - **Oneiric CLI Factory** (v0.3.3+) - Standardized server lifecycle with start/stop/restart/status/health commands
 - **HTTP Client Adapter** - Connection pooling with httpx for 11x performance
 - **Prompting/Notification Adapter** 🆕 - Unified cross-platform user interaction with automatic backend detection
@@ -473,6 +475,74 @@ async def test_tool():
     assert result["success"]
 ```
 
+### 🔧 Tool Profile System (NEW in v0.6.0)
+
+Reduce MCP context overhead by gating which tools are registered at startup. Each server reads a `{SERVER_NAME}_TOOL_PROFILE` environment variable (`minimal`, `standard`, or `full`) and only registers the corresponding tool groups.
+
+**Why:** A server with 170 tools sends ~70k tokens of tool definitions to Claude on every request. Profile gating reduces this to ~10-20k tokens for daily development.
+
+**ToolProfile enum:**
+
+```python
+from mcp_common.tools import ToolProfile, trim_description, MANDATORY_TOOLS
+
+# Resolve from environment (defaults to FULL for backward compatibility)
+profile = ToolProfile.from_env("MY_SERVER_TOOL_PROFILE")
+
+# Ordering comparisons work
+assert ToolProfile.MINIMAL < ToolProfile.STANDARD < ToolProfile.FULL
+
+# Safe fallback for invalid values
+assert ToolProfile.from_string("unknown") == ToolProfile.FULL
+```
+
+**Description trimming:**
+
+```python
+# Strip Args/Returns/Raises sections, keep first paragraph, max 200 chars
+trimmed = trim_description("""Check health of a service.
+
+    Args:
+        service_name: Name of the service
+        port: Port number
+
+    Returns:
+        Health status dictionary""")
+# Result: "Check health of a service."
+```
+
+**Per-server profiles.py pattern:**
+
+```python
+# my_server/mcp/tools/profiles.py
+from mcp_common.tools import ToolProfile
+
+MINIMAL_REGISTRATIONS = ["register_health_tools"]
+STANDARD_REGISTRATIONS = MINIMAL_REGISTRATIONS + ["register_core_tools"]
+FULL_REGISTRATIONS = STANDARD_REGISTRATIONS + ["register_advanced_tools"]
+
+PROFILE_REGISTRATIONS = {
+    ToolProfile.MINIMAL: MINIMAL_REGISTRATIONS,
+    ToolProfile.STANDARD: STANDARD_REGISTRATIONS,
+    ToolProfile.FULL: FULL_REGISTRATIONS,
+}
+
+def get_active_profile(env_var="MY_SERVER_TOOL_PROFILE"):
+    return ToolProfile.from_env(env_var)
+```
+
+**Profile tiers across the ecosystem:**
+
+| Server | MINIMAL | STANDARD | FULL |
+|--------|---------|----------|------|
+| session-buddy | 4 groups (~12 tools) | 13 groups (~35 tools) | 32 groups (~151 tools) |
+| mahavishnu | 1 group (health) | 7 groups | 14 groups (~174 tools) |
+| crackerjack | 2 groups | 7 groups | 12 groups (~60 tools) |
+| akosha | 1 group (health) | 2 groups | 4 groups (~5 tools) |
+| dhara | 1 group (kv/store) | 3 groups | 3 groups (~17 tools) |
+
+**discover_tools meta-tool:** Each server registers a `discover_tools(query)` tool that is always available, letting Claude find unloaded tools and suggest profile changes.
+
 ---
 
 ## Documentation
@@ -684,6 +754,7 @@ crackerjack --all
 
 **Recent Versions:**
 
+- **0.6.0** - Tool Profile System, description trimming, MANDATORY_TOOLS
 - **0.3.6** - Oneiric-native (production ready)
 - **0.3.3** - Added Oneiric CLI Factory
 - **0.3.0** - Initial Oneiric patterns

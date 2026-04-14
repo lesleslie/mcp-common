@@ -59,10 +59,11 @@ from mcp_common.health import (
 from mcp_common.interfaces import DualUseTool, ensure_dual_use
 from mcp_common.profiles import FullServer, MinimalServer, StandardServer
 from mcp_common.schemas import ToolInput, ToolResponse
+from mcp_common.tools import MANDATORY_TOOLS, ToolProfile, trim_description
 from mcp_common.ui import ServerPanels
 from mcp_common.validation import validate_input, validate_output
 
-__version__ = "0.5.1"  # Added health dependency checking
+__version__ = "0.6.0"  # Added tool profiles and description trimming
 
 __all__: list[str] = [
     "APIKeyFormatError",
@@ -84,11 +85,13 @@ __all__: list[str] = [
     "MCPServerCLIFactory",
     "MCPServerError",
     "MCPServerSettings",
+    "MANDATORY_TOOLS",
     "RuntimeHealthSnapshot",
     "ServerConfigurationError",
     "ServerInitializationError",
     "ServerPanels",
     "ToolInput",
+    "ToolProfile",
     "ToolResponse",
     "ValidationMixin",
     "WaitResult",
@@ -98,6 +101,7 @@ __all__: list[str] = [
     "__version__",
     "ensure_dual_use",
     "register_health_tools",
+    "trim_description",
     "validate_input",
     "validate_output",
 ]
