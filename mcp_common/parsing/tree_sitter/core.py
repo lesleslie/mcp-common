@@ -12,16 +12,13 @@ from __future__ import annotations
 import asyncio
 import time
 from concurrent.futures import ProcessPoolExecutor
-from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol
 
 from mcp_common.parsing.tree_sitter.cache import ContentHashLRUCache, ParseResultCache
 from mcp_common.parsing.tree_sitter.exceptions import (
     FileTooLargeError,
-    LanguageHandlerNotFoundError,
     LanguageNotSupportedError,
-    ParseSyntaxError,
 )
 from mcp_common.parsing.tree_sitter.models import (
     ComplexityMetrics,
@@ -29,7 +26,6 @@ from mcp_common.parsing.tree_sitter.models import (
     ParseResult,
     SupportedLanguage,
     SymbolInfo,
-    SymbolKind,
     SymbolRelationship,
 )
 

@@ -5,8 +5,7 @@ Extracts symbols, relationships, and complexity metrics from Python source code.
 
 from __future__ import annotations
 
-import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from mcp_common.parsing.tree_sitter.models import (
     ComplexityMetrics,
@@ -285,7 +284,7 @@ class PythonHandler:
                 names.append(self._get_text(child, source))
             elif child.type == "aliased_import":
                 name_node = child.child_by_field_name("name")
-                alias_node = child.child_by_field_name("alias")
+                child.child_by_field_name("alias")
                 if name_node:
                     names.append(self._get_text(name_node, source))
 
@@ -440,7 +439,9 @@ class PythonHandler:
                     name_node = child.child_by_field_name("name")
                     if name_node:
                         name = self._get_text(name_node, source)
-                        metrics[name] = self._calculate_function_complexity(child, source)
+                        metrics[name] = self._calculate_function_complexity(
+                            child, source
+                        )
 
         # Recurse into children
         for child in node.children:
@@ -531,10 +532,12 @@ class PythonHandler:
 
         # Recurse into children
         for child in node.children:
-            child_cyclo, child_cog, child_nesting, child_returns = self._analyze_complexity(
-                child,
-                source,
-                depth + 1 if node.type in decision_types else depth,
+            child_cyclo, child_cog, child_nesting, child_returns = (
+                self._analyze_complexity(
+                    child,
+                    source,
+                    depth + 1 if node.type in decision_types else depth,
+                )
             )
             cyclomatic += child_cyclo
             cognitive += child_cog

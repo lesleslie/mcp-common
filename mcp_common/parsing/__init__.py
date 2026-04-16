@@ -12,8 +12,8 @@ from mcp_common.parsing.tree_sitter import (
     SymbolInfo,
     SymbolKind,
     SymbolRelationship,
-    TreeSitterParser,
     TreeSitterError,
+    TreeSitterParser,
 )
 
 __all__ = [

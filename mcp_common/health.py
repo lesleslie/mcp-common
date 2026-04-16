@@ -372,7 +372,7 @@ class HealthChecker:
                 response_data=response_json,
             )
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             latency_ms = (time.time() - start_time) * 1000
             return HealthCheckResult(
                 service_name=service_name,
@@ -636,11 +636,15 @@ def register_health_tools(
         )
 
         return {
-            "status": HealthStatus.HEALTHY.value if all_ok else HealthStatus.UNHEALTHY.value,
+            "status": HealthStatus.HEALTHY.value
+            if all_ok
+            else HealthStatus.UNHEALTHY.value,
             "services": results,
             "total_services": len(results),
             "healthy_services": sum(
-                1 for r in results.values() if r.get("status") == HealthStatus.HEALTHY.value
+                1
+                for r in results.values()
+                if r.get("status") == HealthStatus.HEALTHY.value
             ),
         }
 
@@ -779,10 +783,12 @@ def register_health_tools(
         result = await waiter.wait_for_all(dependencies)
 
         checks: dict[str, str] = {"process": "ok"}
-        checks.update({
-            name: dep_result.status.value
-            for name, dep_result in result.dependencies.items()
-        })
+        checks.update(
+            {
+                name: dep_result.status.value
+                for name, dep_result in result.dependencies.items()
+            }
+        )
 
         return {
             "ready": result.success,

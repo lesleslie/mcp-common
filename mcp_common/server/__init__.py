@@ -33,9 +33,11 @@ from mcp_common.server.runtime import (
     RuntimeComponents,
     create_runtime_components,
 )
+from mcp_common.server.telemetry import FastMCPOpenTelemetryMiddleware
 
 __all__ = [
     "BaseOneiricServerMixin",
+    "FastMCPOpenTelemetryMiddleware",
     "RuntimeComponents",
     "check_rate_limiting_available",
     "check_security_available",

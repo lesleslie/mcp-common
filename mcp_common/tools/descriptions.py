@@ -19,10 +19,20 @@ from __future__ import annotations
 MAX_DESCRIPTION_LENGTH = 200
 
 # Sections to strip from tool descriptions
-_STRIP_SECTIONS = ("Args:", "Returns:", "Raises:", "Example:", "Examples:", "Note:", "Notes:")
+_STRIP_SECTIONS = (
+    "Args:",
+    "Returns:",
+    "Raises:",
+    "Example:",
+    "Examples:",
+    "Note:",
+    "Notes:",
+)
 
 
-def trim_description(docstring: str | None, max_length: int = MAX_DESCRIPTION_LENGTH) -> str:
+def trim_description(
+    docstring: str | None, max_length: int = MAX_DESCRIPTION_LENGTH
+) -> str:
     """Extract first paragraph from docstring, trimmed to max_length.
 
     Strips Examples, Args, Returns, Raises, Note sections.

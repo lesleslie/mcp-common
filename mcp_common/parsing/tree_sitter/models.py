@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
 
-class SupportedLanguage(str, Enum):
+class SupportedLanguage(StrEnum):
     """Languages supported by tree-sitter parsing."""
 
     PYTHON = "python"
@@ -19,7 +19,7 @@ class SupportedLanguage(str, Enum):
     UNKNOWN = "unknown"
 
 
-class SymbolKind(str, Enum):
+class SymbolKind(StrEnum):
     """Types of code symbols that can be extracted."""
 
     FUNCTION = "function"

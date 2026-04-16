@@ -8,7 +8,7 @@
 **Version:** 0.6.0 (Oneiric-Native)
 **Status:** Production Ready
 
----
+______________________________________________________________________
 
 ## Quick Links
 
@@ -49,7 +49,7 @@ Crackerjack is the standard quality-control and CI/CD gate for changes to this l
 1. **Type-safe** - Full type hints with strict MyPy checking
 1. **Well-Tested** - 90% coverage minimum
 
----
+______________________________________________________________________
 
 ## 📚 Examples
 
@@ -90,7 +90,7 @@ python weather_server.py
 
 **Full documentation:** [`examples/README.md`](./examples/README.md)
 
----
+______________________________________________________________________
 
 ## Quick Start
 
@@ -166,7 +166,7 @@ if __name__ == "__main__":
     mcp.run()
 ```
 
----
+______________________________________________________________________
 
 ## Core Features
 
@@ -543,14 +543,14 @@ def get_active_profile(env_var="MY_SERVER_TOOL_PROFILE"):
 
 **discover_tools meta-tool:** Each server registers a `discover_tools(query)` tool that is always available, letting Claude find unloaded tools and suggest profile changes.
 
----
+______________________________________________________________________
 
 ## Documentation
 
 - **[examples/README.md](./examples/README.md)** - **START HERE** - Example servers and usage patterns
 - **[ONEIRIC_CLI_FACTORY\_\*.md](./docs/)** - CLI factory documentation and implementation guides
 
----
+______________________________________________________________________
 
 ## Complete Example
 
@@ -566,7 +566,7 @@ See [`examples/`](./examples/) for a complete production-ready Weather MCP serve
 1. **Type Safety** - Full Pydantic validation throughout
 1. **Error Handling** - Graceful error display with ServerPanels
 
----
+______________________________________________________________________
 
 ## Performance Benchmarks
 
@@ -627,7 +627,7 @@ Result: +4% overhead (negligible vs network I/O)
 - ✅ 7 performance optimization tests
 - ✅ 100% backward compatibility maintained
 
----
+______________________________________________________________________
 
 ## Usage Patterns
 
@@ -707,7 +707,7 @@ ServerPanels.status_table(
 )
 ```
 
----
+______________________________________________________________________
 
 ## Development
 
@@ -748,7 +748,7 @@ mypy mcp_common tests
 crackerjack --all
 ```
 
----
+______________________________________________________________________
 
 ## Versioning
 
@@ -765,7 +765,7 @@ crackerjack --all
 - Optional: compatible with FastMCP 2.0+
 - Uses Pydantic 2.12+, Rich 14.2+
 
----
+______________________________________________________________________
 
 ## Success Metrics
 
@@ -778,13 +778,13 @@ crackerjack --all
 1. ✅ Standardized CLI lifecycle management
 1. ✅ Clean dependency tree (no framework lock-in)
 
----
+______________________________________________________________________
 
 ## License
 
 BSD-3-Clause License - See [LICENSE](./LICENSE) for details
 
----
+______________________________________________________________________
 
 ## Contributing
 
@@ -797,7 +797,7 @@ Contributions are welcome! Please:
 1. Ensure all quality checks pass (`ruff format && ruff check && mypy && pytest`)
 1. Submit pull request
 
----
+______________________________________________________________________
 
 ## Acknowledgments
 
@@ -817,12 +817,12 @@ Built with patterns extracted from 9 production MCP servers:
 - mailgun-mcp
 - unifi-mcp
 
----
+______________________________________________________________________
 
 ## Support
 
 For support, please check the documentation in the `docs/` directory or create an issue in the repository.
 
----
+______________________________________________________________________
 
 **Ready to get started?** Check out [`examples/`](./examples/) for working examples demonstrating all features!

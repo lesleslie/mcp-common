@@ -13,76 +13,97 @@ from typing import Any
 # Try to import prometheus_client, make it optional
 try:
     from prometheus_client import Counter, Gauge, Histogram, start_http_server
+
     PROMETHEUS_AVAILABLE = True
 except ImportError:
     PROMETHEUS_AVAILABLE = False
+
     # Create stubs for when prometheus_client is not available
     class Counter:  # type: ignore
-        def __init__(self, *args: Any, **kwargs: Any): pass
-        def labels(self, **kwargs: Any): return self
-        def inc(self, amount: float = 1) -> None: pass
+        def __init__(self, *args: Any, **kwargs: Any):
+            pass
+
+        def labels(self, **kwargs: Any):
+            return self
+
+        def inc(self, amount: float = 1) -> None:
+            pass
+
     class Gauge:  # type: ignore
-        def __init__(self, *args: Any, **kwargs: Any): pass
-        def labels(self, **kwargs: Any): return self
-        def set(self, value: float) -> None: pass
+        def __init__(self, *args: Any, **kwargs: Any):
+            pass
+
+        def labels(self, **kwargs: Any):
+            return self
+
+        def set(self, value: float) -> None:
+            pass
+
     class Histogram:  # type: ignore
-        def __init__(self, *args: Any, **kwargs: Any): pass
-        def labels(self, **kwargs: Any): return self
-        def observe(self, amount: float) -> None: pass
+        def __init__(self, *args: Any, **kwargs: Any):
+            pass
+
+        def labels(self, **kwargs: Any):
+            return self
+
+        def observe(self, amount: float) -> None:
+            pass
+
     def start_http_server(port: int) -> None:  # type: ignore
         pass
+
 
 logger = logging.getLogger(__name__)
 
 # Define metrics at module level for Prometheus to scrape
 websocket_connections_total = Counter(
-    'websocket_connections_total',
-    'Total number of WebSocket connections established',
-    ['server', 'tls_mode']
+    "websocket_connections_total",
+    "Total number of WebSocket connections established",
+    ["server", "tls_mode"],
 )
 
 websocket_connections_active = Gauge(
-    'websocket_connections_active',
-    'Current number of active WebSocket connections',
-    ['server']
+    "websocket_connections_active",
+    "Current number of active WebSocket connections",
+    ["server"],
 )
 
 websocket_messages_total = Counter(
-    'websocket_messages_total',
-    'Total number of messages processed',
-    ['server', 'message_type', 'direction']  # direction: sent, received
+    "websocket_messages_total",
+    "Total number of messages processed",
+    ["server", "message_type", "direction"],  # direction: sent, received
 )
 
 websocket_broadcast_total = Counter(
-    'websocket_broadcast_total',
-    'Total number of broadcast operations',
-    ['server', 'channel']
+    "websocket_broadcast_total",
+    "Total number of broadcast operations",
+    ["server", "channel"],
 )
 
 websocket_broadcast_duration_seconds = Histogram(
-    'websocket_broadcast_duration_seconds',
-    'Time taken to broadcast messages to rooms',
-    ['server', 'channel'],
-    buckets=[0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0]
+    "websocket_broadcast_duration_seconds",
+    "Time taken to broadcast messages to rooms",
+    ["server", "channel"],
+    buckets=[0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0],
 )
 
 websocket_connection_errors_total = Counter(
-    'websocket_connection_errors_total',
-    'Total number of WebSocket connection errors',
-    ['server', 'error_type']
+    "websocket_connection_errors_total",
+    "Total number of WebSocket connection errors",
+    ["server", "error_type"],
 )
 
 websocket_message_errors_total = Counter(
-    'websocket_message_errors_total',
-    'Total number of message processing errors',
-    ['server', 'error_type']
+    "websocket_message_errors_total",
+    "Total number of message processing errors",
+    ["server", "error_type"],
 )
 
 websocket_latency_seconds = Histogram(
-    'websocket_latency_seconds',
-    'WebSocket message processing latency',
-    ['server', 'message_type'],
-    buckets=[0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]
+    "websocket_latency_seconds",
+    "WebSocket message processing latency",
+    ["server", "message_type"],
+    buckets=[0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0],
 )
 
 
@@ -100,10 +121,7 @@ class WebSocketMetrics:
     """
 
     def __init__(
-        self,
-        server_name: str,
-        tls_enabled: bool = False,
-        enabled: bool = True
+        self, server_name: str, tls_enabled: bool = False, enabled: bool = True
     ):
         """Initialize metrics collector.
 
@@ -135,8 +153,7 @@ class WebSocketMetrics:
             return
 
         websocket_connections_total.labels(
-            server=self.server_name,
-            tls_mode=self.tls_mode
+            server=self.server_name, tls_mode=self.tls_mode
         ).inc()
         websocket_connections_active.labels(server=self.server_name).inc()
         self._connection_start_times[connection_id] = time.time()
@@ -154,7 +171,7 @@ class WebSocketMetrics:
 
         # Record connection duration if we have start time
         if connection_id in self._connection_start_times:
-            duration = time.time() - self._connection_start_times[connection_id]
+            time.time() - self._connection_start_times[connection_id]
             del self._connection_start_times[connection_id]
 
     def on_message_sent(self, message_type: str) -> None:
@@ -167,9 +184,7 @@ class WebSocketMetrics:
             return
 
         websocket_messages_total.labels(
-            server=self.server_name,
-            message_type=message_type,
-            direction="sent"
+            server=self.server_name, message_type=message_type, direction="sent"
         ).inc()
 
     def on_message_received(self, message_type: str) -> None:
@@ -182,9 +197,7 @@ class WebSocketMetrics:
             return
 
         websocket_messages_total.labels(
-            server=self.server_name,
-            message_type=message_type,
-            direction="received"
+            server=self.server_name, message_type=message_type, direction="received"
         ).inc()
 
     def on_broadcast(self, channel: str, duration: float) -> None:
@@ -197,13 +210,9 @@ class WebSocketMetrics:
         if not self.enabled:
             return
 
-        websocket_broadcast_total.labels(
-            server=self.server_name,
-            channel=channel
-        ).inc()
+        websocket_broadcast_total.labels(server=self.server_name, channel=channel).inc()
         websocket_broadcast_duration_seconds.labels(
-            server=self.server_name,
-            channel=channel
+            server=self.server_name, channel=channel
         ).observe(duration)
 
     def on_connection_error(self, error_type: str) -> None:
@@ -216,8 +225,7 @@ class WebSocketMetrics:
             return
 
         websocket_connection_errors_total.labels(
-            server=self.server_name,
-            error_type=error_type
+            server=self.server_name, error_type=error_type
         ).inc()
 
     def on_message_error(self, error_type: str) -> None:
@@ -230,8 +238,7 @@ class WebSocketMetrics:
             return
 
         websocket_message_errors_total.labels(
-            server=self.server_name,
-            error_type=error_type
+            server=self.server_name, error_type=error_type
         ).inc()
 
     def observe_latency(self, message_type: str, latency: float) -> None:
@@ -245,8 +252,7 @@ class WebSocketMetrics:
             return
 
         websocket_latency_seconds.labels(
-            server=self.server_name,
-            message_type=message_type
+            server=self.server_name, message_type=message_type
         ).observe(latency)
 
     def set_active_connections(self, count: int) -> None:

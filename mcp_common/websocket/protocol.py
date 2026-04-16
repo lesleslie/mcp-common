@@ -1,13 +1,14 @@
 """WebSocket protocol and message definitions."""
 
-from enum import Enum
-from typing import Dict, Any, Optional, List
-from pydantic import BaseModel, Field
-from datetime import datetime
 import uuid
+from datetime import datetime
+from enum import StrEnum
+from typing import Any
+
+from pydantic import BaseModel, Field
 
 
-class MessageType(str, Enum):
+class MessageType(StrEnum):
     """WebSocket message types."""
 
     # Client → Server messages
@@ -31,20 +32,20 @@ class WebSocketMessage(BaseModel):
 
     # Message identification
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    correlation_id: Optional[str] = None  # For request/response matching
+    correlation_id: str | None = None  # For request/response matching
 
     # Message content
     type: MessageType
-    event: Optional[str] = None  # Event type (e.g., "session_update", "workflow_progress")
-    data: Dict[str, Any] = Field(default_factory=dict)
+    event: str | None = None  # Event type (e.g., "session_update", "workflow_progress")
+    data: dict[str, Any] = Field(default_factory=dict)
 
     # Metadata
     timestamp: str = Field(default_factory=lambda: datetime.now().isoformat())
-    room: Optional[str] = None  # For room-based broadcasting
+    room: str | None = None  # For room-based broadcasting
 
     # Error information (if type == ERROR)
-    error_code: Optional[str] = None
-    error_message: Optional[str] = None
+    error_code: str | None = None
+    error_message: str | None = None
 
     class Config:
         use_enum_values = True
@@ -73,23 +74,19 @@ class WebSocketProtocol:
 
     @staticmethod
     def create_request(
-        event: str,
-        data: Dict[str, Any],
-        correlation_id: Optional[str] = None
+        event: str, data: dict[str, Any], correlation_id: str | None = None
     ) -> WebSocketMessage:
         """Create a request message."""
         return WebSocketMessage(
             type=MessageType.REQUEST,
             event=event,
             data=data,
-            correlation_id=correlation_id or str(uuid.uuid4())
+            correlation_id=correlation_id or str(uuid.uuid4()),
         )
 
     @staticmethod
     def create_response(
-        request: WebSocketMessage,
-        data: Dict[str, Any],
-        error: Optional[str] = None
+        request: WebSocketMessage, data: dict[str, Any], error: str | None = None
     ) -> WebSocketMessage:
         """Create a response message for a request."""
         message = WebSocketMessage(
@@ -97,36 +94,29 @@ class WebSocketProtocol:
             event=request.event,
             data=data,
             correlation_id=request.correlation_id,
-            error_message=error
+            error_message=error,
         )
         return message
 
     @staticmethod
     def create_event(
-        event: str,
-        data: Dict[str, Any],
-        room: Optional[str] = None
+        event: str, data: dict[str, Any], room: str | None = None
     ) -> WebSocketMessage:
         """Create an event message for broadcasting."""
         return WebSocketMessage(
-            type=MessageType.EVENT,
-            event=event,
-            data=data,
-            room=room
+            type=MessageType.EVENT, event=event, data=data, room=room
         )
 
     @staticmethod
     def create_error(
-        error_code: str,
-        error_message: str,
-        correlation_id: Optional[str] = None
+        error_code: str, error_message: str, correlation_id: str | None = None
     ) -> WebSocketMessage:
         """Create an error message."""
         return WebSocketMessage(
             type=MessageType.ERROR,
             error_code=error_code,
             error_message=error_message,
-            correlation_id=correlation_id
+            correlation_id=correlation_id,
         )
 
 

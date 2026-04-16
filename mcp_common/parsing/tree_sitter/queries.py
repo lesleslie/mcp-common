@@ -5,7 +5,6 @@ These queries use tree-sitter's S-expression query syntax.
 
 from __future__ import annotations
 
-
 # Python queries
 PYTHON_QUERIES = {
     # Find all function definitions

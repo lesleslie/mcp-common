@@ -6,8 +6,8 @@ import logging
 import time
 from typing import Any
 
-from .config import LLMSettings, ProviderConfig
-from .exceptions import AllProvidersExhaustedError, ProviderUnavailableError
+from .config import LLMSettings
+from .exceptions import AllProvidersExhaustedError
 from .provider import OpenAICompatibleProvider
 
 logger = logging.getLogger(__name__)

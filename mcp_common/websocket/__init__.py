@@ -6,17 +6,16 @@ enabling real-time bidirectional communication with consistent patterns.
 Follows WebSocket Analysis implementation plan from docs/WEBSOCKET_ANALYSIS.md
 """
 
-from .server import WebSocketServer
+from . import metrics, tls
+from .auth import WebSocketAuthenticator, generate_test_token
 from .client import WebSocketClient
 from .protocol import (
-    MessageType,
-    WebSocketProtocol,
-    WebSocketMessage,
     EventTypes,
+    MessageType,
+    WebSocketMessage,
+    WebSocketProtocol,
 )
-from .auth import WebSocketAuthenticator, generate_test_token
-from . import tls
-from . import metrics
+from .server import WebSocketServer
 
 __all__ = [
     "WebSocketServer",

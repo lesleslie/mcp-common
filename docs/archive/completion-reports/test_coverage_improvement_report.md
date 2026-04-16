@@ -89,7 +89,7 @@ class TestWebSocketMessage:
     @pytest.fixture
     def sample_message(self):
         return WebSocketMessage(type=MessageType.REQUEST, data={})
-    
+
     def test_message_creation(self):
         # Arrange
         # Act
@@ -118,11 +118,11 @@ async def test_websocket_server_client_full_cycle():
     # Arrange
     server = WebSocketServer(config)
     client = WebSocketClient("ws://localhost:8765")
-    
+
     # Act
     await server.start()
     await client.connect()
-    
+
     # Assert
     assert server.is_connected()
     assert client.is_connected()

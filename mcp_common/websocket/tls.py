@@ -11,15 +11,15 @@ import logging
 import os
 import ssl
 import tempfile
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from cryptography import x509
-from cryptography.x509.oid import NameOID
+from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.backends import default_backend
+from cryptography.x509.oid import NameOID
 
 logger = logging.getLogger(__name__)
 
@@ -51,37 +51,37 @@ def generate_self_signed_cert(
     )
 
     # Build certificate subject
-    subject = issuer = x509.Name([
-        x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
-        x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, "California"),
-        x509.NameAttribute(NameOID.LOCALITY_NAME, "San Francisco"),
-        x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Development"),
-        x509.NameAttribute(NameOID.COMMON_NAME, common_name),
-    ])
+    subject = issuer = x509.Name(
+        [
+            x509.NameAttribute(NameOID.COUNTRY_NAME, "US"),
+            x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, "California"),
+            x509.NameAttribute(NameOID.LOCALITY_NAME, "San Francisco"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Development"),
+            x509.NameAttribute(NameOID.COMMON_NAME, common_name),
+        ]
+    )
 
     # Build certificate
-    cert = x509.CertificateBuilder().subject_name(
-        subject
-    ).issuer_name(
-        issuer
-    ).public_key(
-        key.public_key()
-    ).serial_number(
-        x509.random_serial_number()
-    ).not_valid_before(
-        datetime.now(UTC)
-    ).not_valid_after(
-        datetime.now(UTC) + timedelta(days=valid_days)
-    ).add_extension(
-        x509.SubjectAlternativeName(
-            [x509.DNSName(dns) for dns in (dns_names or [common_name])]
-        ),
-        critical=False,
-    ).sign(key, hashes.SHA256(), default_backend())
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(subject)
+        .issuer_name(issuer)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(datetime.now(UTC))
+        .not_valid_after(datetime.now(UTC) + timedelta(days=valid_days))
+        .add_extension(
+            x509.SubjectAlternativeName(
+                [x509.DNSName(dns) for dns in (dns_names or [common_name])]
+            ),
+            critical=False,
+        )
+        .sign(key, hashes.SHA256(), default_backend())
+    )
 
     # Write to temporary files
-    cert_file = tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix='.pem')
-    key_file = tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix='.pem')
+    cert_file = tempfile.NamedTemporaryFile(mode="wb", delete=False, suffix=".pem")
+    key_file = tempfile.NamedTemporaryFile(mode="wb", delete=False, suffix=".pem")
 
     try:
         # Write certificate
@@ -89,11 +89,13 @@ def generate_self_signed_cert(
         cert_file_path = cert_file.name
 
         # Write private key
-        key_file.write(key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.TraditionalOpenSSL,
-            encryption_algorithm=serialization.NoEncryption(),
-        ))
+        key_file.write(
+            key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.TraditionalOpenSSL,
+                encryption_algorithm=serialization.NoEncryption(),
+            )
+        )
         key_file_path = key_file.name
 
         logger.info(
@@ -163,7 +165,9 @@ def create_ssl_context(
 
     # Set certificate verification mode
     if verify_client or ca_file:
-        ssl_context.verify_mode = cert_reqs if cert_reqs != ssl.CERT_NONE else ssl.CERT_REQUIRED
+        ssl_context.verify_mode = (
+            cert_reqs if cert_reqs != ssl.CERT_NONE else ssl.CERT_REQUIRED
+        )
 
         # Load CA for client verification
         if ca_file:
@@ -175,12 +179,12 @@ def create_ssl_context(
 
     # Set secure cipher suites (TLS 1.2+)
     ssl_context.set_ciphers(
-        'ECDHE-ECDSA-AES128-GCM-SHA256:'
-        'ECDHE-RSA-AES128-GCM-SHA256:'
-        'ECDHE-ECDSA-AES256-GCM-SHA384:'
-        'ECDHE-RSA-AES256-GCM-SHA384:'
-        'ECDHE-ECDSA-CHACHA20-POLY1305:'
-        'ECDHE-RSA-CHACHA20-POLY1305'
+        "ECDHE-ECDSA-AES128-GCM-SHA256:"
+        "ECDHE-RSA-AES128-GCM-SHA256:"
+        "ECDHE-ECDSA-AES256-GCM-SHA384:"
+        "ECDHE-RSA-AES256-GCM-SHA384:"
+        "ECDHE-ECDSA-CHACHA20-POLY1305:"
+        "ECDHE-RSA-CHACHA20-POLY1305"
     )
 
     # Set minimum TLS version to 1.2
@@ -188,7 +192,7 @@ def create_ssl_context(
 
     # Set ECDH curve for forward secrecy
     try:
-        ssl_context.set_ecdh_curve('prime256v1')
+        ssl_context.set_ecdh_curve("prime256v1")
     except (ssl.SSLError, AttributeError) as e:
         logger.debug(f"Could not set ECDH curve: {e}")
 
@@ -223,7 +227,8 @@ def get_tls_config_from_env(
         "cert_file": os.getenv(f"{prefix}_CERT_FILE"),
         "key_file": os.getenv(f"{prefix}_KEY_FILE"),
         "ca_file": os.getenv(f"{prefix}_CA_FILE"),
-        "verify_client": os.getenv(f"{prefix}_VERIFY_CLIENT", "false").lower() == "true",
+        "verify_client": os.getenv(f"{prefix}_VERIFY_CLIENT", "false").lower()
+        == "true",
     }
 
 

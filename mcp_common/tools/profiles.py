@@ -22,11 +22,11 @@ Security:
 from __future__ import annotations
 
 import os
-from enum import Enum
+from enum import StrEnum
 from typing import ClassVar
 
 
-class ToolProfile(str, Enum):
+class ToolProfile(StrEnum):
     """Tool registration profile level.
 
     Ordering: MINIMAL < STANDARD < FULL
@@ -61,7 +61,9 @@ class ToolProfile(str, Enum):
         return not self.__ge__(other)
 
     @classmethod
-    def from_string(cls, value: str | None, default: ToolProfile | None = None) -> ToolProfile:
+    def from_string(
+        cls, value: str | None, default: ToolProfile | None = None
+    ) -> ToolProfile:
         """Parse profile from string with safe fallback.
 
         Args:

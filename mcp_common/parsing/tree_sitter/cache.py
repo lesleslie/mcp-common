@@ -16,7 +16,7 @@ import time
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from threading import RLock
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 from mcp_common.parsing.tree_sitter.models import ParseResult
 
@@ -24,7 +24,7 @@ T = TypeVar("T")
 
 
 @dataclass
-class CacheEntry(Generic[T]):
+class CacheEntry[T]:
     """Cached result with content hash and metadata."""
 
     result: T
@@ -57,7 +57,7 @@ class CacheStats:
         }
 
 
-class ContentHashLRUCache(Generic[T]):
+class ContentHashLRUCache[T]:
     """Thread-safe LRU cache using content hash.
 
     Uses SHA-256 hash of content as cache key instead of file mtime.
@@ -221,7 +221,8 @@ class ContentHashLRUCache(Generic[T]):
 
         with self._lock:
             expired = [
-                h for h, e in self._cache.items()
+                h
+                for h, e in self._cache.items()
                 if now - e.cached_at > self._ttl_seconds
             ]
             for h in expired:

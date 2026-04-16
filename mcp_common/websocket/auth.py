@@ -14,6 +14,7 @@ from typing import Any
 try:
     import jwt
     from jwt import ExpiredSignatureError, InvalidTokenError
+
     JWT_AVAILABLE = True
 except ImportError:
     JWT_AVAILABLE = False
@@ -106,11 +107,7 @@ class WebSocketAuthenticator:
             return None
 
         try:
-            payload = jwt.decode(
-                token,
-                self.secret,
-                algorithms=[self.algorithm]
-            )
+            payload = jwt.decode(token, self.secret, algorithms=[self.algorithm])
             return payload
         except ExpiredSignatureError:
             logger.warning("Token expired")
@@ -182,7 +179,9 @@ def generate_test_token(
         >>> token = generate_test_token("user123", ["read", "write"])
     """
     auth = WebSocketAuthenticator(secret=secret)
-    return auth.create_token({
-        "user_id": user_id,
-        "permissions": permissions or ["read"],
-    })
+    return auth.create_token(
+        {
+            "user_id": user_id,
+            "permissions": permissions or ["read"],
+        }
+    )
