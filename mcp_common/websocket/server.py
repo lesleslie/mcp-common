@@ -17,7 +17,6 @@ from typing import Any
 
 try:
     import websockets
-    from websockets.server import WebSocketServerProtocol
 
     WEBSOCKETS_AVAILABLE = True
 except ImportError:
@@ -293,7 +292,7 @@ class WebSocketServer(ABC):
 
         return self.authenticator.authenticate_connection(token)
 
-    async def start(self):
+    async def start(self):  # noqa: C901  # noqa: C901
         """Start the WebSocket server."""
         if self.is_running:
             logger.warning(f"WebSocket server already running on {self.uri}")
@@ -305,7 +304,7 @@ class WebSocketServer(ABC):
         if self.enable_metrics and self.metrics:
             self.metrics.start_metrics_server(self.metrics_port)
 
-        async def handler(websocket):
+        async def handler(websocket):  # noqa: C901  # noqa: C901
             # Check connection limit
             if len(self.connections) >= self.max_connections:
                 await websocket.close(1013, "Server at maximum capacity")

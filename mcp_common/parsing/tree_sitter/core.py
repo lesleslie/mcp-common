@@ -303,7 +303,10 @@ class TreeSitterParser:
         if language == SupportedLanguage.UNKNOWN:
             raise LanguageNotSupportedError(
                 str(file_path.suffix),
-                supported=[l.value for l in LanguageRegistry.supported_languages()],
+                supported=[
+                    language.value
+                    for language in LanguageRegistry.supported_languages()
+                ],
             )
 
         # Async file read

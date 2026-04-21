@@ -1328,9 +1328,9 @@ settings = Settings.load(f"my-server-{env}")
 
 ## See Also
 
-- **[QUICKSTART.md](../QUICKSTART.md)** - 5-minute getting started guide
-- **[examples/README.md](../examples/README.md)** - Working server examples
-- **[Service Dependencies](../docs/reference/service-dependencies.md)** - Dependency documentation
+- **[QUICKSTART.md](../../QUICKSTART.md)** - 5-minute getting started guide
+- **[examples/README.md](../../examples/README.md)** - Working server examples
+- **[Service Dependencies](../reference/service-dependencies.md)** - Dependency documentation
 
 ## Summary
 
@@ -1345,4 +1345,4 @@ Building production-ready MCP servers with mcp-common:
 1. **Testing**: Write unit and integration tests with mocks
 1. **Production**: Enable health checks, logging, graceful shutdown
 
-**Ready to deploy?** See [QUICKSTART.md](../QUICKSTART.md) for quick reference!
+**Ready to deploy?** See [QUICKSTART.md](../../QUICKSTART.md) for quick reference!

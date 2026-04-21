@@ -67,7 +67,7 @@ class PythonHandler:
 
         return symbols, relationships, imports
 
-    def _extract_from_node(
+    def _extract_from_node(  # noqa: C901  # noqa: C901
         self,
         node: tree_sitter.Node,
         source: str,

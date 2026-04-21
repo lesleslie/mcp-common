@@ -407,9 +407,9 @@ When contributing to mcp-common:
 
 ## See Also
 
-- **[README.md](../README.md)** - Main project documentation
-- **[CHANGELOG.md](../CHANGELOG.md)** - Version history and changes
-- **[examples/README.md](../examples/README.md)** - Example servers
+- **[README.md](../../README.md)** - Main project documentation
+- **[CHANGELOG.md](../../CHANGELOG.md)** - Version history and changes
+- **[examples/README.md](../../examples/README.md)** - Example servers
 - **[Oneiric Documentation](https://github.com/lesleslie/oneiric)** - Configuration patterns
 
 ## Summary
@@ -422,4 +422,4 @@ mcp-common provides a **minimal, production-ready foundation** for MCP servers w
 - **Zero security vulnerabilities** (as of v0.7.0)
 - **9 ecosystem projects** using mcp-common in production
 
-**Ready to build?** See [QUICKSTART.md](../QUICKSTART.md) for 5-minute getting started guide!
+**Ready to build?** See [QUICKSTART.md](../../QUICKSTART.md) for 5-minute getting started guide!

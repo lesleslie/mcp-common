@@ -15,7 +15,6 @@ from typing import Any
 
 try:
     import websockets
-    from websockets.client import WebSocketClientProtocol
 
     WEBSOCKETS_AVAILABLE = True
 except ImportError:

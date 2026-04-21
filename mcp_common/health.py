@@ -519,7 +519,7 @@ class DependencyWaiter:
 # =============================================================================
 
 
-def register_health_tools(
+def register_health_tools(  # noqa: C901  # noqa: C901
     mcp: t.Any,
     service_name: str = "mcp-server",
     version: str = "0.0.0",
