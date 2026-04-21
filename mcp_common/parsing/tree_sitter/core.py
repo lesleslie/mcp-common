@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import time
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol
 
@@ -246,13 +246,18 @@ class TreeSitterParser:
         self._cache = cache or ContentHashLRUCache[ParseResult]()
         self._max_workers = max_workers
         self._max_file_size = max_file_size
-        self._executor: ProcessPoolExecutor | None = None
+        self._executor: ProcessPoolExecutor | ThreadPoolExecutor | None = None
         self._lock = asyncio.Lock()
 
-    def _get_executor(self) -> ProcessPoolExecutor:
+    def _get_executor(self) -> ProcessPoolExecutor | ThreadPoolExecutor:
         """Get or create process pool executor."""
         if self._executor is None:
-            self._executor = ProcessPoolExecutor(max_workers=self._max_workers)
+            try:
+                self._executor = ProcessPoolExecutor(max_workers=self._max_workers)
+            except (NotImplementedError, OSError, PermissionError):
+                # Some sandboxed or constrained environments cannot create process pools.
+                # Fall back to threads so parsing still works, albeit without process isolation.
+                self._executor = ThreadPoolExecutor(max_workers=self._max_workers)
         return self._executor
 
     def detect_language(self, file_path: Path) -> SupportedLanguage:

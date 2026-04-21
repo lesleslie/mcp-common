@@ -78,7 +78,8 @@ class TestServerPanelsStartupSuccess:
         call_args = mock_console.print.call_args
         assert call_args is not None
         # Check that timestamp is included in output
-        panel_content = str(call_args)
+        panel = call_args.args[0]
+        panel_content = str(getattr(panel, "renderable", panel))
         assert "Started at:" in panel_content or "datetime" in panel_content.lower()
 
 

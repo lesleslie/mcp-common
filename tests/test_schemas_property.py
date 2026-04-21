@@ -149,12 +149,10 @@ class TestToolResponseProperties:
         assert sorted(restored.data["tags"]) == [1, 2, 3]
 
     @given(
-        message=st.text(min_size=0, max_size=10),
+        message=st.text(min_size=1, max_size=10),
     )
     def test_tool_response_message_validation(self, message: str) -> None:
-        """Test that ToolResponse accepts any message including empty strings."""
-        # ToolResponse.message field doesn't have validation that rejects empty strings
-        # It only has max_length=500 in the schema, so empty strings are valid
+        """Test that ToolResponse accepts non-empty messages."""
         response = ToolResponse(success=True, message=message)
         assert response.message == message
 

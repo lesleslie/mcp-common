@@ -5,6 +5,7 @@ and that it works as expected for basic HTTP operations.
 """
 
 import pytest
+import httpx
 from oneiric.adapters.http import HTTPClientAdapter as OneiricHTTPClientAdapter
 from oneiric.adapters.http import HTTPClientSettings as OneiricHTTPClientSettings
 
@@ -93,10 +94,21 @@ class TestHTTPClientAdapterReExport:
 class TestHTTPClientAdapterBasicUsage:
     """Test basic HTTP client adapter usage patterns."""
 
+    async def _require_httpbin(self) -> None:
+        """Skip the test if httpbin.org is unreachable."""
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get("https://httpbin.org/get")
+                response.raise_for_status()
+        except httpx.HTTPError:
+            pytest.skip("httpbin.org not reachable - skipping integration test")
+
     @pytest.mark.asyncio
     async def test_simple_get_request(self):
         """Test simple GET request using httpbin (public HTTP test API)."""
         from mcp_common import HTTPClientAdapter, HTTPClientSettings
+
+        await self._require_httpbin()
 
         settings = HTTPClientSettings(
             timeout=10.0,
@@ -123,6 +135,8 @@ class TestHTTPClientAdapterBasicUsage:
         import asyncio
 
         from mcp_common import HTTPClientAdapter, HTTPClientSettings
+
+        await self._require_httpbin()
 
         settings = HTTPClientSettings(
             timeout=10.0,

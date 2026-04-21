@@ -15,9 +15,22 @@ from oneiric.adapters.http import HTTPClientAdapter, HTTPClientSettings
 class TestHTTPPoolingBenchmarks:
     """Benchmark Oneiric HTTPClientAdapter connection pooling vs unpooled."""
 
+    def _require_httpbin(self) -> None:
+        """Skip the benchmark if httpbin.org is unreachable."""
+        async def _probe() -> None:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get("https://httpbin.org/get")
+                response.raise_for_status()
+
+        try:
+            asyncio.run(_probe())
+        except httpx.HTTPError:
+            pytest.skip("httpbin.org not reachable - skipping benchmark")
+
     @pytest.mark.benchmark(group="http", min_rounds=20)
     def test_pooled_http_client(self, benchmark):
         """Benchmark Oneiric pooled HTTP client."""
+        self._require_httpbin()
         settings = HTTPClientSettings(timeout=30)
 
         def run_request():
@@ -39,6 +52,7 @@ class TestHTTPPoolingBenchmarks:
     @pytest.mark.benchmark(group="http", min_rounds=20)
     def test_unpooled_http_client(self, benchmark):
         """Baseline: unpooled HTTP client (new connection per request)."""
+        self._require_httpbin()
 
         def run_request():
             """Sync wrapper that creates new client each time."""

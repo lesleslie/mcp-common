@@ -177,8 +177,9 @@ class TestMCPBaseSettingsDataDir:
         assert data_dir.is_dir()
         assert data_dir == tmp_path / "data"
 
-    def test_get_data_dir_expands_home(self) -> None:
+    def test_get_data_dir_expands_home(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         """Test data directory expands ~ to home directory."""
+        monkeypatch.setenv("HOME", str(tmp_path))
 
         class TestSettings(MCPBaseSettings):
             data_dir: Path = Path("~/test-mcp-data")

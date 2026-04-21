@@ -29,7 +29,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StrictBool
 
 
 def _encode_set(v: Any) -> list[Any]:
@@ -68,9 +68,12 @@ class ToolResponse(BaseModel):
         ... )
     """
 
-    success: bool = Field(description="Whether the operation succeeded (true/false)")
+    success: StrictBool = Field(
+        description="Whether the operation succeeded (true/false)"
+    )
     message: str = Field(
-        description="Human-readable result message explaining what happened"
+        min_length=1,
+        description="Human-readable result message explaining what happened",
     )
     data: dict[str, Any] | None = Field(
         default=None,

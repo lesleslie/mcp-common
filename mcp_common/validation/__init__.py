@@ -26,6 +26,23 @@ from pydantic import BaseModel, ValidationError
 T = TypeVar("T", bound=BaseModel)
 
 
+def _reject_blank_strings(value: object, path: str = "input") -> None:
+    """Raise on empty or whitespace-only strings anywhere in the payload."""
+    if isinstance(value, str):
+        if not value.strip():
+            raise ValueError(f"{path} must not be blank or whitespace-only")
+        return
+
+    if isinstance(value, dict):
+        for key, item in value.items():
+            _reject_blank_strings(item, f"{path}.{key}")
+        return
+
+    if isinstance(value, (list, tuple, set)):
+        for index, item in enumerate(value):
+            _reject_blank_strings(item, f"{path}[{index}]")
+
+
 def validate_output(output: dict[str, object], schema: type[T]) -> T:  # noqa: UP047
     """Validate tool output against a Pydantic schema.
 
@@ -125,7 +142,28 @@ def validate_input(input_data: dict[str, object], schema: type[T]) -> T:  # noqa
         ...     print(f"Validation failed: {e}")
     """
     try:
+        _reject_blank_strings(input_data)
         return schema(**input_data)
+    except ValueError as e:
+        error_lines = [
+            f"Tool input validation failed for schema '{schema.__name__}':",
+            "",
+            "Received input:",
+            f"  {input_data}",
+            "",
+            "Validation errors:",
+            f"  - {e}",
+        ]
+
+        error_lines.extend(
+            [
+                "",
+                "Expected schema:",
+                f"  {json.dumps(schema.model_json_schema(), indent=2)}",
+            ]
+        )
+
+        raise ValueError("\n".join(error_lines)) from e
     except ValidationError as e:
         # Create helpful error message
         error_lines = [
