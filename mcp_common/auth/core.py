@@ -76,10 +76,7 @@ def verify_token(
         raise TokenInvalidError(str(exc)) from exc
 
     issuer = raw.get("iss", "")
-    try:
-        verify_issuer(issuer)
-    except Exception as exc:
-        raise UnknownIssuerError(str(exc)) from exc
+    verify_issuer(issuer)
 
     scopes = raw.get("scopes", [])
     perms: frozenset[Permission] = frozenset()
