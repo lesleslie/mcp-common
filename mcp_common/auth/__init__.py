@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from mcp_common.auth.audit import AuditLogger, AuthAuditEvent, AuditSink
 from mcp_common.auth.config import AuthConfig
 from mcp_common.auth.core import (
     JWT_ALGORITHM,
@@ -30,6 +31,9 @@ from mcp_common.auth.permissions import (
 
 __all__ = [
     "AudienceMismatchError",
+    "AuditLogger",
+    "AuditSink",
+    "AuthAuditEvent",
     "AuthConfig",
     "AuthError",
     "InsufficientPermissionError",
