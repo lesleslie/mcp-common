@@ -8,6 +8,7 @@ from mcp_common.auth.core import (
     create_service_token,
     verify_token,
 )
+from mcp_common.auth.decorator import require_auth
 from mcp_common.auth.exceptions import (
     AudienceMismatchError,
     AuthError,
@@ -49,6 +50,7 @@ __all__ = [
     "TokenPayload",
     "UnknownIssuerError",
     "create_service_token",
+    "require_auth",
     "verify_audience",
     "verify_issuer",
     "verify_token",
