@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+from mcp_common.auth.core import (
+    JWT_ALGORITHM,
+    TokenPayload,
+    create_service_token,
+    verify_token,
+)
 from mcp_common.auth.exceptions import (
     AudienceMismatchError,
     AuthError,
@@ -25,6 +31,7 @@ __all__ = [
     "AudienceMismatchError",
     "AuthError",
     "InsufficientPermissionError",
+    "JWT_ALGORITHM",
     "KNOWN_SERVICES",
     "Permission",
     "Role",
@@ -33,7 +40,10 @@ __all__ = [
     "ServiceIdentity",
     "TokenExpiredError",
     "TokenInvalidError",
+    "TokenPayload",
     "UnknownIssuerError",
+    "create_service_token",
     "verify_audience",
     "verify_issuer",
+    "verify_token",
 ]
