@@ -13,7 +13,6 @@ from mcp_common.auth.exceptions import (
     AudienceMismatchError,
     TokenExpiredError,
     TokenInvalidError,
-    UnknownIssuerError,
 )
 from mcp_common.auth.identity import verify_issuer
 from mcp_common.auth.permissions import Permission

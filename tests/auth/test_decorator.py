@@ -89,10 +89,10 @@ async def test_denied_token_emits_audit_event(config, read_token):
         def emit(self, event):
             received.append(event)
 
-    alog = AuditLogger()
-    alog.register_sink(CaptureSink())
+    along = AuditLogger()
+    along.register_sink(CaptureSink())
 
-    @require_auth(Permission.WRITE, config=config, service_name="test-service", audit_logger=alog)
+    @require_auth(Permission.WRITE, config=config, service_name="test-service", audit_logger=along)
     async def my_tool(**kwargs):
         return "ok"
 

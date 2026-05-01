@@ -4,13 +4,15 @@ from dataclasses import dataclass
 
 from mcp_common.auth.exceptions import AudienceMismatchError, UnknownIssuerError
 
-KNOWN_SERVICES: frozenset[str] = frozenset({
-    "mahavishnu",
-    "session-buddy",
-    "akosha",
-    "dhara",
-    "crackerjack",
-})
+KNOWN_SERVICES: frozenset[str] = frozenset(
+    {
+        "mahavishnu",
+        "session-buddy",
+        "akosha",
+        "dhara",
+        "crackerjack",
+    }
+)
 
 
 @dataclass(frozen=True)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from mcp_common.auth.audit import AuditLogger, AuthAuditEvent, AuditSink
+from mcp_common.auth.audit import AuditLogger, AuditSink, AuthAuditEvent
 from mcp_common.auth.config import AuthConfig
 from mcp_common.auth.core import (
     JWT_ALGORITHM,
@@ -25,9 +25,9 @@ from mcp_common.auth.identity import (
     verify_issuer,
 )
 from mcp_common.auth.permissions import (
+    ROLE_PERMISSIONS,
     Permission,
     Role,
-    ROLE_PERMISSIONS,
 )
 
 __all__ = [

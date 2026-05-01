@@ -7,10 +7,19 @@ from mcp_common.auth.exceptions import SecretNotConfiguredError
 
 logger = logging.getLogger(__name__)
 
-_PLACEHOLDER_SECRETS: frozenset[str] = frozenset({
-    "changeme", "secret", "test", "test-secret", "change-me",
-    "placeholder", "example", "none", "null",
-})
+_PLACEHOLDER_SECRETS: frozenset[str] = frozenset(
+    {
+        "changeme",
+        "secret",
+        "test",
+        "test-secret",
+        "change-me",
+        "placeholder",
+        "example",
+        "none",
+        "null",
+    }
+)
 _MIN_SECRET_LENGTH = 32
 
 
@@ -21,9 +30,8 @@ class AuthConfig:
         self._secret: str | None = self._load_secret()
 
     def _load_secret(self) -> str | None:
-        raw = (
-            os.environ.get(self._secret_env_var)
-            or os.environ.get("BODAI_SHARED_SECRET")
+        raw = os.environ.get(self._secret_env_var) or os.environ.get(
+            "BODAI_SHARED_SECRET"
         )
         if raw is None:
             return None

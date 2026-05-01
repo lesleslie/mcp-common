@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.0] - 2026-04-30
+
+### Added
+
+- Add @require_auth() decorator with Permission-level enforcement
+- Add AuthAuditEvent and AuditLogger with custom sink support
+- Add AuthConfig with env-var secret loading and placeholder rejection
+- Add mcp_common/auth package skeleton with exception hierarchy
+- auth: Add JWT create/verify with issuer, audience, and permission claims
+- auth: Add KNOWN_SERVICES registry and issuer/audience verification
+- auth: Add Permission enum and Role definitions
+
+### Fixed
+
+- auth: Remove bare except — verify_issuer already raises UnknownIssuerError
+
+### Testing
+
+- Add inter-service auth integration tests
+
+### Internal
+
+- Ignore .worktrees directory
+
 ## [0.11.0] - 2026-04-14
 
 ### Changed
