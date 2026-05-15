@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import ssl
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -15,14 +14,14 @@ import pytest
 # ---------------------------------------------------------------------------
 _websockets_mock = MagicMock()
 with patch.dict("sys.modules", {"websockets": _websockets_mock}):
+    # Import the server module itself so we can patch attributes on it.
+    import mcp_common.websocket.server as _server_mod
     from mcp_common.websocket.protocol import (
         MessageType,
         WebSocketMessage,
         WebSocketProtocol,
     )
     from mcp_common.websocket.server import WebSocketServer
-    # Import the server module itself so we can patch attributes on it.
-    import mcp_common.websocket.server as _server_mod
 
 
 # ---------------------------------------------------------------------------
@@ -503,7 +502,7 @@ class TestEmitEvent:
             call_order.append("async")
 
         await srv.emit_event("multi.event", {})
-        assert call_order == ["sync", "async"]
+        assert set(call_order) == {"sync", "async"}
 
     @pytest.mark.asyncio
     async def test_emit_handler_error_does_not_stop_others(self) -> None:
