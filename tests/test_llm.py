@@ -1224,3 +1224,126 @@ class TestFallbackChain:
             chain = FC.from_settings(settings)
             provider_names = [p.name for p in chain._providers]
             assert provider_names == ["tier_a"]
+
+
+# ---------------------------------------------------------------------------
+# 10. HailuoAdapter (MiniMax video generation)
+# ---------------------------------------------------------------------------
+
+
+class TestHailuoAdapter:
+    """Tests for the MiniMax Hailuo video generation adapter."""
+
+    def _make_httpx_response(self, json_body: dict, status_code: int = 200) -> MagicMock:
+        resp = MagicMock()
+        resp.status_code = status_code
+        resp.json.return_value = json_body
+        resp.raise_for_status = MagicMock()
+        return resp
+
+    @pytest.mark.asyncio
+    async def test_generate_returns_file_id_on_success(self) -> None:
+        from mcp_common.llm.hailuo import HailuoAdapter
+
+        submit_resp = {"task_id": "task-abc-123", "base_resp": {"status_code": 0}}
+        poll_done = {
+            "task_id": "task-abc-123",
+            "status": "Success",
+            "file_id": "file-xyz-789",
+            "base_resp": {"status_code": 0},
+        }
+
+        mock_client = AsyncMock()
+        mock_client.post = AsyncMock(return_value=self._make_httpx_response(submit_resp))
+        mock_client.get = AsyncMock(return_value=self._make_httpx_response(poll_done))
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+
+        adapter = HailuoAdapter(api_key="test-key", poll_interval=0.01)
+
+        with patch("mcp_common.llm.hailuo.httpx.AsyncClient", return_value=mock_client):
+            result = await adapter.generate(prompt="a cat walking on mars")
+
+        assert result["task_id"] == "task-abc-123"
+        assert result["file_id"] == "file-xyz-789"
+        assert result["status"] == "Success"
+
+    @pytest.mark.asyncio
+    async def test_generate_polls_until_complete(self) -> None:
+        from mcp_common.llm.hailuo import HailuoAdapter
+
+        submit_resp = {"task_id": "task-poll-123", "base_resp": {"status_code": 0}}
+        poll_pending = {"task_id": "task-poll-123", "status": "Queueing", "base_resp": {"status_code": 0}}
+        poll_processing = {"task_id": "task-poll-123", "status": "Processing", "base_resp": {"status_code": 0}}
+        poll_done = {"task_id": "task-poll-123", "status": "Success", "file_id": "file-done-999", "base_resp": {"status_code": 0}}
+
+        mock_client = AsyncMock()
+        mock_client.post = AsyncMock(return_value=self._make_httpx_response(submit_resp))
+        mock_client.get = AsyncMock(side_effect=[
+            self._make_httpx_response(poll_pending),
+            self._make_httpx_response(poll_processing),
+            self._make_httpx_response(poll_done),
+        ])
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+
+        adapter = HailuoAdapter(api_key="test-key", poll_interval=0.01)
+
+        with patch("mcp_common.llm.hailuo.httpx.AsyncClient", return_value=mock_client):
+            result = await adapter.generate(prompt="a dog surfing")
+
+        assert result["file_id"] == "file-done-999"
+        assert mock_client.get.await_count == 3
+
+    @pytest.mark.asyncio
+    async def test_generate_raises_on_api_error(self) -> None:
+        from mcp_common.llm.hailuo import HailuoAdapter
+        from mcp_common.llm.exceptions import LLMError
+
+        submit_resp = {"task_id": "task-err-001", "base_resp": {"status_code": 0}}
+        poll_failed = {"task_id": "task-err-001", "status": "Fail", "base_resp": {"status_code": 2013, "status_msg": "quota exceeded"}}
+
+        mock_client = AsyncMock()
+        mock_client.post = AsyncMock(return_value=self._make_httpx_response(submit_resp))
+        mock_client.get = AsyncMock(return_value=self._make_httpx_response(poll_failed))
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+
+        adapter = HailuoAdapter(api_key="test-key", poll_interval=0.01)
+
+        with patch("mcp_common.llm.hailuo.httpx.AsyncClient", return_value=mock_client):
+            with pytest.raises(LLMError, match="video generation task failed"):
+                await adapter.generate(prompt="a bird flying")
+
+    @pytest.mark.asyncio
+    async def test_generate_raises_on_timeout(self) -> None:
+        from mcp_common.llm.hailuo import HailuoAdapter
+        from mcp_common.llm.exceptions import LLMError
+
+        submit_resp = {"task_id": "task-timeout-001", "base_resp": {"status_code": 0}}
+        poll_pending = {"task_id": "task-timeout-001", "status": "Processing", "base_resp": {"status_code": 0}}
+
+        mock_client = AsyncMock()
+        mock_client.post = AsyncMock(return_value=self._make_httpx_response(submit_resp))
+        mock_client.get = AsyncMock(return_value=self._make_httpx_response(poll_pending))
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+
+        # max_poll_seconds so small it expires after first poll
+        adapter = HailuoAdapter(api_key="test-key", poll_interval=0.01, max_poll_seconds=0.001)
+
+        with patch("mcp_common.llm.hailuo.httpx.AsyncClient", return_value=mock_client):
+            with pytest.raises(LLMError, match="timed out"):
+                await adapter.generate(prompt="a fish swimming")
+
+    def test_poll_url_is_fixed_not_from_response(self) -> None:
+        """SSRF safety: polling must use the fixed endpoint, not any URL from the response body."""
+        from mcp_common.llm.hailuo import HailuoAdapter
+
+        adapter = HailuoAdapter(api_key="test-key")
+        poll_url = adapter._poll_url("task-123")
+        # Must be exactly the known fixed endpoint with task_id as query param
+        assert poll_url.startswith("https://api.minimax.io/v1/query/video_generation")
+        assert "task-123" in poll_url
+        # Must not be a URL constructed from any mutable/external input beyond task_id
+        assert poll_url == "https://api.minimax.io/v1/query/video_generation?task_id=task-123"
