@@ -6,6 +6,7 @@ Covers exceptions, types, config (ProviderConfig, LLMSettings), provider
 
 from __future__ import annotations
 
+import asyncio
 import time
 from pathlib import Path
 from typing import Any
@@ -13,6 +14,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import yaml
+from hypothesis import given, settings as h_settings
+from hypothesis import strategies as st
 from pydantic import SecretStr, ValidationError
 
 from mcp_common.llm.config import LLMSettings, ProviderConfig
@@ -1347,3 +1350,105 @@ class TestHailuoAdapter:
         assert "task-123" in poll_url
         # Must not be a URL constructed from any mutable/external input beyond task_id
         assert poll_url == "https://api.minimax.io/v1/query/video_generation?task_id=task-123"
+
+
+# ---------------------------------------------------------------------------
+# 11. FallbackChain edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestFallbackChainEdgeCases:
+    """Edge cases for FallbackChain not covered in the main TestFallbackChain suite."""
+
+    @pytest.mark.asyncio
+    async def test_cancelled_error_propagates_immediately(self) -> None:
+        """asyncio.CancelledError must never be swallowed by the retry loop."""
+        from mcp_common.llm.fallback import FallbackChain
+
+        p1 = _make_mock_provider("primary", succeed=False)
+        p1.execute = AsyncMock(side_effect=asyncio.CancelledError)
+        chain = FallbackChain([p1], max_attempts_per_tier=3)
+
+        with pytest.raises(asyncio.CancelledError):
+            await chain.execute({"model": "m", "messages": []})
+
+        # Must not retry after CancelledError — only one call
+        assert p1.execute.await_count == 1
+
+    @pytest.mark.asyncio
+    async def test_empty_content_is_treated_as_failure(self) -> None:
+        """Provider returning empty 'content' triggers fallback, not success."""
+        from mcp_common.llm.fallback import FallbackChain
+
+        empty_provider = _make_mock_provider("empty")
+        empty_provider.execute = AsyncMock(return_value={"content": "", "provider": "empty", "model": "m", "usage": {}})
+        good_provider = _make_mock_provider("good")
+        chain = FallbackChain([empty_provider, good_provider], max_attempts_per_tier=1)
+
+        result = await chain.execute({"model": "m", "messages": []})
+        assert result["provider"] == "good"
+
+    @pytest.mark.asyncio
+    async def test_single_provider_exhausted_raises(self) -> None:
+        from mcp_common.llm.fallback import FallbackChain
+
+        p1 = _make_mock_provider("only", succeed=False)
+        chain = FallbackChain([p1], max_attempts_per_tier=2)
+
+        with pytest.raises(AllProvidersExhaustedError):
+            await chain.execute({"model": "m", "messages": []})
+
+        assert p1.execute.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_circuit_breaker_counts_once_per_tier_not_per_attempt(self) -> None:
+        """Circuit breaker increments once after all retries, not per individual attempt."""
+        from mcp_common.llm.fallback import FallbackChain
+
+        p1 = _make_mock_provider("p1", succeed=False)
+        p2 = _make_mock_provider("p2")
+        chain = FallbackChain([p1, p2], max_attempts_per_tier=3)
+
+        await chain.execute({"model": "m", "messages": []})
+
+        # p1 failed all 3 attempts — breaker should count that as 1 tier-failure
+        assert chain._circuit_breakers["p1"]._failure_count == 1
+
+    @pytest.mark.asyncio
+    async def test_no_providers_raises_all_exhausted(self) -> None:
+        from mcp_common.llm.fallback import FallbackChain
+
+        chain = FallbackChain([])
+
+        with pytest.raises(AllProvidersExhaustedError):
+            await chain.execute({"model": "m", "messages": []})
+
+
+# ---------------------------------------------------------------------------
+# 12. Hypothesis property tests for TaskType
+# ---------------------------------------------------------------------------
+
+
+class TestTaskTypeProperty:
+    """Property-based tests for TaskType using Hypothesis."""
+
+    @given(task_type=st.sampled_from(list(TaskType)))
+    @h_settings(max_examples=50)
+    def test_task_type_str_roundtrip(self, task_type: TaskType) -> None:
+        """Every TaskType member's string value can reconstruct the same member."""
+        assert TaskType(str(task_type)) == task_type
+
+    @given(task_type=st.sampled_from(list(TaskType)))
+    @h_settings(max_examples=50)
+    def test_task_type_value_is_lowercase_snake_case(self, task_type: TaskType) -> None:
+        """All TaskType values follow lowercase_snake_case naming."""
+        val = task_type.value
+        assert val == val.lower()
+        assert " " not in val  # no spaces — underscores only
+
+    @given(task_type=st.sampled_from(list(TaskType)))
+    @h_settings(max_examples=50)
+    def test_task_type_is_string_comparable(self, task_type: TaskType) -> None:
+        """TaskType members compare equal to their string values (StrEnum contract)."""
+        assert task_type == task_type.value
+        assert str(task_type) == task_type.value

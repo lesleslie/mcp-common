@@ -90,8 +90,13 @@ class LLMSettings(BaseModel):
         with open(path) as f:
             data = yaml.safe_load(f) or {}
 
-        reserved = {"default_provider", "fallback_chain", "free_tier_provider",
-                    "bifrost", "providers"}
+        reserved = {
+            "default_provider",
+            "fallback_chain",
+            "free_tier_provider",
+            "bifrost",
+            "providers",
+        }
         providers: dict[str, Any] = data.get("providers", {})
         if not providers:
             # Legacy flat schema: extract provider configs from top-level keys
@@ -110,7 +115,9 @@ class LLMSettings(BaseModel):
         return cls(
             providers=providers,
             default_provider=data.get("default_provider", "minimax"),
-            fallback_chain=data.get("fallback_chain", ["minimax", "llama_server", "ollama"]),
+            fallback_chain=data.get(
+                "fallback_chain", ["minimax", "llama_server", "ollama"]
+            ),
         )
 
     def get_provider(self, name: str) -> ProviderConfig | None:
@@ -136,7 +143,9 @@ class LLMSettings(BaseModel):
         for name in self.fallback_chain:
             raw = self.providers.get(name)
             if raw is None:
-                logger.warning("Provider %s in fallback_chain not found in config", name)
+                logger.warning(
+                    "Provider %s in fallback_chain not found in config", name
+                )
                 continue
             cfg = ProviderConfig(**raw)
             if not cfg.enabled:

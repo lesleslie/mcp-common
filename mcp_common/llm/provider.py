@@ -51,7 +51,9 @@ class OpenAICompatibleProvider:
                 timeout=config.timeout_seconds,
             )
 
-        logger.info("Initialized provider %s: base_url=%s", config.name, config.base_url)
+        logger.info(
+            "Initialized provider %s: base_url=%s", config.name, config.base_url
+        )
 
     async def execute(self, task: dict[str, Any]) -> dict[str, Any]:
         """Execute a chat completion request.
@@ -81,7 +83,9 @@ class OpenAICompatibleProvider:
             }
         except Exception as e:
             logger.warning("Provider %s failed: %s", self.name, _sanitize_error(str(e)))
-            raise LLMError(f"Provider {self.name} failed: {_sanitize_error(str(e))}") from e
+            raise LLMError(
+                f"Provider {self.name} failed: {_sanitize_error(str(e))}"
+            ) from e
 
     async def health_check(self) -> bool:
         """Lightweight health check by listing models.
@@ -93,5 +97,7 @@ class OpenAICompatibleProvider:
             await self._client.models.list()
             return True
         except Exception as e:
-            logger.warning("Health check failed for %s: %s", self.name, _sanitize_error(str(e)))
+            logger.warning(
+                "Health check failed for %s: %s", self.name, _sanitize_error(str(e))
+            )
             return False

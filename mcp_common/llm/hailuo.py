@@ -83,7 +83,9 @@ class HailuoAdapter:
                 submit_resp = await client.post(_SUBMIT_URL, json=payload)
                 submit_resp.raise_for_status()
             except Exception as e:
-                raise LLMError(f"Hailuo submit failed: {_sanitize_error(str(e))}") from e
+                raise LLMError(
+                    f"Hailuo submit failed: {_sanitize_error(str(e))}"
+                ) from e
 
             submit_data = submit_resp.json()
             task_id: str = submit_data["task_id"]

@@ -133,14 +133,19 @@ class FallbackChain:
                         backoff = 2**attempt  # 1s, 2s, 4s
                         logger.debug(
                             "Provider %s attempt %d/%d failed (%s), retrying in %ds",
-                            provider.name, attempt + 1, self._max_attempts,
-                            sanitized, backoff,
+                            provider.name,
+                            attempt + 1,
+                            self._max_attempts,
+                            sanitized,
+                            backoff,
                         )
                         await asyncio.sleep(backoff)
                     else:
                         logger.warning(
                             "Provider %s exhausted %d attempts: %s",
-                            provider.name, self._max_attempts, sanitized,
+                            provider.name,
+                            self._max_attempts,
+                            sanitized,
                         )
 
             if not tier_succeeded:
