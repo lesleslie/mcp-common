@@ -11,3 +11,7 @@ class ProviderUnavailableError(LLMError):
 
 class AllProvidersExhaustedError(LLMError):
     """All providers in the fallback chain failed."""
+
+
+class UnsupportedModalityError(LLMError):
+    """Raised when no tier in the chain supports the requested TaskType modality."""

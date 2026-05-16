@@ -13,7 +13,12 @@ Usage:
 from __future__ import annotations
 
 from .config import LLMSettings, ProviderConfig
-from .exceptions import AllProvidersExhaustedError, LLMError, ProviderUnavailableError
+from .exceptions import (
+    AllProvidersExhaustedError,
+    LLMError,
+    ProviderUnavailableError,
+    UnsupportedModalityError,
+)
 from .fallback import CircuitBreaker, FallbackChain
 from .provider import OpenAICompatibleProvider
 from .types import TaskType
@@ -28,4 +33,5 @@ __all__ = [
     "ProviderConfig",
     "ProviderUnavailableError",
     "TaskType",
+    "UnsupportedModalityError",
 ]

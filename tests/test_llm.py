@@ -72,6 +72,14 @@ class TestExceptions:
         assert ProviderUnavailableError is not AllProvidersExhaustedError
 
 
+class TestUnsupportedModalityError:
+    def test_unsupported_modality_inherits_llm_error(self) -> None:
+        from mcp_common.llm.exceptions import UnsupportedModalityError
+        err = UnsupportedModalityError("VIDEO_GENERATION not supported by this tier")
+        assert isinstance(err, LLMError)
+        assert "VIDEO_GENERATION" in str(err)
+
+
 # ---------------------------------------------------------------------------
 # 2. TaskType StrEnum
 # ---------------------------------------------------------------------------
