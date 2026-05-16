@@ -101,7 +101,7 @@ class TestTaskType:
             assert hasattr(TaskType, name), f"Missing TaskType.{name}"
 
     def test_total_member_count(self) -> None:
-        assert len(TaskType) == 14
+        assert len(TaskType) == 21
 
     def test_str_values_match_snake_case(self) -> None:
         assert TaskType.CODE_GENERATION == "code_generation"
@@ -126,7 +126,7 @@ class TestTaskType:
 
     def test_iteration(self) -> None:
         members = list(TaskType)
-        assert len(members) == 14
+        assert len(members) == 21
         assert TaskType.GENERAL in members
 
     def test_from_string(self) -> None:
@@ -136,6 +136,33 @@ class TestTaskType:
     def test_invalid_value_raises(self) -> None:
         with pytest.raises(ValueError):
             TaskType("nonexistent_task")
+
+
+class TestTaskTypeMultimodal:
+    def test_image_generation_exists(self) -> None:
+        assert TaskType.IMAGE_GENERATION == "image_generation"
+
+    def test_image_understanding_exists(self) -> None:
+        assert TaskType.IMAGE_UNDERSTANDING == "image_understanding"
+
+    def test_audio_speech_exists(self) -> None:
+        assert TaskType.AUDIO_SPEECH == "audio_speech"
+
+    def test_audio_transcription_exists(self) -> None:
+        assert TaskType.AUDIO_TRANSCRIPTION == "audio_transcription"
+
+    def test_video_generation_exists(self) -> None:
+        assert TaskType.VIDEO_GENERATION == "video_generation"
+
+    def test_vision_alias_maps_to_image_understanding(self) -> None:
+        # VISION kept for one release cycle to avoid breaking callers
+        assert TaskType.VISION == "vision"
+        assert TaskType("vision") is TaskType.VISION
+
+    def test_all_task_types_are_strings(self) -> None:
+        for t in TaskType:
+            assert isinstance(t.value, str)
+            assert t.value == t.value.lower()
 
 
 # ---------------------------------------------------------------------------
