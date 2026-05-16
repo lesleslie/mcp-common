@@ -4,7 +4,11 @@ from mcp_common.auth.decorator import require_auth
 from mcp_common.auth.config import AuthConfig
 from mcp_common.auth.core import create_service_token
 from mcp_common.auth.permissions import Permission
-from mcp_common.auth.exceptions import InsufficientPermissionError
+from mcp_common.auth.exceptions import (
+    InsufficientPermissionError,
+    TokenInvalidError,
+    AuthError,
+)
 
 SECRET = "decorator-test-secret-that-is-long-enough-ab"
 
@@ -102,3 +106,63 @@ async def test_denied_token_emits_audit_event(config, read_token):
     assert len(received) == 1
     assert received[0].result == "denied"
     assert received[0].permission == Permission.WRITE
+
+
+@pytest.mark.asyncio
+async def test_raises_when_no_token_provided(config):
+    """Test that missing __auth_token__ raises TokenInvalidError."""
+    from mcp_common.auth.audit import AuditLogger
+
+    received = []
+
+    class CaptureSink:
+        def emit(self, event):
+            received.append(event)
+
+    along = AuditLogger()
+    along.register_sink(CaptureSink())
+
+    @require_auth(Permission.READ, config=config, service_name="test-service", audit_logger=along)
+    async def my_tool(**kwargs):
+        return "ok"
+
+    with pytest.raises(TokenInvalidError, match="No __auth_token__ provided"):
+        await my_tool()
+
+    assert len(received) == 1
+    assert received[0].result == "denied"
+    assert received[0].reason == "no __auth_token__ provided"
+
+
+@pytest.mark.asyncio
+async def test_raises_with_invalid_token(config):
+    """Test that invalid token signature raises TokenInvalidError."""
+    from mcp_common.auth.audit import AuditLogger
+
+    received = []
+
+    class CaptureSink:
+        def emit(self, event):
+            received.append(event)
+
+    along = AuditLogger()
+    along.register_sink(CaptureSink())
+
+    @require_auth(Permission.READ, config=config, service_name="test-service", audit_logger=along)
+    async def my_tool(**kwargs):
+        return "ok"
+
+    # Create a token with wrong secret to simulate invalid signature
+    wrong_secret = "wrong-secret-that-is-long-enough-12345"
+    invalid_token = create_service_token(
+        secret=wrong_secret,
+        issuer="mahavishnu",
+        audience="test-service",
+        permissions=[Permission.READ],
+    )
+
+    with pytest.raises(AuthError):
+        await my_tool(__auth_token__=invalid_token)
+
+    assert len(received) == 1
+    assert received[0].result == "denied"

@@ -202,10 +202,11 @@ def sanitize_path(
         >>> safe_path = sanitize_path("../../etc/passwd", base_dir="/app/data")
         >>> # Raises ValueError: Path traversal detected
     """
+    path_str = str(path)
     path_obj = Path(path)
 
-    # Check for directory traversal
-    if ".." in path_obj.parts:
+    # Check for directory traversal - detect ".." anywhere in the path
+    if ".." in path_str:
         msg = f"Path traversal detected in '{path}'"
         raise ValueError(msg)
 
