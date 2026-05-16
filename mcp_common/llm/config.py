@@ -63,15 +63,18 @@ class LLMSettings(BaseModel):
     """Loaded from settings/models.yaml or equivalent."""
 
     providers: dict[str, dict[str, Any]] = {}
-    default_provider: str = "zai"
-    fallback_chain: list[str] = ["zai", "ollama"]
-    free_tier_provider: str = "zai-free"
+    default_provider: str = "minimax"
+    fallback_chain: list[str] = ["minimax", "llama_server", "ollama"]
 
     model_config = {"extra": "forbid"}
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> LLMSettings:
         """Load settings from a YAML file.
+
+        Accepts both the legacy flat schema (top-level provider keys) and
+        the new schema (providers: + fallback_chain:). Both shapes coexist
+        during the transition period.
 
         Args:
             path: Path to the YAML configuration file.
@@ -85,31 +88,36 @@ class LLMSettings(BaseModel):
             return cls()
 
         with open(path) as f:
-            raw = yaml.safe_load(f) or {}
+            data = yaml.safe_load(f) or {}
 
-        providers = {}
-        skip_keys = {"default_provider", "fallback_chain", "free_tier_provider"}
-        for key, value in raw.items():
-            if key in skip_keys or not isinstance(value, dict):
-                continue
-            if key.startswith("#"):
-                continue
-            value_copy = dict(value)
-            value_copy["name"] = key
-            providers[key] = value_copy
+        reserved = {"default_provider", "fallback_chain", "free_tier_provider",
+                    "bifrost", "providers"}
+        providers: dict[str, Any] = data.get("providers", {})
+        if not providers:
+            # Legacy flat schema: extract provider configs from top-level keys
+            for key, val in data.items():
+                if key in reserved or key.startswith("#") or not isinstance(val, dict):
+                    continue
+                val_copy = dict(val)
+                val_copy["name"] = key
+                providers[key] = val_copy
+            if providers:
+                logger.debug(
+                    "Loaded LLM settings using legacy flat schema — "
+                    "migrate to 'providers:' top-level key."
+                )
 
         return cls(
             providers=providers,
-            default_provider=raw.get("default_provider", "zai"),
-            fallback_chain=raw.get("fallback_chain", ["zai", "ollama"]),
-            free_tier_provider=raw.get("free_tier_provider", "zai-free"),
+            default_provider=data.get("default_provider", "minimax"),
+            fallback_chain=data.get("fallback_chain", ["minimax", "llama_server", "ollama"]),
         )
 
     def get_provider(self, name: str) -> ProviderConfig | None:
         """Get a resolved provider configuration by name.
 
         Args:
-            name: Provider name (e.g., "zai", "ollama").
+            name: Provider name (e.g., "minimax", "ollama").
 
         Returns:
             ProviderConfig if found and enabled, None otherwise.
@@ -123,11 +131,26 @@ class LLMSettings(BaseModel):
         return config
 
     def get_enabled_providers(self) -> list[ProviderConfig]:
-        """Get all enabled providers sorted by priority."""
-        configs = []
+        """Return providers in fallback_chain order, excluding disabled or key-missing ones."""
+        result = []
         for name in self.fallback_chain:
-            config = self.get_provider(name)
-            if config:
-                configs.append(config)
-        configs.sort(key=lambda c: c.priority)
-        return configs
+            raw = self.providers.get(name)
+            if raw is None:
+                logger.warning("Provider %s in fallback_chain not found in config", name)
+                continue
+            cfg = ProviderConfig(**raw)
+            if not cfg.enabled:
+                continue
+            # Fail-closed: skip cloud providers that require auth but have no token configured
+            if cfg.require_auth:
+                key = cfg.api_key.get_secret_value()
+                env_name = cfg.api_key_env or ""
+                if not key or not key.strip() or key.startswith("${"):
+                    logger.warning(
+                        "Provider %s skipped: env var %s is not set.",
+                        name,
+                        env_name or "unknown",
+                    )
+                    continue
+            result.append(cfg)
+        return result

@@ -317,15 +317,64 @@ class TestProviderConfig:
 # ---------------------------------------------------------------------------
 
 
+class TestLLMSettingsValidation:
+    def test_llama_server_provider_recognized_in_fallback_chain(self, tmp_path) -> None:
+        yaml_content = """
+default_provider: minimax
+fallback_chain: [minimax, llama_server, ollama]
+minimax:
+  enabled: true
+  base_url: "https://api.minimax.io/v1"
+  api_key: "${MINIMAX_API_KEY}"
+  timeout_seconds: 30
+llama_server:
+  enabled: true
+  base_url: "http://localhost:8081/v1"
+  require_auth: false
+  timeout_seconds: 60
+ollama:
+  enabled: true
+  base_url: "http://localhost:11434/v1"
+  require_auth: false
+  timeout_seconds: 120
+"""
+        p = tmp_path / "models.yaml"
+        p.write_text(yaml_content)
+        settings = LLMSettings.from_yaml(str(p))
+        assert "llama_server" in [p.name for p in settings.get_enabled_providers()]
+
+    def test_missing_required_api_key_raises_at_load(self, tmp_path, monkeypatch) -> None:
+        monkeypatch.delenv("MINIMAX_API_KEY", raising=False)
+        yaml_content = """
+default_provider: minimax
+fallback_chain: [minimax, ollama]
+minimax:
+  enabled: true
+  base_url: "https://api.minimax.io/v1"
+  api_key_env: "MINIMAX_API_KEY"
+  require_auth: true
+ollama:
+  enabled: true
+  base_url: "http://localhost:11434/v1"
+  require_auth: false
+"""
+        p = tmp_path / "models.yaml"
+        p.write_text(yaml_content)
+        settings = LLMSettings.from_yaml(str(p))
+        # minimax should be excluded from enabled providers (fail-closed)
+        enabled_names = [p.name for p in settings.get_enabled_providers()]
+        assert "minimax" not in enabled_names
+        assert "ollama" in enabled_names  # local tier still available
+
+
 class TestLLMSettings:
     """Tests for LLMSettings."""
 
     def test_defaults(self) -> None:
         settings = LLMSettings()
         assert settings.providers == {}
-        assert settings.default_provider == "zai"
-        assert settings.fallback_chain == ["zai", "ollama"]
-        assert settings.free_tier_provider == "zai-free"
+        assert settings.default_provider == "minimax"
+        assert settings.fallback_chain == ["minimax", "llama_server", "ollama"]
 
     def test_extra_fields_forbidden(self) -> None:
         with pytest.raises(ValidationError):
@@ -334,7 +383,7 @@ class TestLLMSettings:
     def test_from_yaml_nonexistent_path(self, tmp_path: Path) -> None:
         settings = LLMSettings.from_yaml(tmp_path / "nonexistent.yaml")
         assert settings.providers == {}
-        assert settings.default_provider == "zai"
+        assert settings.default_provider == "minimax"
 
     def test_from_yaml_empty_file(self, tmp_path: Path) -> None:
         path = tmp_path / "empty.yaml"
@@ -344,23 +393,23 @@ class TestLLMSettings:
 
     def test_from_yaml_with_providers(self, tmp_path: Path) -> None:
         content = {
-            "default_provider": "zai",
-            "fallback_chain": ["zai", "ollama"],
-            "free_tier_provider": "zai-free",
-            "zai": {
+            "default_provider": "minimax",
+            "fallback_chain": ["minimax", "ollama"],
+            "minimax": {
                 "enabled": True,
-                "base_url": "https://api.z.ai/v4",
+                "base_url": "https://api.minimax.io/v1",
                 "api_key": "sk-test",
-                "models": {"glm-4.7": "glm-4.7"},
+                "models": {"MiniMax-M2.7": "MiniMax-M2.7"},
                 "priority": 1,
                 "timeout": 30,
                 "max_retries": 2,
-                "task_routing": {"code_generation": "glm-4.7"},
+                "task_routing": {"code_generation": "MiniMax-M2.7"},
             },
             "ollama": {
                 "enabled": True,
                 "base_url": "http://localhost:11434",
                 "api_key": "",
+                "require_auth": False,
                 "priority": 2,
             },
         }
@@ -368,10 +417,9 @@ class TestLLMSettings:
         path.write_text(yaml.dump(content))
 
         settings = LLMSettings.from_yaml(path)
-        assert settings.default_provider == "zai"
-        assert settings.fallback_chain == ["zai", "ollama"]
-        assert settings.free_tier_provider == "zai-free"
-        assert "zai" in settings.providers
+        assert settings.default_provider == "minimax"
+        assert settings.fallback_chain == ["minimax", "ollama"]
+        assert "minimax" in settings.providers
         assert "ollama" in settings.providers
 
     def test_from_yaml_strips_comments(self, tmp_path: Path) -> None:
@@ -452,11 +500,12 @@ class TestLLMSettings:
     def test_get_enabled_providers_follows_fallback_chain_order(
         self, tmp_path: Path
     ) -> None:
+        # No-auth providers so fail-closed doesn't filter them
         content = {
-            "fallback_chain": ["ollama", "zai"],
-            "zai": {"enabled": True, "priority": 1, "base_url": "", "api_key": ""},
-            "ollama": {"enabled": True, "priority": 2, "base_url": "", "api_key": ""},
-            "unlisted": {"enabled": True, "priority": 0, "base_url": "", "api_key": ""},
+            "fallback_chain": ["tier_a", "tier_b"],
+            "tier_a": {"enabled": True, "priority": 2, "base_url": "", "api_key": "", "require_auth": False},
+            "tier_b": {"enabled": True, "priority": 1, "base_url": "", "api_key": "", "require_auth": False},
+            "unlisted": {"enabled": True, "priority": 0, "base_url": "", "api_key": "", "require_auth": False},
         }
         path = tmp_path / "ordering.yaml"
         path.write_text(yaml.dump(content))
@@ -466,30 +515,33 @@ class TestLLMSettings:
         names = [p.name for p in enabled]
         # Providers not in fallback_chain are excluded
         assert "unlisted" not in names
-        # All providers in fallback_chain are included
-        assert set(names) == {"zai", "ollama"}
+        # Providers returned in fallback_chain order (not priority order)
+        assert names == ["tier_a", "tier_b"]
 
-    def test_get_enabled_providers_sorted_by_priority(self, tmp_path: Path) -> None:
+    def test_get_enabled_providers_ordered_by_fallback_chain_not_priority(
+        self, tmp_path: Path
+    ) -> None:
+        """get_enabled_providers returns in fallback_chain order, not priority order."""
         content = {
-            "fallback_chain": ["low", "high", "mid"],
-            "low": {"enabled": True, "priority": 10, "base_url": "", "api_key": ""},
-            "high": {"enabled": True, "priority": 1, "base_url": "", "api_key": ""},
-            "mid": {"enabled": True, "priority": 5, "base_url": "", "api_key": ""},
+            "fallback_chain": ["tier_c", "tier_a", "tier_b"],
+            "tier_a": {"enabled": True, "priority": 1, "base_url": "", "api_key": "", "require_auth": False},
+            "tier_b": {"enabled": True, "priority": 5, "base_url": "", "api_key": "", "require_auth": False},
+            "tier_c": {"enabled": True, "priority": 10, "base_url": "", "api_key": "", "require_auth": False},
         }
-        path = tmp_path / "priority.yaml"
+        path = tmp_path / "chain_order.yaml"
         path.write_text(yaml.dump(content))
         settings = LLMSettings.from_yaml(path)
 
         enabled = settings.get_enabled_providers()
-        priorities = [p.priority for p in enabled]
-        assert priorities == [1, 5, 10]
-        assert enabled[0].name == "high"
+        names = [p.name for p in enabled]
+        # Chain order wins over priority order
+        assert names == ["tier_c", "tier_a", "tier_b"]
 
     def test_get_enabled_providers_excludes_disabled(self, tmp_path: Path) -> None:
         content = {
             "fallback_chain": ["active", "disabled"],
-            "active": {"enabled": True, "priority": 1, "base_url": "", "api_key": ""},
-            "disabled": {"enabled": False, "priority": 0, "base_url": "", "api_key": ""},
+            "active": {"enabled": True, "priority": 1, "base_url": "", "api_key": "", "require_auth": False},
+            "disabled": {"enabled": False, "priority": 0, "base_url": "", "api_key": "", "require_auth": False},
         }
         path = tmp_path / "excludes_disabled.yaml"
         path.write_text(yaml.dump(content))
@@ -1005,11 +1057,11 @@ class TestFallbackChain:
 
     def test_from_settings(self, tmp_path: Path) -> None:
         content = {
-            "default_provider": "zai",
-            "fallback_chain": ["zai", "ollama"],
-            "zai": {
+            "default_provider": "minimax",
+            "fallback_chain": ["minimax", "ollama"],
+            "minimax": {
                 "enabled": True,
-                "base_url": "https://api.z.ai/v4",
+                "base_url": "https://api.minimax.io/v1",
                 "api_key": "sk-test",
                 "priority": 1,
             },
@@ -1017,6 +1069,7 @@ class TestFallbackChain:
                 "enabled": True,
                 "base_url": "http://localhost:11434",
                 "api_key": "",
+                "require_auth": False,
                 "priority": 2,
             },
         }
@@ -1043,13 +1096,13 @@ class TestFallbackChain:
 
             chain = FC.from_settings(settings)
             provider_names = [p.name for p in chain._providers]
-            assert set(provider_names) == {"zai", "ollama"}
+            assert set(provider_names) == {"minimax", "ollama"}
 
     def test_from_settings_skips_disabled_providers(self, tmp_path: Path) -> None:
         content = {
-            "fallback_chain": ["zai", "ollama"],
-            "zai": {"enabled": True, "base_url": "", "api_key": "", "priority": 1},
-            "ollama": {"enabled": False, "base_url": "", "api_key": "", "priority": 2},
+            "fallback_chain": ["tier_a", "tier_b"],
+            "tier_a": {"enabled": True, "base_url": "", "api_key": "", "require_auth": False, "priority": 1},
+            "tier_b": {"enabled": False, "base_url": "", "api_key": "", "require_auth": False, "priority": 2},
         }
         path = tmp_path / "models.yaml"
         path.write_text(yaml.dump(content))
@@ -1071,4 +1124,4 @@ class TestFallbackChain:
 
             chain = FC.from_settings(settings)
             provider_names = [p.name for p in chain._providers]
-            assert provider_names == ["zai"]
+            assert provider_names == ["tier_a"]
