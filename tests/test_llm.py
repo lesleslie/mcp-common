@@ -178,6 +178,32 @@ class TestTaskTypeMultimodal:
 # ---------------------------------------------------------------------------
 
 
+class TestProviderConfigExtensions:
+    def test_timeout_seconds_field_exists(self) -> None:
+        cfg = ProviderConfig(name="test", timeout_seconds=45)
+        assert cfg.timeout_seconds == 45
+
+    def test_timeout_seconds_defaults_to_30(self) -> None:
+        cfg = ProviderConfig(name="test")
+        assert cfg.timeout_seconds == 30
+
+    def test_require_auth_defaults_true(self) -> None:
+        cfg = ProviderConfig(name="test")
+        assert cfg.require_auth is True
+
+    def test_require_auth_can_be_false_for_ollama(self) -> None:
+        cfg = ProviderConfig(name="ollama", require_auth=False)
+        assert cfg.require_auth is False
+
+    def test_api_key_env_field_exists(self) -> None:
+        cfg = ProviderConfig(name="test", api_key_env="MINIMAX_API_KEY")
+        assert cfg.api_key_env == "MINIMAX_API_KEY"
+
+    def test_api_key_env_nullable(self) -> None:
+        cfg = ProviderConfig(name="ollama", api_key_env=None)
+        assert cfg.api_key_env is None
+
+
 class TestProviderConfig:
     """Tests for ProviderConfig Pydantic model."""
 

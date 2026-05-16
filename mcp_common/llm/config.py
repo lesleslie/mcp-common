@@ -20,9 +20,12 @@ class ProviderConfig(BaseModel):
     enabled: bool = True
     base_url: str = ""
     api_key: SecretStr = SecretStr("")
+    api_key_env: str | None = None
+    require_auth: bool = True
     models: dict[str, str] = {}
     priority: int = 1
     timeout: int = 30
+    timeout_seconds: int = 30
     max_retries: int = 2
     task_routing: dict[str, str] = {}
     fallback: dict[str, str] = {}
@@ -44,6 +47,10 @@ class ProviderConfig(BaseModel):
             resolved = os.getenv(env_var, "")
             if resolved:
                 self.api_key = SecretStr(resolved)
+
+        # Sync timeout_seconds from legacy timeout if not explicitly set
+        if self.timeout_seconds == 30 and self.timeout != 30:
+            self.timeout_seconds = self.timeout
 
         return self
 
