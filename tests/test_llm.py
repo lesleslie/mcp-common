@@ -21,7 +21,7 @@ from mcp_common.llm.exceptions import (
     LLMError,
     ProviderUnavailableError,
 )
-from mcp_common.llm.fallback import CircuitBreaker
+from mcp_common.llm.fallback import CircuitBreaker, FallbackChain
 from mcp_common.llm.types import TaskType
 
 
@@ -609,20 +609,20 @@ class TestOpenAICompatibleProvider:
             _build_provider_with_mock_openai(config, None)  # type: ignore[arg-type]
 
     def test_constructor_creates_client(self, mock_openai_module: MagicMock) -> None:
-        """Constructor initializes AsyncOpenAI with correct params."""
+        """Constructor initializes AsyncOpenAI with max_retries=0 (chain handles retries)."""
         config = ProviderConfig(
-            name="zai",
-            base_url="https://api.z.ai/v4",
+            name="minimax",
+            base_url="https://api.minimax.io/v1",
             api_key=SecretStr("sk-test"),
-            max_retries=3,
-            timeout=60,
+            timeout_seconds=60,
         )
         provider = _build_provider_with_mock_openai(config, mock_openai_module)
-        assert provider.name == "zai"
+        assert provider.name == "minimax"
+        assert provider.timeout_seconds == 60
         mock_openai_module.AsyncOpenAI.assert_called_once_with(
             api_key="sk-test",
-            base_url="https://api.z.ai/v4",
-            max_retries=3,
+            base_url="https://api.minimax.io/v1",
+            max_retries=0,
             timeout=60,
         )
 
@@ -910,6 +910,7 @@ def _make_mock_provider(
     """Create a mock OpenAICompatibleProvider."""
     provider = MagicMock()
     provider.name = name
+    provider.timeout_seconds = 30  # must be numeric for asyncio.wait_for
     if succeed:
         provider.execute = AsyncMock(
             return_value=return_value
@@ -925,6 +926,103 @@ def _make_mock_provider(
             side_effect=error or LLMError(f"{name} failed")
         )
     return provider
+
+
+class TestFallbackChainRetry:
+    @pytest.mark.asyncio
+    async def test_retries_within_tier_before_advancing(self) -> None:
+        """FallbackChain retries 3x within a tier before falling back."""
+        call_count = 0
+
+        async def flaky_execute(task):
+            nonlocal call_count
+            call_count += 1
+            if call_count < 3:
+                raise Exception("transient failure")
+            return {"content": "ok", "provider": "test", "model": "m", "usage": {}}
+
+        mock_provider = AsyncMock()
+        mock_provider.name = "tier1"
+        mock_provider.execute = flaky_execute
+        mock_provider.timeout_seconds = 30
+
+        chain = FallbackChain([mock_provider])
+        result = await chain.execute({"model": "m", "messages": []})
+        assert result["content"] == "ok"
+        assert call_count == 3  # succeeded on 3rd attempt within same tier
+
+    @pytest.mark.asyncio
+    async def test_circuit_breaker_counts_per_tier_call_not_per_attempt(self) -> None:
+        """Circuit breaker counts tier-calls (after all retries), not individual attempts."""
+        tier1_calls = 0
+
+        async def always_fail(task):
+            nonlocal tier1_calls
+            tier1_calls += 1
+            raise Exception("always fails")
+
+        mock_tier1 = AsyncMock()
+        mock_tier1.name = "tier1"
+        mock_tier1.execute = always_fail
+        mock_tier1.timeout_seconds = 30
+
+        async def succeed(task):
+            return {"content": "ok", "provider": "tier2", "model": "m", "usage": {}}
+
+        mock_tier2 = AsyncMock()
+        mock_tier2.name = "tier2"
+        mock_tier2.execute = succeed
+        mock_tier2.timeout_seconds = 30
+
+        chain = FallbackChain([mock_tier1, mock_tier2], max_attempts_per_tier=3)
+        # Pin failure_threshold explicitly so the test doesn't depend on the default
+        chain._circuit_breakers["tier1"] = CircuitBreaker(failure_threshold=5, reset_timeout=60.0)
+
+        # After 5 tier-calls (each with 3 attempts = 15 total attempts), breaker opens
+        for _ in range(5):
+            await chain.execute({"model": "m", "messages": []})
+
+        assert tier1_calls == 15  # 5 tier-calls × 3 attempts each
+        breaker = chain._circuit_breakers["tier1"]
+        assert breaker.is_open  # 5 failures >= threshold of 5
+
+    @pytest.mark.asyncio
+    async def test_error_message_sanitized_before_logging(self, caplog) -> None:
+        """API keys in error messages must be stripped before logging."""
+        import logging
+
+        async def fail_with_key(task):
+            raise Exception("auth failed: sk-ant-api03-realkey1234567890abcdef")
+
+        mock_provider = AsyncMock()
+        mock_provider.name = "tier1"
+        mock_provider.execute = fail_with_key
+        mock_provider.timeout_seconds = 30
+
+        chain = FallbackChain([mock_provider])
+        with caplog.at_level(logging.WARNING):
+            with pytest.raises(Exception):
+                await chain.execute({"model": "m", "messages": []})
+
+        for record in caplog.records:
+            assert "sk-ant-api03-realkey" not in record.message
+
+    @pytest.mark.asyncio
+    async def test_cancelled_error_propagates_immediately(self) -> None:
+        """asyncio.CancelledError must never be caught by the chain."""
+        import asyncio
+
+        async def cancel_self(task):
+            raise asyncio.CancelledError()
+
+        mock_provider = AsyncMock()
+        mock_provider.name = "tier1"
+        mock_provider.execute = cancel_self
+        mock_provider.timeout_seconds = 30
+
+        chain = FallbackChain([mock_provider])
+        with pytest.raises(asyncio.CancelledError):
+            await chain.execute({"model": "m", "messages": []})
 
 
 class TestFallbackChain:
@@ -953,7 +1051,8 @@ class TestFallbackChain:
 
         result = await chain.execute({"model": "m", "messages": []})
         assert result["provider"] == "secondary"
-        p1.execute.assert_awaited_once()
+        # Per-tier retry: p1 is attempted max_attempts_per_tier (3) times before fallback
+        assert p1.execute.await_count == 3
         p2.execute.assert_awaited_once()
 
     @pytest.mark.asyncio

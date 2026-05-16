@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from typing import Any
 
+from ._security import sanitize_error as _sanitize_error
 from .config import LLMSettings
 from .exceptions import AllProvidersExhaustedError
 from .provider import OpenAICompatibleProvider
@@ -51,14 +53,21 @@ class CircuitBreaker:
 
 
 class FallbackChain:
-    """Ordered provider list with circuit breaker per provider.
+    """Ordered provider list with per-tier retry and circuit breaker.
 
-    Tries providers in order, falling back on failure. Each provider
-    has its own circuit breaker to avoid hammering a down provider.
+    Tries providers in order with up to `max_attempts_per_tier` retries
+    per provider before advancing to the next tier. Circuit breakers count
+    per tier-call (after all retries exhausted), not per attempt.
+    asyncio.CancelledError always propagates immediately.
     """
 
-    def __init__(self, providers: list[OpenAICompatibleProvider]) -> None:
+    def __init__(
+        self,
+        providers: list[OpenAICompatibleProvider],
+        max_attempts_per_tier: int = 3,
+    ) -> None:
         self._providers = providers
+        self._max_attempts = max_attempts_per_tier
         self._circuit_breakers: dict[str, CircuitBreaker] = {
             p.name: CircuitBreaker(failure_threshold=5, reset_timeout=60.0)
             for p in providers
@@ -80,7 +89,7 @@ class FallbackChain:
         return cls(providers)
 
     async def execute(self, task: dict[str, Any]) -> dict[str, Any]:
-        """Try providers in order, falling back on failure.
+        """Try providers in order with per-tier retry before advancing.
 
         Args:
             task: Dict with 'model', 'messages', and optional params.
@@ -96,22 +105,48 @@ class FallbackChain:
         for provider in self._providers:
             breaker = self._circuit_breakers[provider.name]
             if breaker.is_open:
-                logger.debug(
-                    "Skipping provider %s (circuit breaker open)", provider.name
-                )
+                logger.debug("Skipping %s (circuit breaker open)", provider.name)
                 continue
 
-            try:
-                result = await provider.execute(task)
-                breaker.record_success()
-                return result
-            except Exception as e:
-                last_error = e
-                breaker.record_failure()
-                logger.warning(
-                    "Provider %s failed: %s", provider.name, e, exc_info=True
-                )
+            tier_succeeded = False
+            timeout = getattr(provider, "timeout_seconds", 30)
 
+            for attempt in range(self._max_attempts):
+                try:
+                    result = await asyncio.wait_for(
+                        provider.execute(task),
+                        timeout=timeout,
+                    )
+                    if result.get("content"):
+                        breaker.record_success()
+                        tier_succeeded = True
+                        return result
+                    raise ValueError("Provider returned empty content")
+
+                except asyncio.CancelledError:
+                    raise  # never swallow
+
+                except Exception as e:
+                    last_error = e
+                    sanitized = _sanitize_error(str(e))
+                    if attempt < self._max_attempts - 1:
+                        backoff = 2**attempt  # 1s, 2s, 4s
+                        logger.debug(
+                            "Provider %s attempt %d/%d failed (%s), retrying in %ds",
+                            provider.name, attempt + 1, self._max_attempts,
+                            sanitized, backoff,
+                        )
+                        await asyncio.sleep(backoff)
+                    else:
+                        logger.warning(
+                            "Provider %s exhausted %d attempts: %s",
+                            provider.name, self._max_attempts, sanitized,
+                        )
+
+            if not tier_succeeded:
+                breaker.record_failure()  # counts once per tier-call
+
+        sanitized_last = _sanitize_error(str(last_error)) if last_error else "unknown"
         raise AllProvidersExhaustedError(
-            f"All {len(self._providers)} providers failed"
+            f"All {len(self._providers)} providers failed. Last: {sanitized_last}"
         ) from last_error

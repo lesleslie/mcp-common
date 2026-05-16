@@ -1,10 +1,11 @@
-"""OpenAI-compatible LLM provider for ZAI, Qwen, OpenAI."""
+"""OpenAI-compatible LLM provider for MiniMax, llama-server, Ollama."""
 
 from __future__ import annotations
 
 import logging
 from typing import Any
 
+from ._security import sanitize_error as _sanitize_error
 from .config import ProviderConfig
 from .exceptions import LLMError
 
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class OpenAICompatibleProvider:
-    """Single provider for ZAI, Qwen, OpenAI — all use the same API.
+    """Single provider using the OpenAI-compatible API.
 
     The `openai` package is an optional dependency. It is lazy-imported
     and a clear ImportError is raised if not installed.
@@ -29,18 +30,28 @@ class OpenAICompatibleProvider:
             raise ImportError(msg) from e
 
         self.name = config.name
+        self.timeout_seconds = config.timeout_seconds
         self._config = config
-        self._client = openai.AsyncOpenAI(
-            api_key=config.api_key.get_secret_value(),
-            base_url=config.base_url,
-            max_retries=config.max_retries,
-            timeout=config.timeout,
-        )
-        logger.info(
-            "Initialized provider %s: base_url=%s",
-            config.name,
-            config.base_url,
-        )
+
+        if config.require_auth:
+            self._client = openai.AsyncOpenAI(
+                api_key=config.api_key.get_secret_value(),
+                base_url=config.base_url,
+                max_retries=0,  # retries handled by FallbackChain
+                timeout=config.timeout_seconds,
+            )
+        else:
+            # Local no-auth provider (e.g. ollama, llama-server) —
+            # send empty Authorization header so the SDK doesn't inject "Bearer no-auth"
+            self._client = openai.AsyncOpenAI(
+                api_key="no-auth",
+                base_url=config.base_url,
+                default_headers={"Authorization": ""},
+                max_retries=0,
+                timeout=config.timeout_seconds,
+            )
+
+        logger.info("Initialized provider %s: base_url=%s", config.name, config.base_url)
 
     async def execute(self, task: dict[str, Any]) -> dict[str, Any]:
         """Execute a chat completion request.
@@ -69,8 +80,8 @@ class OpenAICompatibleProvider:
                 "usage": response.usage.model_dump() if response.usage else {},
             }
         except Exception as e:
-            logger.warning("Provider %s failed: %s", self.name, e)
-            raise LLMError(f"Provider {self.name} failed: {e}") from e
+            logger.warning("Provider %s failed: %s", self.name, _sanitize_error(str(e)))
+            raise LLMError(f"Provider {self.name} failed: {_sanitize_error(str(e))}") from e
 
     async def health_check(self) -> bool:
         """Lightweight health check by listing models.
@@ -82,5 +93,5 @@ class OpenAICompatibleProvider:
             await self._client.models.list()
             return True
         except Exception as e:
-            logger.warning("Health check failed for %s: %s", self.name, e)
+            logger.warning("Health check failed for %s: %s", self.name, _sanitize_error(str(e)))
             return False
