@@ -813,6 +813,95 @@ class TestOpenAICompatibleProvider:
         )
         assert result["usage"] == {}
 
+    @pytest.mark.asyncio
+    async def test_execute_uses_task_routing_model(
+        self, mock_openai_module: MagicMock
+    ) -> None:
+        """When task_type is present and task_routing matches, that model is used."""
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock(message=MagicMock(content="ok"))]
+        mock_response.usage = None
+
+        mock_client = mock_openai_module._async_client
+        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+
+        config = ProviderConfig(
+            name="ollama",
+            base_url="http://localhost:11434",
+            require_auth=False,
+            task_routing={"code_generation": "qwen2.5-coder:7b"},
+        )
+        provider = _build_provider_with_mock_openai(config, mock_openai_module)
+        result = await provider.execute(
+            {
+                "model": "default-model",  # should be overridden
+                "task_type": "code_generation",
+                "messages": [{"role": "user", "content": "fix this"}],
+            }
+        )
+        assert result["model"] == "qwen2.5-coder:7b"
+        mock_client.chat.completions.create.assert_called_once_with(
+            model="qwen2.5-coder:7b",
+            messages=[{"role": "user", "content": "fix this"}],
+            max_tokens=4096,
+            temperature=0.7,
+        )
+
+    @pytest.mark.asyncio
+    async def test_execute_falls_back_to_task_model_when_no_routing(
+        self, mock_openai_module: MagicMock
+    ) -> None:
+        """When no task_routing is configured, task['model'] is used as-is."""
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock(message=MagicMock(content="ok"))]
+        mock_response.usage = None
+
+        mock_client = mock_openai_module._async_client
+        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+
+        config = ProviderConfig(
+            name="minimax",
+            base_url="https://api.minimax.io/v1",
+            api_key=SecretStr("sk-test"),
+        )
+        provider = _build_provider_with_mock_openai(config, mock_openai_module)
+        result = await provider.execute(
+            {
+                "model": "MiniMax-M2.7",
+                "task_type": "code_generation",
+                "messages": [{"role": "user", "content": "fix this"}],
+            }
+        )
+        assert result["model"] == "MiniMax-M2.7"
+
+    @pytest.mark.asyncio
+    async def test_execute_uses_task_model_when_task_type_unrecognized(
+        self, mock_openai_module: MagicMock
+    ) -> None:
+        """When task_type is not in task_routing, task['model'] is used."""
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock(message=MagicMock(content="ok"))]
+        mock_response.usage = None
+
+        mock_client = mock_openai_module._async_client
+        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+
+        config = ProviderConfig(
+            name="ollama",
+            base_url="http://localhost:11434",
+            require_auth=False,
+            task_routing={"code_generation": "qwen2.5-coder:7b"},
+        )
+        provider = _build_provider_with_mock_openai(config, mock_openai_module)
+        result = await provider.execute(
+            {
+                "model": "llama3:8b",
+                "task_type": "creative",  # not in task_routing
+                "messages": [{"role": "user", "content": "write a poem"}],
+            }
+        )
+        assert result["model"] == "llama3:8b"
+
 
 # ---------------------------------------------------------------------------
 # 6. CircuitBreaker

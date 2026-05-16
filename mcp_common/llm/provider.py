@@ -55,12 +55,25 @@ class OpenAICompatibleProvider:
             "Initialized provider %s: base_url=%s", config.name, config.base_url
         )
 
+    def _resolve_model(self, task: dict[str, Any]) -> str:
+        """Pick model: task_routing[task_type] if configured, else task['model']."""
+        task_type = task.get("task_type")
+        if task_type and self._config.task_routing:
+            routed = self._config.task_routing.get(task_type)
+            if routed:
+                return routed
+        return task.get("model") or ""
+
     async def execute(self, task: dict[str, Any]) -> dict[str, Any]:
         """Execute a chat completion request.
 
         Args:
             task: Dict with 'model', 'messages', and optional
-                  'max_tokens', 'temperature'.
+                  'task_type', 'max_tokens', 'temperature'.
+                  When 'task_type' is present and this provider has a
+                  matching task_routing entry, that model is used instead
+                  of task['model'], enabling per-provider model selection
+                  from a single FallbackChain call.
 
         Returns:
             Dict with 'content', 'provider', 'model', 'usage'.
@@ -68,9 +81,10 @@ class OpenAICompatibleProvider:
         Raises:
             LLMError: If the API call fails.
         """
+        model = self._resolve_model(task)
         try:
             response = await self._client.chat.completions.create(
-                model=task["model"],
+                model=model,
                 messages=task["messages"],
                 max_tokens=task.get("max_tokens", 4096),
                 temperature=task.get("temperature", 0.7),
@@ -78,7 +92,7 @@ class OpenAICompatibleProvider:
             return {
                 "content": response.choices[0].message.content or "",
                 "provider": self.name,
-                "model": task["model"],
+                "model": model,
                 "usage": response.usage.model_dump() if response.usage else {},
             }
         except Exception as e:
