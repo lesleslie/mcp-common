@@ -89,6 +89,7 @@ site/
 /.mcp.json
 /.crackerjack/
 /coverage.json
+docs/archive/test-artifacts/coverage*.json
 /.complexipy_cache/
 /.jbeval/
 /NOTES.md
