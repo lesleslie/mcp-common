@@ -5,6 +5,73 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0] - 2026-05-16
+
+### Added
+
+- Add @require_auth() decorator with Permission-level enforcement
+- Add AuthAuditEvent and AuditLogger with custom sink support
+- Add AuthConfig with env-var secret loading and placeholder rejection
+- Add mcp_common/auth package skeleton with exception hierarchy
+- auth: Add JWT create/verify with issuer, audience, and permission claims
+- auth: Add KNOWN_SERVICES registry and issuer/audience verification
+- auth: Add Permission enum and Role definitions
+- Extend health module with dependency checking infrastructure
+- llm: Add edge case tests, Hypothesis property tests, format pass; bump to 0.14.0
+- llm: Add HailuoAdapter for MiniMax video generation with SSRF-safe polling
+- llm: Add llama_server support and fail-closed API key validation
+- llm: Add multimodal TaskType variants and VISION deprecation alias
+- llm: Add per-tier retry loop, error sanitization, and CancelledError propagation
+- llm: Add task_routing model resolution in OpenAICompatibleProvider; bump to 0.14.1
+- llm: Add timeout_seconds, require_auth, api_key_env to ProviderConfig
+- llm: Add UnsupportedModalityError exception
+
+### Changed
+
+- Mcp-common (quality: 60/100) - 2026-04-13 04:52:13
+- Mcp-common (quality: 60/100) - 2026-04-14 02:37:34
+- Replace python-jose with PyJWT to fix CVE-2024-23342
+- Update config, core, deps, tests
+- Update config, deps, docs, tests
+- Update core functionality
+- Update core, deps, docs
+- Update dependencies
+- Update dependencies
+
+### Fixed
+
+- auth: Remove bare except — verify_issuer already raises UnknownIssuerError
+
+### Testing
+
+- Add inter-service auth integration tests
+- coverage: Add 31 comprehensive tests and fix path traversal security issue
+
+### Internal
+
+- Add archive/backup directories to gitignore
+- Bump version to 0.10.0
+- Bump version to 0.11.0
+- Bump version to 0.11.1
+- Bump version to 0.12.0
+- Bump version to 0.12.1
+- Bump version to 0.12.2
+- Bump version to 0.12.3
+- Bump version to 0.13.0
+- Bump version to 0.13.1
+- Bump version to 0.13.2
+- Bump version to 0.13.3
+- Bump version to 0.9.10
+- Bump version to 0.9.2
+- Bump version to 0.9.4
+- Bump version to 0.9.5
+- Bump version to 0.9.6
+- Bump version to 0.9.7
+- Bump version to 0.9.8
+- Bump version to 0.9.9
+- Ignore .worktrees directory
+- Update LICENSE copyright to 2026, standardize license field
+
 ## [0.13.0] - 2026-04-30
 
 ### Added

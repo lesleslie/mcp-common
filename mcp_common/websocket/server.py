@@ -351,7 +351,6 @@ class WebSocketServer(ABC):
                         # Send auth success
                         response = WebSocketProtocol.create_response(
                             auth_data,
-                            200,
                             {"status": "authenticated", "user_id": user.get("user_id")},
                         )
                         await websocket.send(WebSocketProtocol.encode(response))

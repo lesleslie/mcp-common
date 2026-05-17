@@ -135,6 +135,80 @@ class TestCreateServerCli:
         assert "config" in instances
         assert "server" in instances
 
+    def test_start_handler_raises_when_server_factory_returns_none(self) -> None:
+        """start_handler raises when server_class returns None."""
+
+        class FakeConfig:
+            def __init__(self) -> None:
+                self.http_host = "127.0.0.1"
+                self.http_port = 9999
+                self.log_level = "info"
+
+        def fake_server_factory(_config: object) -> None:
+            return None
+
+        factory = MCPServerCLIFactory.create_server_cli(
+            server_class=fake_server_factory,
+            config_class=FakeConfig,
+            name="fake",
+        )
+
+        with patch("mcp_common.cli.factory.asyncio.run"), patch(
+            "mcp_common.cli.factory.uvicorn.run"
+        ):
+            with pytest.raises(RuntimeError, match="Failed to create server instance"):
+                factory.start_handler()
+
+    def test_start_handler_raises_when_server_is_cleared_after_startup(self) -> None:
+        """start_handler raises when the server instance becomes None before uvicorn."""
+
+        class FakeConfig:
+            def __init__(self) -> None:
+                self.http_host = "127.0.0.1"
+                self.http_port = 9999
+                self.log_level = "info"
+
+        class FakeServer:
+            def __init__(self, config: object) -> None:
+                self.config = config
+
+            async def startup(self) -> None:
+                pass
+
+            async def shutdown(self) -> None:
+                pass
+
+            def get_app(self) -> object:
+                return Mock()
+
+        factory = MCPServerCLIFactory.create_server_cli(
+            server_class=FakeServer,
+            config_class=FakeConfig,
+            name="fake",
+        )
+
+        server_cell = next(
+            cell
+            for name, cell in zip(
+                factory.start_handler.__code__.co_freevars,
+                factory.start_handler.__closure__ or (),
+            )
+            if name == "_server_instance"
+        )
+
+        def fake_run(awaitable: object) -> None:
+            # Clear the captured server instance after startup completes.
+            server_cell.cell_contents = None
+            return None
+
+        with patch("mcp_common.cli.factory.asyncio.run", side_effect=fake_run), patch(
+            "mcp_common.cli.factory.uvicorn.run"
+        ) as uvicorn_run:
+            with pytest.raises(RuntimeError, match="Server instance was not properly initialized"):
+                factory.start_handler()
+
+        uvicorn_run.assert_not_called()
+
     def test_health_probe_handler_server_none(self) -> None:
         """health_probe_handler returns not-running when server not created."""
 
@@ -501,6 +575,34 @@ class TestReadPidOrExit:
         with patch("mcp_common.cli.factory.is_process_alive", return_value=True):
             # Should NOT raise
             factory._ensure_process_alive_or_exit(os.getpid(), json_output=False)
+
+    def test_read_pid_unreachable_assertion(
+        self, factory: MCPServerCLIFactory, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """If emit helpers do not exit, _read_pid_or_exit hits its guard assertion."""
+        class DummyPath:
+            def exists(self) -> bool:
+                return False
+
+            def read_text(self) -> str:
+                raise OSError("missing")
+
+        monkeypatch.setattr(MCPServerSettings, "pid_path", lambda self: DummyPath())
+        monkeypatch.setattr(factory, "_emit_not_running", lambda _json_output: None)
+        monkeypatch.setattr(factory, "_emit_corrupted_pid", lambda _json_output: None)
+
+        with pytest.raises(AssertionError, match="PID read should exit or return"):
+            factory._read_pid_or_exit(json_output=True)
+
+    def test_read_pid_corrupted_unreachable_assertion(
+        self, factory: MCPServerCLIFactory, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """If corrupted PID emission does not exit, _read_pid_or_exit hits its guard assertion."""
+        factory.settings.pid_path().write_text("bad")
+        monkeypatch.setattr(factory, "_emit_corrupted_pid", lambda _json_output: None)
+
+        with pytest.raises(AssertionError, match="PID read should exit or return"):
+            factory._read_pid_or_exit(json_output=False)
 
 
 # ---------------------------------------------------------------------------

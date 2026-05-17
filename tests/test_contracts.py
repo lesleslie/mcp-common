@@ -26,4 +26,3 @@ def test_contract_facade_exports_canonical_primitives() -> None:
     assert create_service_token is auth_create_service_token
     assert verify_token is auth_verify_token
     assert TokenPayload.__name__ == "TokenPayload"
-

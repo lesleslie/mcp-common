@@ -8,7 +8,11 @@ import pytest
 
 from mcp_common.prompting import PromptBackend
 from mcp_common.prompting.exceptions import BackendUnavailableError
-from mcp_common.prompting.factory import create_prompt_adapter, _resolve_backend
+from mcp_common.prompting.factory import (
+    create_prompt_adapter,
+    list_available_backends,
+    _resolve_backend,
+)
 from mcp_common.prompting.models import PromptAdapterSettings, PromptConfig
 
 
@@ -130,6 +134,20 @@ class TestBackendAvailability:
         # In test environment, prompt-toolkit should be available
         adapter = create_prompt_adapter(backend="prompt-toolkit")
         assert adapter.is_available() is True
+
+    def test_list_available_backends_includes_pyobjc_when_available(self) -> None:
+        """Test list_available_backends includes pyobjc when its availability check passes."""
+        with patch(
+            "mcp_common.backends.pyobjc.PyObjCPromptBackend.is_available_static",
+            return_value=True,
+        ), patch(
+            "mcp_common.backends.toolkit.PromptToolkitBackend.is_available_static",
+            return_value=True,
+        ):
+            available = list_available_backends()
+
+        assert "pyobjc" in available
+        assert "prompt-toolkit" in available
 
     @patch("sys.platform", "linux")
     def test_pyobjc_not_available_on_linux(self) -> None:

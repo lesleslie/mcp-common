@@ -41,6 +41,37 @@ class ConcreteServer(WebSocketServer):
         pass
 
 
+class _FakeWebSocket:
+    def __init__(
+        self,
+        recv_messages: list[str] | None = None,
+        iter_messages: list[str] | None = None,
+    ) -> None:
+        self.recv_messages = list(recv_messages or [])
+        self.iter_messages = list(iter_messages or [])
+        self.sent_messages: list[str] = []
+        self.closed: list[tuple[int | None, str | None]] = []
+
+    async def recv(self) -> str:
+        return self.recv_messages.pop(0)
+
+    async def send(self, message: str) -> None:
+        self.sent_messages.append(message)
+
+    async def close(self, code: int | None = None, reason: str | None = None) -> None:
+        self.closed.append((code, reason))
+
+    def __aiter__(self) -> _FakeWebSocket:
+        self._iter = iter(self.iter_messages)
+        return self
+
+    async def __anext__(self) -> str:
+        try:
+            return next(self._iter)
+        except StopIteration as exc:
+            raise StopAsyncIteration from exc
+
+
 # ===================================================================
 # 1. Constructor defaults and custom params
 # ===================================================================
@@ -985,3 +1016,138 @@ class TestStart:
 
         assert srv.is_running is True
         assert srv.server is not None
+
+    @pytest.mark.asyncio
+    async def test_handler_rejects_when_at_capacity(self) -> None:
+        srv = ConcreteServer(max_connections=0, enable_metrics=True)
+        srv.metrics = MagicMock()
+
+        mock_serve = AsyncMock(return_value=MagicMock())
+        _websockets_mock.serve = mock_serve
+
+        await srv.start()
+        handler = mock_serve.call_args.args[0]
+
+        websocket = _FakeWebSocket()
+        await handler(websocket)
+
+        assert websocket.closed[-1] == (1013, "Server at maximum capacity")
+        srv.metrics.on_connection_error.assert_called_once_with("max_connections")
+
+    @pytest.mark.asyncio
+    async def test_handler_requires_authentication(self) -> None:
+        srv = ConcreteServer(require_auth=True, authenticator=MagicMock(), enable_metrics=True)
+        srv.metrics = MagicMock()
+
+        mock_serve = AsyncMock(return_value=MagicMock())
+        _websockets_mock.serve = mock_serve
+
+        await srv.start()
+        handler = mock_serve.call_args.args[0]
+
+        auth_message = WebSocketProtocol.encode(
+            WebSocketProtocol.create_event("hello", {"token": "ignored"})
+        )
+        websocket = _FakeWebSocket(recv_messages=[auth_message])
+
+        await handler(websocket)
+
+        assert len(websocket.sent_messages) == 1
+        assert websocket.closed[-1] == (1008, "Authentication required")
+        srv.metrics.on_connection_error.assert_called_once_with("auth_required")
+
+    @pytest.mark.asyncio
+    async def test_handler_authenticates_and_accepts_user(self) -> None:
+        authenticator = MagicMock()
+        authenticator.authenticate_connection.return_value = {"user_id": "alice"}
+        srv = ConcreteServer(require_auth=True, authenticator=authenticator, enable_metrics=True)
+        srv.metrics = MagicMock()
+        srv.on_connect = AsyncMock()  # type: ignore[method-assign]
+        srv.on_disconnect = AsyncMock()  # type: ignore[method-assign]
+
+        mock_serve = AsyncMock(return_value=MagicMock())
+        _websockets_mock.serve = mock_serve
+
+        await srv.start()
+        handler = mock_serve.call_args.args[0]
+
+        auth_message = WebSocketProtocol.encode(
+            WebSocketProtocol.create_request("auth", {"token": "good-token"})
+        )
+        websocket = _FakeWebSocket(recv_messages=[auth_message])
+
+        await handler(websocket)
+
+        assert websocket.user == {"user_id": "alice"}
+        assert len(websocket.sent_messages) == 1
+        response = WebSocketProtocol.decode(websocket.sent_messages[0])
+        assert response.type == MessageType.RESPONSE
+        assert response.data == {"status": "authenticated", "user_id": "alice"}
+        authenticator.authenticate_connection.assert_called_once_with("good-token")
+        srv.metrics.on_connection_error.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_handler_processes_messages_and_records_metrics(self) -> None:
+        srv = ConcreteServer(enable_metrics=True)
+        srv.metrics = MagicMock()
+        srv.on_message = AsyncMock()
+
+        mock_serve = AsyncMock(return_value=MagicMock())
+        _websockets_mock.serve = mock_serve
+
+        await srv.start()
+        handler = mock_serve.call_args.args[0]
+
+        message = WebSocketProtocol.encode(
+            WebSocketProtocol.create_event("message", {"hello": "world"})
+        )
+        websocket = _FakeWebSocket(iter_messages=[message])
+
+        await handler(websocket)
+
+        srv.metrics.on_connect.assert_called_once()
+        srv.metrics.on_message_received.assert_called_once_with("event")
+        srv.metrics.observe_latency.assert_called_once()
+        srv.metrics.on_disconnect.assert_called_once()
+        srv.on_message.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_handler_reports_decode_error(self) -> None:
+        srv = ConcreteServer(enable_metrics=True)
+        srv.metrics = MagicMock()
+        srv.on_message = AsyncMock()
+
+        mock_serve = AsyncMock(return_value=MagicMock())
+        _websockets_mock.serve = mock_serve
+
+        await srv.start()
+        handler = mock_serve.call_args.args[0]
+
+        websocket = _FakeWebSocket(iter_messages=["not-json"])
+
+        await handler(websocket)
+
+        assert len(websocket.sent_messages) == 1
+        error = WebSocketProtocol.decode(websocket.sent_messages[0])
+        assert error.type == MessageType.ERROR
+        assert error.error_code == "DECODE_ERROR"
+        srv.metrics.on_message_error.assert_called_once_with("decode_error")
+        srv.on_message.assert_not_awaited()
+
+    def test_cleanup_logs_warning_on_unlink_failure(self, tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+        cert_file = tmp_path / "auto_cert.pem"
+        key_file = tmp_path / "auto_key.pem"
+        cert_file.write_text("cert data")
+        key_file.write_text("key data")
+
+        monkeypatch.setattr("os.path.exists", lambda path: True)
+        monkeypatch.setattr("os.unlink", MagicMock(side_effect=RuntimeError("cannot unlink")))
+
+        srv = ConcreteServer()
+        srv._auto_cert_path = str(cert_file)
+        srv._auto_key_path = str(key_file)
+
+        srv._cleanup_auto_cert()
+
+        assert srv._auto_cert_path is None
+        assert srv._auto_key_path is None

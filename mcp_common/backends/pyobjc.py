@@ -13,6 +13,7 @@ Dependencies: pyobjc-core, pyobjc-framework-Cocoa (optional)
 import asyncio
 import sys
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from mcp_common.prompting.base import PromptBackend
