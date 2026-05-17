@@ -56,6 +56,11 @@ class _FakeWebSocket:
             raise StopAsyncIteration from exc
 
 
+class _ErrorWebSocket(_FakeWebSocket):
+    async def __anext__(self) -> str:
+        raise RuntimeError("socket loop failed")
+
+
 class _FakeTask:
     def __init__(self, result: object | None = None, cancel_raises: bool = False) -> None:
         self.result = result
@@ -202,6 +207,15 @@ class TestConnectAndAuth:
         with pytest.raises(ConnectionError, match="Authentication failed"):
             await client._authenticate()
 
+    @pytest.mark.asyncio
+    async def test_authenticate_without_token_returns_none(self) -> None:
+        client = WebSocketClient("ws://example.com")
+        client.websocket = _FakeWebSocket()
+
+        result = await client._authenticate()
+
+        assert result is None
+
 
 class TestDisconnectAndReceive:
     @pytest.mark.asyncio
@@ -242,6 +256,19 @@ class TestDisconnectAndReceive:
         assert client.is_connected is False
         assert client.is_authenticated is False
         assert client.reconnect_task is not None
+
+    @pytest.mark.asyncio
+    async def test_receive_loop_handles_outer_exception(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        websocket = _ErrorWebSocket()
+        client = WebSocketClient("ws://example.com")
+        client.websocket = websocket
+        monkeypatch.setattr(client_mod.asyncio, "create_task", _create_task)
+        client._handle_message = AsyncMock()  # type: ignore[method-assign]
+
+        await client._receive_loop()
+
+        assert client.is_connected is False
+        assert client.is_authenticated is False
 
 
 class TestReconnectAndMessages:
@@ -308,6 +335,16 @@ class TestReconnectAndMessages:
         assert set(hits) == {"sync", "async"}
 
     @pytest.mark.asyncio
+    async def test_emit_event_missing_and_erroring_handler(self) -> None:
+        client = WebSocketClient("ws://example.com")
+        client.event_handlers["evt"] = {
+            lambda data: (_ for _ in ()).throw(RuntimeError("boom"))
+        }
+
+        await client._emit_event("missing", {})
+        await client._emit_event("evt", {})
+
+    @pytest.mark.asyncio
     async def test_send_request_and_send_helpers(self, monkeypatch: pytest.MonkeyPatch) -> None:
         websocket = _FakeWebSocket()
         client = WebSocketClient("ws://example.com")
@@ -326,6 +363,12 @@ class TestReconnectAndMessages:
 
         await client.send("evt", {"value": 2})
         assert len(websocket.sent_messages) >= 2
+
+    @pytest.mark.asyncio
+    async def test_send_raises_when_not_connected(self) -> None:
+        client = WebSocketClient("ws://example.com")
+        with pytest.raises(ConnectionError, match="Not connected"):
+            await client.send("evt", {})
 
     @pytest.mark.asyncio
     async def test_send_request_raises_when_not_connected(self) -> None:

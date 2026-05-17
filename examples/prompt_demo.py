@@ -6,7 +6,8 @@ Run with: python examples/prompt_demo.py
 """
 
 import asyncio
-from mcp_common.prompting import create_prompt_adapter, NotificationLevel
+
+from mcp_common.prompting import NotificationLevel, create_prompt_adapter
 
 
 async def main():

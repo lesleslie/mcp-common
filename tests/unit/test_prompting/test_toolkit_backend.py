@@ -50,6 +50,17 @@ class TestPromptToolkitBackend:
             assert error.backend == "prompt-toolkit"
             assert "install" in str(error).lower()
 
+    @pytest.mark.asyncio
+    async def test_initialize_and_shutdown_toggle_state(self) -> None:
+        """Test lifecycle methods toggle the initialized flag."""
+        backend = PromptToolkitBackend(config=PromptAdapterSettings())
+
+        await backend.initialize()
+        assert backend._initialized is True
+
+        await backend.shutdown()
+        assert backend._initialized is False
+
 
 @pytest.mark.unit
 class TestPromptToolkitBackendAlert:
@@ -134,6 +145,20 @@ class TestPromptToolkitBackendAlert:
 
             assert exc_info.value.backend == "prompt-toolkit"
             assert exc_info.value.dialog_type == "alert"
+
+    @pytest.mark.asyncio
+    async def test_alert_with_buttons_cancelled(self) -> None:
+        """Test alert with buttons when the choice prompt is cancelled."""
+        backend = PromptToolkitBackend(config=PromptAdapterSettings())
+
+        with patch.object(backend, "prompt_choice", return_value=None):
+            result = await backend.alert(
+                title="Confirm",
+                message="Are you sure?",
+                buttons=["OK", "Cancel"],
+            )
+
+            assert result.cancelled is True
 
 
 @pytest.mark.unit
@@ -282,6 +307,20 @@ class TestPromptToolkitBackendPromptText:
 
             assert result == "secret_password"
 
+    @pytest.mark.asyncio
+    async def test_prompt_text_empty_result(self) -> None:
+        """Test prompt_text returns None for empty input."""
+        backend = PromptToolkitBackend(config=PromptAdapterSettings())
+
+        with patch("mcp_common.backends.toolkit.prompt") as mock_prompt:
+            mock_prompt.return_value = ""
+            result = await backend.prompt_text(
+                title="Input",
+                message="Enter text:",
+            )
+
+            assert result is None
+
 
 @pytest.mark.unit
 class TestPromptToolkitBackendPromptChoice:
@@ -338,6 +377,66 @@ class TestPromptToolkitBackendPromptChoice:
                 )
 
                 assert result is None
+
+    @pytest.mark.asyncio
+    async def test_prompt_choice_default_and_invalid_then_valid(self) -> None:
+        """Test choice prompt defaulting and retrying after invalid input."""
+        backend = PromptToolkitBackend(config=PromptAdapterSettings())
+
+        with patch("mcp_common.backends.toolkit.prompt") as mock_prompt:
+            with patch("builtins.print"):
+                mock_prompt.side_effect = ["", "maybe", "2"]
+                result = await backend.prompt_choice(
+                    title="Select",
+                    message="Choose:",
+                    choices=["A", "B"],
+                    default=None,
+                )
+
+                assert result == "A"
+                assert mock_prompt.call_count == 1
+
+        with patch("mcp_common.backends.toolkit.prompt") as mock_prompt:
+            with patch("builtins.print"):
+                mock_prompt.side_effect = ["maybe", "2"]
+                result = await backend.prompt_choice(
+                    title="Select",
+                    message="Choose:",
+                    choices=["A", "B"],
+                )
+
+                assert result == "B"
+                assert mock_prompt.call_count == 2
+
+    @pytest.mark.asyncio
+    async def test_prompt_choice_accepts_direct_selection(self) -> None:
+        """Test choice prompt accepts an exact choice string."""
+        backend = PromptToolkitBackend(config=PromptAdapterSettings())
+
+        with patch("mcp_common.backends.toolkit.prompt") as mock_prompt:
+            with patch("builtins.print"):
+                mock_prompt.return_value = "B"
+                result = await backend.prompt_choice(
+                    title="Select",
+                    message="Choose:",
+                    choices=["A", "B"],
+                )
+
+                assert result == "B"
+
+    @pytest.mark.asyncio
+    async def test_prompt_choice_handles_unexpected_exception(self) -> None:
+        """Test choice prompt returns None on unexpected errors."""
+        backend = PromptToolkitBackend(config=PromptAdapterSettings())
+
+        with patch("mcp_common.backends.toolkit.prompt", side_effect=Exception("boom")):
+            result = await backend.prompt_choice(
+                title="Select",
+                message="Choose:",
+                choices=["A", "B"],
+            )
+
+            assert result is None
 
 
 @pytest.mark.unit
@@ -410,6 +509,19 @@ class TestPromptToolkitBackendNotify:
             args = mock_print.call_args[0][0]
             assert "Success" in args or "✓" in args or "✅" in args
 
+    @pytest.mark.asyncio
+    async def test_notify_handles_print_exception(self) -> None:
+        """Test notify returns False when printing fails."""
+        backend = PromptToolkitBackend(config=PromptAdapterSettings())
+
+        with patch("builtins.print", side_effect=Exception("print failed")):
+            result = await backend.notify(
+                title="Info",
+                message="Message",
+            )
+
+            assert result is False
+
 
 @pytest.mark.unit
 class TestPromptToolkitBackendFileSelection:
@@ -465,6 +577,15 @@ class TestPromptToolkitBackendFileSelection:
             assert result is None
 
     @pytest.mark.asyncio
+    async def test_select_file_handles_exception(self) -> None:
+        """Test file selection wraps unexpected errors."""
+        backend = PromptToolkitBackend(config=PromptAdapterSettings())
+
+        with patch.object(backend, "prompt_text", side_effect=Exception("boom")):
+            with pytest.raises(DialogDisplayError):
+                await backend.select_file(title="Select File")
+
+    @pytest.mark.asyncio
     async def test_select_directory(self) -> None:
         """Test directory selection."""
         backend = PromptToolkitBackend(config=PromptAdapterSettings())
@@ -490,6 +611,15 @@ class TestPromptToolkitBackendFileSelection:
             )
 
             assert result is None
+
+    @pytest.mark.asyncio
+    async def test_select_directory_handles_exception(self) -> None:
+        """Test directory selection wraps unexpected errors."""
+        backend = PromptToolkitBackend(config=PromptAdapterSettings())
+
+        with patch.object(backend, "prompt_text", side_effect=Exception("boom")):
+            with pytest.raises(DialogDisplayError):
+                await backend.select_directory(title="Select Directory")
 
 
 @pytest.mark.unit

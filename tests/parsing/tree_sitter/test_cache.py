@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+import mcp_common.parsing.tree_sitter.cache as cache_module
 from mcp_common.parsing.tree_sitter.cache import (
     CacheStats,
     ContentHashLRUCache,
@@ -123,6 +124,30 @@ class TestContentHashLRUCache:
         # Invalidate non-existent
         invalidated = cache.invalidate(b"not there")
         assert invalidated is False
+
+    def test_ttl_expiration_and_prune_expired(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        cache = ContentHashLRUCache[str](max_size=10, ttl_seconds=10)
+        now = [100.0]
+
+        monkeypatch.setattr(cache_module.time, "time", lambda: now[0])
+
+        cache.set(b"fresh", "fresh-result")
+        cache._cache[cache._hash_content(b"fresh")].cached_at = 100.0
+        assert cache.get(b"fresh") == "fresh-result"
+
+        now[0] = 111.0
+        assert cache.get(b"fresh") is None
+
+        cache.set(b"old", "old-result")
+        cache.set(b"new", "new-result")
+        cache._cache[cache._hash_content(b"old")].cached_at = 90.0
+        cache._cache[cache._hash_content(b"new")].cached_at = 105.0
+
+        removed = cache.prune_expired()
+
+        assert removed == 1
+        assert cache.get(b"old") is None
+        assert cache.get(b"new") == "new-result"
 
 
 class TestCacheStats:

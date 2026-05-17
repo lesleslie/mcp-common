@@ -8,6 +8,7 @@ This script demonstrates the fundamental features of the prompting adapter:
 """
 
 import asyncio
+
 from mcp_common.prompting import create_prompt_adapter
 
 

@@ -10,6 +10,7 @@ This script demonstrates:
 
 import asyncio
 import os
+
 from mcp_common.prompting import (
     PromptAdapter,
     PromptAdapterSettings,
@@ -108,7 +109,7 @@ async def example_error_handling():
     except BackendUnavailableError as e:
         print(f"PyObjC backend unavailable: {e.backend}")
         print(f"Reason: {e.reason}")
-        print(f"Falling back to prompt-toolkit...")
+        print("Falling back to prompt-toolkit...")
 
         # Fallback to prompt-toolkit
         adapter = create_prompt_adapter(backend="prompt-toolkit")

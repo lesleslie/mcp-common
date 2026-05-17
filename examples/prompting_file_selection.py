@@ -8,7 +8,7 @@ This script demonstrates:
 """
 
 import asyncio
-from pathlib import Path
+
 from mcp_common.prompting import create_prompt_adapter
 
 

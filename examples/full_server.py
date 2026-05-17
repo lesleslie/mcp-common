@@ -104,9 +104,16 @@ def create_full_server() -> FullServer:
         ]
 
         if filters:
-            results = [r for r in results if all(r.get(k) == v for k, v in filters.items())]
+            results = [
+                r for r in results if all(r.get(k) == v for k, v in filters.items())
+            ]
 
-        return {"query": query, "results": results, "count": len(results), "filters": filters}
+        return {
+            "query": query,
+            "results": results,
+            "count": len(results),
+            "filters": filters,
+        }
 
     @server.tool()
     def process_data(data: dict[str, Any], operations: list[str]) -> dict[str, Any]:
@@ -123,9 +130,15 @@ def create_full_server() -> FullServer:
 
         for op in operations:
             if op == "uppercase":
-                result = {k: str(v).upper() if isinstance(v, str) else v for k, v in result.items()}
+                result = {
+                    k: str(v).upper() if isinstance(v, str) else v
+                    for k, v in result.items()
+                }
             elif op == "reverse":
-                result = {k: str(v)[::-1] if isinstance(v, str) else v for k, v in result.items()}
+                result = {
+                    k: str(v)[::-1] if isinstance(v, str) else v
+                    for k, v in result.items()
+                }
             elif op == "count":
                 result["_count"] = len(result)
 
@@ -150,7 +163,11 @@ def create_full_server() -> FullServer:
                 "api": {"endpoint": "http://localhost:8000", "timeout": 30},
             },
             "prod": {
-                "database": {"host": "db.prod.example.com", "port": 5432, "name": "mydb_prod"},
+                "database": {
+                    "host": "db.prod.example.com",
+                    "port": 5432,
+                    "name": "mydb_prod",
+                },
                 "api": {"endpoint": "https://api.example.com", "timeout": 10},
             },
         }

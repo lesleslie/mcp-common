@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import ssl
+import sys
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -22,6 +24,13 @@ with patch.dict("sys.modules", {"websockets": _websockets_mock}):
         WebSocketProtocol,
     )
     from mcp_common.websocket.server import WebSocketServer
+
+
+@pytest.fixture(autouse=True)
+def reset_websockets_mock(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setitem(sys.modules, "websockets", _websockets_mock)
+    monkeypatch.setattr(_server_mod, "websockets", _websockets_mock, raising=False)
+    _websockets_mock.reset_mock()
 
 
 # ---------------------------------------------------------------------------
@@ -70,6 +79,13 @@ class _FakeWebSocket:
             return next(self._iter)
         except StopIteration as exc:
             raise StopAsyncIteration from exc
+
+
+class _ClosedWebSocket(_FakeWebSocket):
+    exception_cls: type[BaseException] = Exception
+
+    async def __anext__(self) -> str:
+        raise self.exception_cls(1000, "closed")
 
 
 # ===================================================================
@@ -1087,6 +1103,51 @@ class TestStart:
         srv.metrics.on_connection_error.assert_not_called()
 
     @pytest.mark.asyncio
+    async def test_handler_rejects_invalid_auth_token(self) -> None:
+        authenticator = MagicMock()
+        authenticator.authenticate_connection.return_value = None
+        srv = ConcreteServer(require_auth=True, authenticator=authenticator, enable_metrics=True)
+        srv.metrics = MagicMock()
+
+        mock_serve = AsyncMock(return_value=MagicMock())
+        _websockets_mock.serve = mock_serve
+
+        await srv.start()
+        handler = mock_serve.call_args.args[0]
+
+        auth_message = WebSocketProtocol.encode(
+            WebSocketProtocol.create_request("auth", {"token": "bad-token"})
+        )
+        websocket = _FakeWebSocket(recv_messages=[auth_message])
+
+        await handler(websocket)
+
+        assert len(websocket.sent_messages) == 1
+        error = WebSocketProtocol.decode(websocket.sent_messages[0])
+        assert error.error_code == "AUTH_FAILED"
+        assert websocket.closed[-1] == (1008, "Authentication failed")
+        srv.metrics.on_connection_error.assert_called_once_with("auth_failed")
+
+    @pytest.mark.asyncio
+    async def test_handler_handles_authentication_exception(self) -> None:
+        srv = ConcreteServer(require_auth=True, authenticator=MagicMock(), enable_metrics=True)
+        srv.metrics = MagicMock()
+
+        mock_serve = AsyncMock(return_value=MagicMock())
+        _websockets_mock.serve = mock_serve
+
+        await srv.start()
+        handler = mock_serve.call_args.args[0]
+
+        websocket = _FakeWebSocket()
+        websocket.recv = AsyncMock(side_effect=RuntimeError("recv failed"))
+
+        await handler(websocket)
+
+        assert websocket.closed[-1] == (1011, "Authentication error")
+        srv.metrics.on_connection_error.assert_called_once_with("auth_error")
+
+    @pytest.mark.asyncio
     async def test_handler_processes_messages_and_records_metrics(self) -> None:
         srv = ConcreteServer(enable_metrics=True)
         srv.metrics = MagicMock()
@@ -1133,6 +1194,27 @@ class TestStart:
         assert error.error_code == "DECODE_ERROR"
         srv.metrics.on_message_error.assert_called_once_with("decode_error")
         srv.on_message.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_handler_handles_connection_closed(self) -> None:
+        connection_closed_exc = type("ConnectionClosed", (Exception,), {})
+        _websockets_mock.exceptions = SimpleNamespace(ConnectionClosed=connection_closed_exc)
+        srv = ConcreteServer()
+        srv.on_connect = AsyncMock()  # type: ignore[method-assign]
+        srv.on_disconnect = AsyncMock()  # type: ignore[method-assign]
+
+        mock_serve = AsyncMock(return_value=MagicMock())
+        _websockets_mock.serve = mock_serve
+
+        await srv.start()
+        handler = mock_serve.call_args.args[0]
+
+        websocket = _ClosedWebSocket()
+        websocket.exception_cls = connection_closed_exc
+
+        await handler(websocket)
+
+        srv.on_disconnect.assert_awaited_once()
 
     def test_cleanup_logs_warning_on_unlink_failure(self, tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> None:
         cert_file = tmp_path / "auto_cert.pem"

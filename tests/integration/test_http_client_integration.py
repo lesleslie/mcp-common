@@ -4,6 +4,10 @@ Tests that mcp-common correctly re-exports Oneiric's HTTPClientAdapter
 and that it works as expected for basic HTTP operations.
 """
 
+from __future__ import annotations
+
+import asyncio
+
 import pytest
 import httpx
 from oneiric.adapters.http import HTTPClientAdapter as OneiricHTTPClientAdapter
@@ -94,27 +98,40 @@ class TestHTTPClientAdapterReExport:
 class TestHTTPClientAdapterBasicUsage:
     """Test basic HTTP client adapter usage patterns."""
 
-    async def _require_httpbin(self) -> None:
-        """Skip the test if httpbin.org is unreachable."""
-        try:
-            async with httpx.AsyncClient(timeout=5.0) as client:
-                response = await client.get("https://httpbin.org/get")
-                response.raise_for_status()
-        except httpx.HTTPError:
-            pytest.skip("httpbin.org not reachable - skipping integration test")
+    def _make_adapter(self) -> tuple[object, dict[str, int]]:
+        """Create an adapter backed by a local mock transport."""
+        state = {"in_flight": 0, "max_in_flight": 0}
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            state["in_flight"] += 1
+            state["max_in_flight"] = max(state["max_in_flight"], state["in_flight"])
+            try:
+                await asyncio.sleep(0.05)
+                return httpx.Response(
+                    200,
+                    json={
+                        "url": str(request.url),
+                        "path": request.url.path,
+                        "method": request.method,
+                    },
+                )
+            finally:
+                state["in_flight"] -= 1
+
+        settings = OneiricHTTPClientSettings(
+            timeout=10.0,
+            base_url="https://example.test",
+        )
+        adapter = OneiricHTTPClientAdapter(
+            settings=settings,
+            transport=httpx.MockTransport(handler),
+        )
+        return adapter, state
 
     @pytest.mark.asyncio
     async def test_simple_get_request(self):
-        """Test simple GET request using httpbin (public HTTP test API)."""
-        from mcp_common import HTTPClientAdapter, HTTPClientSettings
-
-        await self._require_httpbin()
-
-        settings = HTTPClientSettings(
-            timeout=10.0,
-            base_url="https://httpbin.org",
-        )
-        adapter = HTTPClientAdapter(settings=settings)
+        """Test simple GET request using a local mock transport."""
+        adapter, _state = self._make_adapter()
 
         await adapter.init()
 
@@ -125,24 +142,16 @@ class TestHTTPClientAdapterBasicUsage:
             # Verify response
             assert response.status_code == 200
             data = response.json()
-            assert "url" in data
+            assert data["path"] == "/get"
+            assert data["method"] == "GET"
+            assert data["url"] == "https://example.test/get"
         finally:
             await adapter.cleanup()
 
     @pytest.mark.asyncio
     async def test_concurrent_requests(self):
-        """Test concurrent requests using connection pooling."""
-        import asyncio
-
-        from mcp_common import HTTPClientAdapter, HTTPClientSettings
-
-        await self._require_httpbin()
-
-        settings = HTTPClientSettings(
-            timeout=10.0,
-            base_url="https://httpbin.org",
-        )
-        adapter = HTTPClientAdapter(settings=settings)
+        """Test concurrent requests using a local mock transport."""
+        adapter, state = self._make_adapter()
 
         await adapter.init()
 
@@ -157,5 +166,6 @@ class TestHTTPClientAdapterBasicUsage:
 
             # All should succeed
             assert all(r == 200 for r in results)
+            assert state["max_in_flight"] > 1
         finally:
             await adapter.cleanup()

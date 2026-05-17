@@ -25,7 +25,6 @@ from typing import Any
 from mcp_common.profiles import StandardServer
 from mcp_common.ui import ServerPanels
 
-
 # Safe calculation operations
 OPERATIONS = {
     "+": operator.add,
@@ -56,7 +55,11 @@ def safe_calculate(expression: str) -> dict[str, Any]:
         b_int = int(b)
 
         if op not in OPERATIONS:
-            return {"expression": expression, "result": None, "error": "Unsupported operation"}
+            return {
+                "expression": expression,
+                "result": None,
+                "error": "Unsupported operation",
+            }
 
         result = OPERATIONS[op](a_int, b_int)
         return {"expression": expression, "result": result, "error": None}
@@ -77,7 +80,7 @@ def create_standard_server() -> StandardServer:
     # Create standard server
     server = StandardServer(
         name="standard-server",
-        description="Standard MCP Server with tools and resources"
+        description="Standard MCP Server with tools and resources",
     )
 
     # Register tools using decorators

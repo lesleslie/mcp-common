@@ -15,6 +15,37 @@ pytest.importorskip("tree_sitter")
 pytest.importorskip("tree_sitter_python")
 
 
+class _FakeNode:
+    def __init__(
+        self,
+        node_type: str,
+        *,
+        children: list[_FakeNode] | None = None,
+        fields: dict[str, _FakeNode | None] | None = None,
+        text: str = "",
+        start_byte: int = 0,
+        end_byte: int | None = None,
+        start_point: tuple[int, int] = (0, 0),
+        end_point: tuple[int, int] = (0, 0),
+    ) -> None:
+        self.type = node_type
+        self.children = children or []
+        self._fields = fields or {}
+        self.text = text
+        self.start_byte = start_byte
+        self.end_byte = len(text) if end_byte is None else end_byte
+        self.start_point = start_point
+        self.end_point = end_point
+
+    def child_by_field_name(self, name: str) -> _FakeNode | None:
+        return self._fields.get(name)
+
+
+class _FakeTree:
+    def __init__(self, root_node: _FakeNode) -> None:
+        self.root_node = root_node
+
+
 class TestPythonHandler:
     """Tests for PythonHandler."""
 
@@ -207,3 +238,217 @@ def process_items(items):
         assert "process_items" in metrics
         # Should account for for loop and if statement
         assert metrics["process_items"].cyclomatic >= 2
+
+    def test_extract_decorated_function_and_nested_definitions(
+        self,
+        handler: PythonHandler,
+        parser,
+    ) -> None:
+        code = b'''
+@decorator
+def outer(x: int):
+    """Outer docstring."""
+    total = 0
+
+    def inner(y: int):
+        return x and y
+
+    return inner(total)
+'''
+        tree = parser.parse(code)
+        symbols, relationships, imports = handler.extract(code, tree)
+        metrics = handler.compute_complexity(code, tree)
+
+        names = {symbol.name for symbol in symbols}
+        assert "outer" in names
+        assert "inner" in names
+        outer = next(symbol for symbol in symbols if symbol.name == "outer")
+        inner = next(symbol for symbol in symbols if symbol.name == "inner")
+        assert outer.docstring == "Outer docstring."
+        assert inner.kind == SymbolKind.METHOD
+        assert any(symbol.kind == SymbolKind.VARIABLE for symbol in symbols)
+        assert metrics["outer"].cyclomatic >= 2
+        assert metrics["inner"].cyclomatic >= 1
+
+    def test_extract_import_aliases_wildcards_and_assignments(
+        self,
+        handler: PythonHandler,
+        parser,
+    ) -> None:
+        code = b'''
+import os as operating_system
+from math import *
+from collections import deque as dq, Counter
+
+CONSTANT_VALUE = 10
+mutable_value = 20
+
+class Config:
+    CLASS_VALUE = 30
+'''
+        tree = parser.parse(code)
+        symbols, relationships, imports = handler.extract(code, tree)
+
+        import_modules = {imp.module for imp in imports}
+        assert "os" in import_modules
+        assert "math" in import_modules
+        assert "collections" in import_modules
+
+        math_import = next(imp for imp in imports if imp.module == "math")
+        collections_import = next(imp for imp in imports if imp.module == "collections")
+        assert "*" in math_import.names
+        assert "deque" in collections_import.names
+        assert "Counter" in collections_import.names
+
+        constants = {symbol.name for symbol in symbols if symbol.kind == SymbolKind.CONSTANT}
+        variables = {symbol.name for symbol in symbols if symbol.kind == SymbolKind.VARIABLE}
+        assert "CONSTANT_VALUE" in constants
+        assert "mutable_value" in variables
+        assert "CLASS_VALUE" in variables
+
+    def test_extract_default_parameter_and_single_alias_import(
+        self,
+        handler: PythonHandler,
+        parser,
+    ) -> None:
+        code = b'''
+from collections import deque as dq
+
+def configure(level="debug"):
+    return level
+'''
+        tree = parser.parse(code)
+        symbols, relationships, imports = handler.extract(code, tree)
+
+        assert any(imp.module == "collections" and "deque" in imp.names for imp in imports)
+        configure = next(symbol for symbol in symbols if symbol.name == "configure")
+        assert configure.parameters
+        assert configure.parameters[0]["default"] == '"debug"'
+
+    def test_compute_complexity_with_nested_control_flow(
+        self,
+        handler: PythonHandler,
+        parser,
+    ) -> None:
+        code = b'''
+def complex_logic(items, enabled):
+    assert items
+    total = 0
+
+    with open("/tmp/data.txt") as handle:
+        for item in items:
+            while total < 3:
+                if enabled and item:
+                    total += 1 if item else 0
+                try:
+                    total += 1
+                except ValueError:
+                    total += 2
+
+    return total
+'''
+        tree = parser.parse(code)
+        metrics = handler.compute_complexity(code, tree)
+
+        assert "complex_logic" in metrics
+        assert metrics["complex_logic"].cyclomatic >= 8
+        assert metrics["complex_logic"].num_returns == 1
+        assert metrics["complex_logic"].cognitive > 0
+
+    def test_private_extractors_handle_missing_fields(self, handler: PythonHandler) -> None:
+        source = "def x():\n    pass\n"
+
+        assert handler._extract_function(_FakeNode("function_definition"), source, None) is None
+        assert handler._extract_class(_FakeNode("class_definition"), source, None) is None
+        assert handler._extract_import(_FakeNode("import_statement"), source) is None
+        assert (
+            handler._extract_from_import(_FakeNode("import_from_statement"), source) is None
+        )
+        assert handler._extract_assignment(_FakeNode("assignment"), source, None) is None
+        assert handler._extract_docstring(_FakeNode("function_definition"), source) is None
+
+    def test_private_extractors_cover_alias_and_module_branches(self, handler: PythonHandler) -> None:
+        source = "from pkg import thing as alias\n"
+
+        aliased_import = _FakeNode(
+            "aliased_import",
+            fields={"name": _FakeNode("identifier", text="thing", start_byte=16, end_byte=21)},
+        )
+        import_node = _FakeNode(
+            "import_from_statement",
+            children=[
+                _FakeNode("dotted_name", text="pkg", start_byte=5, end_byte=8),
+                _FakeNode("import"),
+                aliased_import,
+            ],
+            start_point=(0, 0),
+        )
+        imported = handler._extract_from_import(import_node, source)
+
+        assert imported is not None
+        assert imported.module == "pkg"
+        assert imported.names == ("thing",)
+
+        import_only_node = _FakeNode(
+            "import_statement",
+            children=[_FakeNode("aliased_import", fields={})],
+            start_point=(0, 0),
+        )
+        assert handler._extract_import(import_only_node, source) is None
+
+    def test_private_extractors_cover_import_list_and_single_quote_docstring(
+        self,
+        handler: PythonHandler,
+    ) -> None:
+        source = "from pkg import thing as alias\n\ndef single_quote():\n    'Doc'\n    return 1\n"
+
+        import_list = _FakeNode(
+            "import_list",
+            children=[
+                _FakeNode("identifier", text="thing", start_byte=16, end_byte=21),
+                _FakeNode(
+                    "aliased_import",
+                    fields={"name": _FakeNode("identifier", text="alias", start_byte=25, end_byte=30)},
+                ),
+            ],
+        )
+        import_node = _FakeNode(
+            "import_from_statement",
+            children=[
+                _FakeNode("dotted_name", text="pkg", start_byte=5, end_byte=8),
+                _FakeNode("import"),
+                import_list,
+            ],
+            start_point=(0, 0),
+        )
+        imported = handler._extract_from_import(import_node, source)
+
+        assert imported is not None
+        assert imported.module == "pkg"
+        assert imported.names == ("thing", "alias")
+
+        doc_start = source.index("'Doc'")
+        func_node = _FakeNode(
+            "function_definition",
+            fields={
+                "body": _FakeNode(
+                    "block",
+                    children=[
+                        _FakeNode(
+                            "expression_statement",
+                            children=[
+                                _FakeNode(
+                                    "string",
+                                    text="'Doc'",
+                                    start_byte=doc_start,
+                                    end_byte=doc_start + 5,
+                                )
+                            ],
+                        )
+                    ],
+                )
+            },
+            start_byte=0,
+            end_byte=len(source),
+        )
+        assert handler._extract_docstring(func_node, source) == "Doc"
