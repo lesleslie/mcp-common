@@ -39,3 +39,21 @@ def test_permission_from_string():
 def test_invalid_permission_raises():
     with pytest.raises(ValueError):
         Permission("superuser")
+
+
+def test_role_has_returns_true_for_granted():
+    role = Role(name="editor", permissions=frozenset({Permission.READ, Permission.WRITE}))
+    assert role.has(Permission.READ) is True
+    assert role.has(Permission.WRITE) is True
+
+
+def test_role_has_returns_false_for_missing():
+    role = Role(name="viewer", permissions=frozenset({Permission.READ}))
+    assert role.has(Permission.DELETE) is False
+    assert role.has(Permission.ADMIN) is False
+
+
+def test_role_has_with_empty_permissions():
+    role = Role(name="nobody")
+    for perm in Permission:
+        assert role.has(perm) is False

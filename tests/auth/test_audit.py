@@ -72,3 +72,38 @@ def test_custom_sink_receives_event():
     logger.emit(event)
     assert len(received) == 1
     assert received[0].result == "denied"
+
+
+def test_sink_exception_does_not_propagate(caplog):
+    """A failing sink must not prevent other sinks from receiving events."""
+
+    class BrokenSink:
+        def emit(self, event: AuthAuditEvent) -> None:
+            raise RuntimeError("sink failure")
+
+    class GoodSink:
+        def __init__(self) -> None:
+            self.received: list[AuthAuditEvent] = []
+
+        def emit(self, event: AuthAuditEvent) -> None:
+            self.received.append(event)
+
+    good = GoodSink()
+    logger = AuditLogger()
+    logger.register_sink(BrokenSink())
+    logger.register_sink(good)
+
+    event = AuthAuditEvent(
+        timestamp=datetime.now(UTC),
+        service="mahavishnu",
+        caller_service="cli",
+        caller_id="system",
+        action="route",
+        permission=Permission.WRITE,
+        result="allowed",
+        reason=None,
+        source_ip=None,
+        token_id=None,
+    )
+    logger.emit(event)  # must not raise
+    assert len(good.received) == 1
