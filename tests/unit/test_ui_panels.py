@@ -6,8 +6,6 @@ from datetime import UTC, datetime
 from unittest.mock import Mock, patch
 
 import pytest
-from rich.console import Console
-from rich.table import Table
 
 from mcp_common.ui import ServerPanels
 
@@ -455,6 +453,28 @@ class TestServerPanelsGenericHelpers:
                 ("API Server", "Running", 1234, "Listening on :8000"),
                 ("Worker", "Running", 1235, "Processing jobs"),
                 ("Scheduler", "Stopped", None, "Disabled"),
+            ],
+        )
+
+        mock_console.print.assert_called_once()
+
+    @patch("mcp_common.ui.panels.console")
+    def test_server_status_table_with_markup_status(self, mock_console: Mock) -> None:
+        """Test server_status_table preserves explicit Rich markup."""
+        ServerPanels.server_status_table(
+            rows=[
+                ("API Server", "[green]Running[/green]", 1234, "Listening on :8000"),
+            ],
+        )
+
+        mock_console.print.assert_called_once()
+
+    @patch("mcp_common.ui.panels.console")
+    def test_server_status_table_without_status_column(self, mock_console: Mock) -> None:
+        """Test server_status_table leaves single-cell rows untouched."""
+        ServerPanels.server_status_table(
+            rows=[
+                ("Component-only",),
             ],
         )
 

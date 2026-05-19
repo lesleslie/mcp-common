@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, Mock, patch
+from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
 from mcp_common.backends.toolkit import PromptToolkitBackend
 from mcp_common.prompting.exceptions import BackendUnavailableError, DialogDisplayError
-from mcp_common.prompting.models import DialogResult, NotificationLevel, PromptAdapterSettings, PromptConfig
+from mcp_common.prompting.models import (
+    DialogResult,
+    NotificationLevel,
+    PromptAdapterSettings,
+)
 
 
 @pytest.mark.unit
@@ -408,6 +413,18 @@ class TestPromptToolkitBackendPromptChoice:
                 assert result == "B"
                 assert mock_prompt.call_count == 2
 
+        with patch("mcp_common.backends.toolkit.prompt") as mock_prompt:
+            with patch("builtins.print"):
+                mock_prompt.side_effect = ["9", "2"]
+                result = await backend.prompt_choice(
+                    title="Select",
+                    message="Choose:",
+                    choices=["A", "B"],
+                )
+
+                assert result == "B"
+                assert mock_prompt.call_count == 2
+
     @pytest.mark.asyncio
     async def test_prompt_choice_accepts_direct_selection(self) -> None:
         """Test choice prompt accepts an exact choice string."""
@@ -528,7 +545,7 @@ class TestPromptToolkitBackendFileSelection:
     """Tests for file and directory selection methods."""
 
     @pytest.mark.asyncio
-    async def test_select_file_single(self) -> None:
+    async def test_select_file_single(self, tmp_path: Path) -> None:
         """Test single file selection."""
         backend = PromptToolkitBackend(config=PromptAdapterSettings())
 
@@ -543,6 +560,17 @@ class TestPromptToolkitBackendFileSelection:
             assert result is not None
             assert len(result) == 1
             assert str(result[0]) == "/path/to/file.txt"
+
+        with patch("mcp_common.backends.toolkit.prompt") as mock_prompt:
+            with patch("builtins.print"):
+                file_path = tmp_path / "existing-file.txt"
+                file_path.write_text("data")
+                mock_prompt.return_value = str(file_path)
+                result = await backend.select_file(title="Select File")
+
+                assert result is not None
+                assert len(result) == 1
+                assert result[0] == file_path
 
     @pytest.mark.asyncio
     async def test_select_file_multiple(self) -> None:
@@ -586,7 +614,7 @@ class TestPromptToolkitBackendFileSelection:
                 await backend.select_file(title="Select File")
 
     @pytest.mark.asyncio
-    async def test_select_directory(self) -> None:
+    async def test_select_directory(self, tmp_path: Path) -> None:
         """Test directory selection."""
         backend = PromptToolkitBackend(config=PromptAdapterSettings())
 
@@ -598,6 +626,17 @@ class TestPromptToolkitBackendFileSelection:
 
             assert result is not None
             assert str(result) == "/path/to/directory"
+
+        with patch("mcp_common.backends.toolkit.prompt") as mock_prompt:
+            with patch("builtins.print"):
+                dir_path = tmp_path / "existing-directory"
+                dir_path.mkdir(exist_ok=True)
+                mock_prompt.return_value = str(dir_path)
+                result = await backend.select_directory(
+                    title="Select Directory",
+                )
+
+                assert result == dir_path
 
     @pytest.mark.asyncio
     async def test_select_directory_cancelled(self) -> None:

@@ -2,18 +2,18 @@
 
 from __future__ import annotations
 
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
 from mcp_common.prompting import PromptBackend
 from mcp_common.prompting.exceptions import BackendUnavailableError
 from mcp_common.prompting.factory import (
+    _resolve_backend,
     create_prompt_adapter,
     list_available_backends,
-    _resolve_backend,
 )
-from mcp_common.prompting.models import PromptAdapterSettings, PromptConfig
+from mcp_common.prompting.models import PromptAdapterSettings
 
 
 @pytest.mark.unit
@@ -57,6 +57,19 @@ class TestResolveBackend:
         """Test auto-detection on Linux."""
         backend = _resolve_backend("auto", PromptAdapterSettings())
         assert backend == "prompt-toolkit"
+
+    @patch("sys.platform", "darwin")
+    def test_resolve_backend_auto_on_macos_without_any_backend(self) -> None:
+        """Test auto-detection on macOS when no backend is available."""
+        with patch(
+            "mcp_common.backends.pyobjc.PyObjCPromptBackend.is_available_static",
+            return_value=False,
+        ), patch(
+            "mcp_common.backends.toolkit.PromptToolkitBackend.is_available_static",
+            return_value=False,
+        ):
+            with pytest.raises(BackendUnavailableError):
+                _resolve_backend("auto", PromptAdapterSettings())
 
     @patch("sys.platform", "win32")
     def test_resolve_backend_auto_on_windows(self) -> None:
@@ -124,6 +137,26 @@ class TestCreatePromptAdapter:
         assert adapter.config.timeout == 60
         assert adapter.config.tui_theme == "dark"
 
+    def test_create_adapter_prompt_toolkit_init_failure(self) -> None:
+        """Test prompt-toolkit constructor failures are wrapped."""
+        with patch("mcp_common.backends.toolkit.PromptToolkitBackend", side_effect=RuntimeError("boom")):
+            with pytest.raises(BackendUnavailableError) as exc_info:
+                create_prompt_adapter(backend="prompt-toolkit")
+
+        error = exc_info.value
+        assert error.backend == "prompt-toolkit"
+        assert "Failed to initialize prompt-toolkit" in str(error)
+
+    def test_create_adapter_pyobjc_init_failure(self) -> None:
+        """Test pyobjc constructor failures are wrapped."""
+        with patch("mcp_common.backends.pyobjc.PyObjCPromptBackend", side_effect=RuntimeError("boom")):
+            with pytest.raises(BackendUnavailableError) as exc_info:
+                create_prompt_adapter(backend="pyobjc")
+
+        error = exc_info.value
+        assert error.backend == "pyobjc"
+        assert "Failed to initialize PyObjC" in str(error)
+
 
 @pytest.mark.unit
 class TestBackendAvailability:
@@ -148,6 +181,17 @@ class TestBackendAvailability:
 
         assert "pyobjc" in available
         assert "prompt-toolkit" in available
+
+    def test_list_available_backends_empty_when_unavailable(self) -> None:
+        """Test list_available_backends returns empty when both backends are unavailable."""
+        with patch(
+            "mcp_common.backends.pyobjc.PyObjCPromptBackend.is_available_static",
+            return_value=False,
+        ), patch(
+            "mcp_common.backends.toolkit.PromptToolkitBackend.is_available_static",
+            return_value=False,
+        ):
+            assert list_available_backends() == []
 
     @patch("sys.platform", "linux")
     def test_pyobjc_not_available_on_linux(self) -> None:

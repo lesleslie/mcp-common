@@ -227,6 +227,28 @@ class TestTreeSitterParser:
 
         assert type(executor).__name__ == "ThreadPoolExecutor"
 
+    def test_get_executor_creates_process_pool(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        parser = core.TreeSitterParser(max_workers=2)
+        executor = MagicMock(name="process_pool")
+        mocked_ctor = MagicMock(return_value=executor)
+        monkeypatch.setattr(core, "ProcessPoolExecutor", mocked_ctor)
+
+        result = parser._get_executor()
+
+        assert result is executor
+        mocked_ctor.assert_called_once_with(max_workers=2)
+
+    def test_get_executor_reuses_existing_executor(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        parser = core.TreeSitterParser(max_workers=2)
+        executor = MagicMock(name="cached_executor")
+        parser._executor = executor
+        monkeypatch.setattr(core, "ProcessPoolExecutor", MagicMock())
+
+        result = parser._get_executor()
+
+        assert result is executor
+        core.ProcessPoolExecutor.assert_not_called()
+
     def test_shutdown_clears_executor(self) -> None:
         parser = core.TreeSitterParser()
         executor = MagicMock()

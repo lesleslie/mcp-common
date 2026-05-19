@@ -9,27 +9,27 @@ Extended: HTTP dependency checking, DependencyWaiter, MCP tool registration.
 
 from __future__ import annotations
 
-import asyncio
 import time
+import typing as t
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from hypothesis import given, strategies as st
+from hypothesis import given
+from hypothesis import strategies as st
 
 from mcp_common.health import (
     ComponentHealth,
     DependencyConfig,
     DependencyWaiter,
+    HealthChecker,
     HealthCheckResponse,
     HealthCheckResult,
-    HealthChecker,
     HealthStatus,
     WaitResult,
     _HttpxFallback,
     register_health_tools,
 )
-
 
 # =============================================================================
 # HealthStatus
@@ -562,6 +562,43 @@ class TestHealthChecker:
         checker = HealthChecker(timeout_seconds=10)
         assert checker._timeout == 10
         assert checker._http_action is not None
+
+    def test_create_http_action_uses_oneiric_when_available(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Should prefer Oneiric's HttpFetchAction when import succeeds."""
+        import sys
+        from types import ModuleType
+
+        fake_http_module = ModuleType("oneiric.actions.http")
+
+        class FakeHttpFetchAction:
+            def __init__(self) -> None:
+                self.created = True
+
+        fake_http_module.HttpFetchAction = FakeHttpFetchAction  # type: ignore[attr-defined]
+        fake_actions_module = ModuleType("oneiric.actions")
+        fake_actions_module.http = fake_http_module  # type: ignore[attr-defined]
+        fake_oneiric_module = ModuleType("oneiric")
+        fake_oneiric_module.actions = fake_actions_module  # type: ignore[attr-defined]
+
+        original_modules = {
+            name: sys.modules.get(name)
+            for name in ("oneiric", "oneiric.actions", "oneiric.actions.http")
+        }
+        monkeypatch.setitem(sys.modules, "oneiric", fake_oneiric_module)
+        monkeypatch.setitem(sys.modules, "oneiric.actions", fake_actions_module)
+        monkeypatch.setitem(sys.modules, "oneiric.actions.http", fake_http_module)
+
+        checker = HealthChecker(timeout_seconds=10)
+
+        assert type(checker._http_action).__name__ == "FakeHttpFetchAction"
+
+        for name, module in original_modules.items():
+            if module is None:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = module
 
     @pytest.mark.asyncio
     async def test_check_healthy_response(self) -> None:
@@ -1158,8 +1195,9 @@ class TestRegisterHealthTools:
         """Should register 6 health tools on the MCP server."""
         mock_mcp = MagicMock()
 
-        with patch("mcp_common.health.HealthChecker") as mock_checker_cls, \
-             patch("mcp_common.health.DependencyWaiter") as mock_waiter_cls:
+        with patch("mcp_common.health.HealthChecker"), patch(
+            "mcp_common.health.DependencyWaiter"
+        ):
             register_health_tools(
                 mock_mcp,
                 service_name="test-service",
@@ -1223,8 +1261,9 @@ class TestRegisterHealthTools:
             "session_buddy": DependencyConfig(port=8678, required=True),
         }
 
-        with patch("mcp_common.health.HealthChecker") as mock_checker_cls, \
-             patch("mcp_common.health.DependencyWaiter") as mock_waiter_cls:
+        with patch("mcp_common.health.HealthChecker"), patch(
+            "mcp_common.health.DependencyWaiter"
+        ):
             register_health_tools(
                 mock_mcp,
                 dependencies=deps,
@@ -1232,6 +1271,170 @@ class TestRegisterHealthTools:
 
         # The function should have been called (tools registered)
         assert mock_mcp.tool.call_count == 6
+
+    @pytest.mark.asyncio
+    async def test_wait_for_dependency_handles_missing_dep_result(self) -> None:
+        """Should omit dependency fields when waiter returns no dependency result."""
+        mock_mcp = MagicMock()
+        mock_waiter = MagicMock()
+        mock_waiter.wait_for_all = AsyncMock(
+            return_value=WaitResult(
+                success=False,
+                dependencies={},
+                total_wait_seconds=1.25,
+                failed_required=["cache"],
+            )
+        )
+        captured: dict[str, t.Callable[..., t.Awaitable[dict[str, t.Any]]]] = {}
+
+        def capture_tool():
+            def decorator(func):
+                captured[func.__name__] = func
+                return func
+
+            return decorator
+
+        mock_mcp.tool = MagicMock(side_effect=capture_tool)
+
+        with patch("mcp_common.health.HealthChecker"), patch(
+            "mcp_common.health.DependencyWaiter", return_value=mock_waiter
+        ):
+            register_health_tools(mock_mcp, dependencies={})
+
+        result = await captured["wait_for_dependency"](
+            dep_service_name="cache",
+            timeout=5,
+            required=True,
+        )
+
+        assert "status" not in result
+        assert "latency_ms" not in result
+        assert "error" not in result
+        assert result["message"].startswith("Required dependency 'cache'")
+
+    @pytest.mark.asyncio
+    async def test_wait_for_dependency_without_error_field(self) -> None:
+        """Should omit the error field when the dependency result has no error."""
+        mock_mcp = MagicMock()
+        mock_waiter = MagicMock()
+        mock_waiter.wait_for_all = AsyncMock(
+            return_value=WaitResult(
+                success=True,
+                dependencies={
+                    "db": HealthCheckResult(
+                        service_name="db",
+                        status=HealthStatus.DEGRADED,
+                        latency_ms=12.5,
+                    )
+                },
+                total_wait_seconds=1.0,
+            )
+        )
+        captured: dict[str, t.Callable[..., t.Awaitable[dict[str, t.Any]]]] = {}
+
+        def capture_tool():
+            def decorator(func):
+                captured[func.__name__] = func
+                return func
+
+            return decorator
+
+        mock_mcp.tool = MagicMock(side_effect=capture_tool)
+
+        with patch("mcp_common.health.HealthChecker"), patch(
+            "mcp_common.health.DependencyWaiter", return_value=mock_waiter
+        ):
+            register_health_tools(mock_mcp, dependencies={"db": DependencyConfig()})
+
+        result = await captured["wait_for_dependency"](
+            dep_service_name="db",
+            timeout=5,
+            required=True,
+        )
+
+        assert result["status"] == "degraded"
+        assert result["latency_ms"] == 12.5
+        assert "error" not in result
+
+    @pytest.mark.asyncio
+    async def test_wait_for_all_dependencies_success_omits_message(self) -> None:
+        """Should not add a message when all dependencies are healthy."""
+        mock_mcp = MagicMock()
+        mock_waiter = MagicMock()
+        mock_waiter.wait_for_all = AsyncMock(
+            return_value=WaitResult(
+                success=True,
+                dependencies={
+                    "db": HealthCheckResult(
+                        service_name="db",
+                        status=HealthStatus.HEALTHY,
+                    )
+                },
+                total_wait_seconds=2.0,
+            )
+        )
+        captured: dict[str, t.Callable[..., t.Awaitable[dict[str, t.Any]]]] = {}
+
+        def capture_tool():
+            def decorator(func):
+                captured[func.__name__] = func
+                return func
+
+            return decorator
+
+        mock_mcp.tool = MagicMock(side_effect=capture_tool)
+
+        with patch("mcp_common.health.HealthChecker"), patch(
+            "mcp_common.health.DependencyWaiter", return_value=mock_waiter
+        ):
+            register_health_tools(
+                mock_mcp,
+                dependencies={"db": DependencyConfig()},
+            )
+
+        result = await captured["wait_for_all_dependencies"]()
+
+        assert result["success"] is True
+        assert result["dependencies"]["db"]["status"] == "healthy"
+        assert "message" not in result
+
+    @pytest.mark.asyncio
+    async def test_wait_for_dependency_without_dependency_entry(self) -> None:
+        """Should still return a response when the waiter has no dependency entry."""
+        mock_mcp = MagicMock()
+        mock_waiter = MagicMock()
+        mock_waiter.wait_for_all = AsyncMock(
+            return_value=WaitResult(
+                success=False,
+                dependencies={},
+                total_wait_seconds=0.5,
+            )
+        )
+        captured: dict[str, t.Callable[..., t.Awaitable[dict[str, t.Any]]]] = {}
+
+        def capture_tool():
+            def decorator(func):
+                captured[func.__name__] = func
+                return func
+
+            return decorator
+
+        mock_mcp.tool = MagicMock(side_effect=capture_tool)
+
+        with patch("mcp_common.health.HealthChecker"), patch(
+            "mcp_common.health.DependencyWaiter", return_value=mock_waiter
+        ):
+            register_health_tools(mock_mcp, dependencies={})
+
+        result = await captured["wait_for_dependency"](
+            dep_service_name="cache",
+            timeout=5,
+            required=False,
+        )
+
+        assert result["success"] is False
+        assert "status" not in result
+        assert "message" not in result
 
 
 # =============================================================================

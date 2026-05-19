@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-common"
-version = "0.15.1"
+version = "0.15.2"
 description = "Oneiric-Native foundation library providing battle-tested patterns for MCP (Model Context Protocol) servers, with YAML configuration, Rich UI, and CLI lifecycle management"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -125,7 +125,7 @@ max-complexity = 15
 [tool.pytest.ini_options]
 minversion = "8.0"
 addopts = [
-    "--cov=mcp-common",
+    "--cov=mcp_common",
     "--cov-report=term-missing:skip-covered",
     "--cov-report=html:htmlcov",
     "--cov-report=json",
@@ -163,7 +163,7 @@ concurrency = [
     "multiprocessing",
 ]
 source = [
-    "mcp-common",
+    "mcp_common",
 ]
 data_file = ".coverage"
 omit = [

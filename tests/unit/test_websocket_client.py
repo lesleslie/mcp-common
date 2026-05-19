@@ -5,18 +5,16 @@ from __future__ import annotations
 import asyncio
 import ssl
 import sys
-from types import ModuleType, SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-
 
 _websockets_mock = MagicMock()
 with pytest.MonkeyPatch.context() as monkeypatch:
     monkeypatch.setitem(sys.modules, "websockets", _websockets_mock)
     import mcp_common.websocket.client as client_mod
     from mcp_common.websocket.client import WebSocketClient
-    from mcp_common.websocket.protocol import MessageType, WebSocketProtocol
+    from mcp_common.websocket.protocol import WebSocketProtocol
 
 
 class _FakeSSLContext:
@@ -160,6 +158,22 @@ class TestConnectAndAuth:
         _websockets_mock.connect.assert_awaited_once()
 
     @pytest.mark.asyncio
+    async def test_connect_success_without_token(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        websocket = _FakeWebSocket()
+        _websockets_mock.connect = AsyncMock(return_value=websocket)
+        monkeypatch.setattr(client_mod.asyncio, "create_task", _create_task)
+
+        client = WebSocketClient("ws://example.com")
+        client._receive_loop = AsyncMock(return_value=None)  # type: ignore[method-assign]
+
+        await client.connect()
+
+        assert client.websocket is websocket
+        assert client.is_connected is True
+        assert client.is_authenticated is False
+        assert websocket.sent_messages == []
+
+    @pytest.mark.asyncio
     async def test_connect_failure_no_reconnect(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _websockets_mock.connect = AsyncMock(side_effect=RuntimeError("boom"))
         client = WebSocketClient("ws://example.com", reconnect=False)
@@ -207,6 +221,18 @@ class TestConnectAndAuth:
         with pytest.raises(ConnectionError, match="Authentication failed"):
             await client._authenticate()
 
+        client.is_authenticated = False
+        other_ws = _FakeWebSocket(
+            recv_messages=[
+                WebSocketProtocol.encode(
+                    WebSocketProtocol.create_event("status", {"ok": True})
+                )
+            ]
+        )
+        client.websocket = other_ws
+        await client._authenticate()
+        assert client.is_authenticated is False
+
     @pytest.mark.asyncio
     async def test_authenticate_without_token_returns_none(self) -> None:
         client = WebSocketClient("ws://example.com")
@@ -236,6 +262,16 @@ class TestDisconnectAndReceive:
         assert client.websocket is None
 
     @pytest.mark.asyncio
+    async def test_disconnect_without_tasks_or_socket(self) -> None:
+        client = WebSocketClient("ws://example.com")
+
+        await client.disconnect()
+
+        assert client.websocket is None
+        assert client.is_connected is False
+        assert client.is_authenticated is False
+
+    @pytest.mark.asyncio
     async def test_receive_loop_dispatches_and_reconnects(self, monkeypatch: pytest.MonkeyPatch) -> None:
         websocket = _FakeWebSocket(
             iter_messages=[
@@ -256,6 +292,18 @@ class TestDisconnectAndReceive:
         assert client.is_connected is False
         assert client.is_authenticated is False
         assert client.reconnect_task is not None
+
+    @pytest.mark.asyncio
+    async def test_receive_loop_without_reconnect(self) -> None:
+        websocket = _FakeWebSocket(iter_messages=[])
+        client = WebSocketClient("ws://example.com", reconnect=False)
+        client.websocket = websocket
+
+        await client._receive_loop()
+
+        assert client.is_connected is False
+        assert client.is_authenticated is False
+        assert client.reconnect_task is None
 
     @pytest.mark.asyncio
     async def test_receive_loop_handles_outer_exception(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -303,6 +351,20 @@ class TestReconnectAndMessages:
         await client._reconnect_loop()
 
     @pytest.mark.asyncio
+    async def test_reconnect_loop_without_token(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        client = WebSocketClient("ws://example.com", reconnect=True, max_retries=1, initial_delay=0.0)
+        websocket = _FakeWebSocket()
+        _websockets_mock.connect = AsyncMock(return_value=websocket)
+        monkeypatch.setattr(client_mod.asyncio, "sleep", AsyncMock())
+        monkeypatch.setattr(client_mod.asyncio, "create_task", _create_task)
+        client._receive_loop = AsyncMock(return_value=None)  # type: ignore[method-assign]
+
+        await client._reconnect_loop()
+
+        assert client.is_connected is True
+        assert client.is_authenticated is False
+
+    @pytest.mark.asyncio
     async def test_handle_message_paths(self) -> None:
         client = WebSocketClient("ws://example.com")
         future = asyncio.Future()
@@ -317,6 +379,24 @@ class TestReconnectAndMessages:
 
         client.event_handlers["evt"] = {AsyncMock()}
         await client._handle_message(WebSocketProtocol.create_event("evt", {"a": 1}))
+
+    @pytest.mark.asyncio
+    async def test_handle_message_done_future_and_non_event(self) -> None:
+        client = WebSocketClient("ws://example.com")
+        future = asyncio.Future()
+        future.set_result("done")
+        client.pending_requests["abc"] = future
+        await client._handle_message(
+            WebSocketProtocol.create_response(
+                WebSocketProtocol.create_request("req", {"x": 1}, correlation_id="abc"),
+                {"ok": True},
+            )
+        )
+        assert future.done() is True
+
+        await client._handle_message(
+            WebSocketProtocol.create_response(WebSocketProtocol.create_request("req", {}), {"ok": True})
+        )
 
     @pytest.mark.asyncio
     async def test_emit_event_sync_and_async(self) -> None:
@@ -343,6 +423,11 @@ class TestReconnectAndMessages:
 
         await client._emit_event("missing", {})
         await client._emit_event("evt", {})
+
+    @pytest.mark.asyncio
+    async def test_emit_event_event_without_handlers(self) -> None:
+        client = WebSocketClient("ws://example.com")
+        await client._emit_event("missing", {})
 
     @pytest.mark.asyncio
     async def test_send_request_and_send_helpers(self, monkeypatch: pytest.MonkeyPatch) -> None:

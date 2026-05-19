@@ -619,6 +619,213 @@ class TestCleanupAutoCert:
         assert srv._auto_cert_path is None
         assert srv._auto_key_path is None
 
+
+# ===================================================================
+# 11. start handler branch coverage
+# ===================================================================
+
+class TestStartHandlerBranches:
+    """Exercise the internal handler branches captured by websockets.serve."""
+
+    @pytest.mark.asyncio
+    async def test_rejects_when_at_capacity(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        srv = ConcreteServer(max_connections=0, enable_metrics=True)
+        srv.metrics = MagicMock()
+        captured: dict[str, Any] = {}
+
+        async def fake_serve(handler, host, port, ssl=None):
+            captured["handler"] = handler
+            return SimpleNamespace()
+
+        monkeypatch.setattr(_websockets_mock, "serve", fake_serve, raising=False)
+
+        await srv.start()
+        websocket = _FakeWebSocket()
+        await captured["handler"](websocket)
+
+        assert websocket.closed == [(1013, "Server at maximum capacity")]
+        srv.metrics.on_connection_error.assert_called_once_with("max_connections")
+
+    @pytest.mark.asyncio
+    async def test_auth_required_and_auth_error_paths(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        srv = ConcreteServer(require_auth=True, authenticator=MagicMock(), enable_metrics=True)
+        srv.metrics = MagicMock()
+        captured: dict[str, Any] = {}
+
+        async def fake_serve(handler, host, port, ssl=None):
+            captured["handler"] = handler
+            return SimpleNamespace()
+
+        monkeypatch.setattr(_websockets_mock, "serve", fake_serve, raising=False)
+
+        await srv.start()
+
+        unauth_ws = _FakeWebSocket(
+            recv_messages=[
+                WebSocketProtocol.encode(WebSocketProtocol.create_request("not-auth", {}))
+            ]
+        )
+        await captured["handler"](unauth_ws)
+        error = WebSocketProtocol.decode(unauth_ws.sent_messages[0])
+        assert error.error_code == "AUTH_REQUIRED"
+        assert unauth_ws.closed == [(1008, "Authentication required")]
+        srv.metrics.on_connection_error.assert_called_with("auth_required")
+
+        def failing_auth(_token: str) -> None:
+            raise RuntimeError("auth boom")
+
+        srv.authenticate_websocket = failing_auth  # type: ignore[method-assign]
+        auth_ws = _FakeWebSocket(
+            recv_messages=[
+                WebSocketProtocol.encode(
+                    WebSocketProtocol.create_request("auth", {"token": "bad-token"})
+                )
+            ]
+        )
+        await captured["handler"](auth_ws)
+        assert auth_ws.closed == [(1011, "Authentication error")]
+        srv.metrics.on_connection_error.assert_called_with("auth_error")
+
+    @pytest.mark.asyncio
+    async def test_handler_branches_without_metrics(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        captured: dict[str, Any] = {}
+
+        async def fake_serve(handler, host, port, ssl=None):
+            captured["handler"] = handler
+            return SimpleNamespace()
+
+        monkeypatch.setattr(_websockets_mock, "serve", fake_serve, raising=False)
+
+        class _FixedUUID:
+            def __str__(self) -> str:
+                return "conn-2"
+
+        monkeypatch.setattr(_server_mod.uuid, "uuid4", lambda: _FixedUUID())
+
+        blocked = ConcreteServer(max_connections=0, enable_metrics=False)
+        await blocked.start()
+        await captured["handler"](_FakeWebSocket())
+
+        auth_required = ConcreteServer(require_auth=True, authenticator=MagicMock(), enable_metrics=False)
+        await auth_required.start()
+        unauth_ws = _FakeWebSocket(
+            recv_messages=[
+                WebSocketProtocol.encode(WebSocketProtocol.create_request("not-auth", {}))
+            ]
+        )
+        await captured["handler"](unauth_ws)
+
+        def failing_auth(_token: str) -> None:
+            raise RuntimeError("auth boom")
+
+        auth_required.authenticate_websocket = failing_auth  # type: ignore[method-assign]
+        auth_ws = _FakeWebSocket(
+            recv_messages=[
+                WebSocketProtocol.encode(
+                    WebSocketProtocol.create_request("auth", {"token": "bad-token"})
+                )
+            ]
+        )
+        await captured["handler"](auth_ws)
+
+        denied = ConcreteServer(require_auth=True, authenticator=MagicMock(), enable_metrics=False)
+        denied.authenticator.authenticate_connection.return_value = None
+        await denied.start()
+        auth_failed_ws = _FakeWebSocket(
+            recv_messages=[
+                WebSocketProtocol.encode(
+                    WebSocketProtocol.create_request("auth", {"token": "expired-token"})
+                )
+            ]
+        )
+        await captured["handler"](auth_failed_ws)
+
+        plain = ConcreteServer(enable_metrics=False)
+        monkeypatch.setattr(_server_mod.time, "time", lambda: 123.0)
+        await plain.start()
+        valid_ws = _FakeWebSocket(
+            iter_messages=[
+                WebSocketProtocol.encode(WebSocketProtocol.create_event("ping", {"ok": True}))
+            ]
+        )
+        await captured["handler"](valid_ws)
+        monkeypatch.setattr(
+            _server_mod.WebSocketProtocol,
+            "decode",
+            lambda _message: (_ for _ in ()).throw(RuntimeError("decode boom")),
+        )
+        error_ws = _FakeWebSocket(iter_messages=["bad-payload"])
+        await captured["handler"](error_ws)
+
+    @pytest.mark.asyncio
+    async def test_handler_on_connect_failure_skips_connection_cleanup(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        srv = ConcreteServer(enable_metrics=False)
+        captured: dict[str, Any] = {}
+
+        async def fake_serve(handler, host, port, ssl=None):
+            captured["handler"] = handler
+            return SimpleNamespace()
+
+        monkeypatch.setattr(_websockets_mock, "serve", fake_serve, raising=False)
+        connection_closed_exc = type("ConnectionClosed", (Exception,), {})
+        _websockets_mock.exceptions = SimpleNamespace(ConnectionClosed=connection_closed_exc)
+
+        async def failing_connect(_websocket: Any, _connection_id: str) -> None:
+            raise RuntimeError("connect boom")
+
+        srv.on_connect = failing_connect  # type: ignore[method-assign]
+        await srv.start()
+
+        with pytest.raises(RuntimeError, match="connect boom"):
+            await captured["handler"](_FakeWebSocket())
+
+        assert srv.connections == {}
+
+    @pytest.mark.asyncio
+    async def test_message_loop_success_and_decode_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        srv = ConcreteServer(enable_metrics=True)
+        srv.metrics = MagicMock()
+        captured: dict[str, Any] = {}
+        time_values = iter([100.0, 100.5, 200.0, 200.5])
+
+        class _FixedUUID:
+            def __str__(self) -> str:
+                return "conn-1"
+
+        async def fake_serve(handler, host, port, ssl=None):
+            captured["handler"] = handler
+            return SimpleNamespace()
+
+        monkeypatch.setattr(_websockets_mock, "serve", fake_serve, raising=False)
+        monkeypatch.setattr(_server_mod.uuid, "uuid4", lambda: _FixedUUID())
+        monkeypatch.setattr(_server_mod.time, "time", lambda: next(time_values))
+
+        await srv.start()
+
+        valid_ws = _FakeWebSocket(
+            iter_messages=[
+                WebSocketProtocol.encode(WebSocketProtocol.create_event("ping", {"ok": True}))
+            ]
+        )
+        await captured["handler"](valid_ws)
+        srv.metrics.on_message_received.assert_called_with(str(MessageType.EVENT))
+        srv.metrics.observe_latency.assert_called_with(str(MessageType.EVENT), 0.5)
+        srv.metrics.on_disconnect.assert_called_with("conn-1")
+
+        monkeypatch.setattr(_server_mod.WebSocketProtocol, "decode", lambda _message: (_ for _ in ()).throw(RuntimeError("decode boom")))
+        error_ws = _FakeWebSocket(iter_messages=["bad-payload"])
+        await captured["handler"](error_ws)
+        srv.metrics.on_message_error.assert_called_with("decode_error")
+
+    @pytest.mark.asyncio
+    async def test_leave_room_without_connection_mapping(self) -> None:
+        srv = ConcreteServer()
+        await srv.join_room("room-1", "conn-1")
+        await srv.leave_room("room-1", "conn-2")
+        assert srv.room_connections["conn-1"] == "room-1"
+
     def test_cleanup_handles_none_paths(self) -> None:
         srv = ConcreteServer()
         srv._auto_cert_path = None

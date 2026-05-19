@@ -6,6 +6,7 @@ Validates AST parsing, function/class extraction, and call graph analysis.
 
 import asyncio
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -211,6 +212,22 @@ async def test_skip_test_files(tmp_path: Path) -> None:
 
     # Should index all files
     assert stats2["files_indexed"] == 4
+
+
+def test_should_skip_test_file_variants() -> None:
+    """Test the helper branches for skipped test files directly."""
+    analyzer = CodeGraphAnalyzer(Path("/tmp/project"))
+
+    assert analyzer._should_skip_test_file(Path("pkg/test/module.py")) is True
+
+    stem_only_match = SimpleNamespace(
+        parts=("pkg", "src", "module.py"),
+        name="module.py",
+        stem="test_helper",
+    )
+    assert analyzer._should_skip_test_file(stem_only_match) is True
+
+    assert analyzer._should_skip_test_file(Path("pkg/src/module.py")) is False
 
 
 @pytest.mark.asyncio

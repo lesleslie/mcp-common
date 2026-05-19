@@ -452,3 +452,198 @@ def complex_logic(items, enabled):
             end_byte=len(source),
         )
         assert handler._extract_docstring(func_node, source) == "Doc"
+
+    def test_extract_from_node_skips_empty_results(self, handler: PythonHandler) -> None:
+        root = _FakeNode(
+            "module",
+            children=[
+                _FakeNode("function_definition"),
+                _FakeNode("class_definition"),
+                _FakeNode("import_statement"),
+                _FakeNode("import_from_statement"),
+                _FakeNode("assignment"),
+                _FakeNode(
+                    "decorated_definition",
+                    children=[
+                        _FakeNode("function_definition"),
+                        _FakeNode("class_definition"),
+                    ],
+                ),
+            ],
+        )
+
+        symbols: list = []
+        relationships: list = []
+        imports: list = []
+
+        handler._extract_from_node(root, "source", symbols, relationships, imports, None)
+
+        assert symbols == []
+        assert relationships == []
+        assert imports == []
+
+    def test_private_extractors_cover_missing_name_and_double_quote_docstring(
+        self,
+        handler: PythonHandler,
+    ) -> None:
+        source = 'from pkg import alias\n\ndef double_quote():\n    "Doc"\n    return 1\n'
+
+        import_node = _FakeNode(
+            "import_from_statement",
+            children=[
+                _FakeNode("dotted_name", text="pkg", start_byte=5, end_byte=8),
+                _FakeNode("import"),
+                _FakeNode("aliased_import", fields={}),
+            ],
+            start_point=(0, 0),
+        )
+        imported = handler._extract_from_import(import_node, source)
+        assert imported is not None
+        assert imported.module == "pkg"
+        assert imported.names == ()
+
+        doc_start = source.index('"Doc"')
+        func_node = _FakeNode(
+            "function_definition",
+            fields={
+                "body": _FakeNode(
+                    "block",
+                    children=[
+                        _FakeNode(
+                            "expression_statement",
+                            children=[
+                                _FakeNode(
+                                    "string",
+                                    text='"Doc"',
+                                    start_byte=doc_start,
+                                    end_byte=doc_start + 5,
+                                )
+                            ],
+                        )
+                    ],
+                )
+            },
+            start_byte=0,
+            end_byte=len(source),
+        )
+        assert handler._extract_docstring(func_node, source) == "Doc"
+
+    def test_private_extractors_cover_no_params_and_unquoted_docstring(
+        self,
+        handler: PythonHandler,
+    ) -> None:
+        source = "def plain():\n    Doc\n    return 1\n"
+
+        func_node = _FakeNode(
+            "function_definition",
+            fields={
+                "name": _FakeNode("identifier", text="plain", start_byte=4, end_byte=9),
+            },
+            start_byte=0,
+            end_byte=len(source),
+        )
+        symbol = handler._extract_function(func_node, source, None)
+
+        assert symbol is not None
+        assert symbol.signature == "def plain()"
+        assert symbol.parameters == ()
+        assert symbol.return_type is None
+
+        doc_node = _FakeNode(
+            "function_definition",
+            fields={
+                "body": _FakeNode(
+                    "block",
+                    children=[
+                        _FakeNode(
+                            "expression_statement",
+                            children=[
+                                _FakeNode(
+                                    "string",
+                                    text="Doc",
+                                    start_byte=17,
+                                    end_byte=20,
+                                )
+                            ],
+                        )
+                    ],
+                )
+            },
+            start_byte=0,
+            end_byte=len(source),
+        )
+        assert handler._extract_docstring(doc_node, source) == "Doc"
+
+    def test_private_extractors_cover_import_list_alias_without_name(
+        self,
+        handler: PythonHandler,
+    ) -> None:
+        source = "from pkg import thing as alias, other\n"
+
+        import_list = _FakeNode(
+            "import_list",
+            children=[
+                _FakeNode("identifier", text="thing", start_byte=16, end_byte=21),
+                _FakeNode(
+                    "aliased_import",
+                    fields={
+                        "name": _FakeNode("identifier", text="alias", start_byte=25, end_byte=30)
+                    },
+                ),
+                _FakeNode("aliased_import", fields={"name": None}),
+            ],
+        )
+        import_node = _FakeNode(
+            "import_from_statement",
+            children=[
+                _FakeNode("dotted_name", text="pkg", start_byte=5, end_byte=8),
+                _FakeNode("import"),
+                import_list,
+            ],
+            start_point=(0, 0),
+        )
+        imported = handler._extract_from_import(import_node, source)
+
+        assert imported is not None
+        assert imported.module == "pkg"
+        assert imported.names == ("thing", "alias")
+
+    def test_compute_complexity_skips_missing_names(self, handler: PythonHandler) -> None:
+        root = _FakeNode(
+            "module",
+            children=[
+                _FakeNode("function_definition", fields={"name": None}),
+                _FakeNode(
+                    "decorated_definition",
+                    children=[
+                        _FakeNode("function_definition", fields={"name": None}),
+                    ],
+                ),
+            ],
+        )
+
+        metrics = handler.compute_complexity(b"", _FakeTree(root))
+
+        assert metrics == {}
+
+    def test_calculate_complexity_handles_missing_params_and_body(
+        self,
+        handler: PythonHandler,
+    ) -> None:
+        node = _FakeNode(
+            "function_definition",
+            fields={
+                "name": _FakeNode("identifier", text="plain", start_byte=4, end_byte=9),
+            },
+            start_byte=0,
+            end_byte=12,
+        )
+
+        metrics = handler._calculate_function_complexity(node, "def plain():\n")
+
+        assert metrics.cyclomatic == 1
+        assert metrics.cognitive == 0
+        assert metrics.nesting_depth == 0
+        assert metrics.lines_of_code == 1
+        assert metrics.num_parameters == 0
+        assert metrics.num_returns == 0

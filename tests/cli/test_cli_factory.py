@@ -411,6 +411,36 @@ class TestCreateServerCli:
             # asyncio.run was called with a coroutine
             assert run_mock.called
 
+    def test_stop_handler_without_server_noops(self) -> None:
+        """stop_handler does nothing when no server instance exists."""
+
+        class FakeConfig:
+            pass
+
+        class FakeServer:
+            def __init__(self, config: object) -> None:
+                self.config = config
+
+            async def startup(self) -> None:
+                pass
+
+            async def shutdown(self) -> None:
+                pass
+
+            def get_app(self) -> object:
+                return Mock()
+
+        factory = MCPServerCLIFactory.create_server_cli(
+            server_class=FakeServer,
+            config_class=FakeConfig,
+            name="fake",
+        )
+
+        with patch("mcp_common.cli.factory.asyncio.run") as run_mock:
+            factory.stop_handler(os.getpid())
+
+        run_mock.assert_not_called()
+
 
 # ---------------------------------------------------------------------------
 # create_app with use_mcp_subcommand=True
@@ -1036,7 +1066,6 @@ class TestCmdStartFullFlow:
         original_validate = factory._validate_cache_and_check_process
         original_write = factory._write_pid_and_health_snapshot
         original_register = factory._register_signal_handlers
-        original_execute = factory._execute_start_handler
 
         def track_validate(*args, **kwargs):
             calls.append("validate")

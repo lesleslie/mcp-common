@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-import os
 import ssl
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -216,6 +214,17 @@ def test_create_ssl_context_verify_client_without_ca(monkeypatch: pytest.MonkeyP
 
     assert result is ctx
     assert ctx.verify_mode == ssl.CERT_REQUIRED
+    assert ctx.loaded_verify_locations == []
+
+
+def test_create_ssl_context_without_cert_or_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    ctx = _FakeSSLContext(ssl.PROTOCOL_TLS_SERVER)
+    monkeypatch.setattr(tls.ssl, "SSLContext", lambda protocol: ctx)
+
+    result = tls.create_ssl_context()
+
+    assert result is ctx
+    assert ctx.loaded_cert_chain is None
     assert ctx.loaded_verify_locations == []
 
 

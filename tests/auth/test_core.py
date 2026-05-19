@@ -1,9 +1,15 @@
-import time
-import pytest
-from mcp_common.auth.core import create_service_token, verify_token, TokenPayload
-from mcp_common.auth.permissions import Permission
-from mcp_common.auth.exceptions import TokenExpiredError, TokenInvalidError, UnknownIssuerError
+from datetime import UTC, datetime, timedelta
 
+import jwt as pyjwt
+import pytest
+
+from mcp_common.auth.core import create_service_token, verify_token
+from mcp_common.auth.exceptions import (
+    TokenExpiredError,
+    TokenInvalidError,
+    UnknownIssuerError,
+)
+from mcp_common.auth.permissions import Permission
 
 SECRET = "a-test-secret-that-is-at-least-32-chars-long"
 
@@ -35,8 +41,6 @@ def test_verify_rejects_wrong_audience():
 
 
 def test_verify_rejects_unknown_issuer():
-    import jwt as pyjwt
-    from datetime import UTC, datetime, timedelta
     bad_token = pyjwt.encode(
         {"sub": "x", "iss": "rogue-service", "aud": "dhara",
          "exp": datetime.now(UTC) + timedelta(seconds=60), "iat": datetime.now(UTC),
@@ -48,8 +52,6 @@ def test_verify_rejects_unknown_issuer():
 
 
 def test_verify_rejects_expired_token():
-    import jwt as pyjwt
-    from datetime import UTC, datetime, timedelta
     expired = pyjwt.encode(
         {"sub": "mahavishnu", "iss": "mahavishnu", "aud": "akosha",
          "exp": datetime.now(UTC) - timedelta(seconds=5), "iat": datetime.now(UTC),
@@ -79,3 +81,27 @@ def test_token_payload_has_jti():
     payload = verify_token(token, secret=SECRET, expected_audience="dhara")
     assert payload.jti is not None
     assert len(payload.jti) > 0
+
+
+def test_verify_ignores_unknown_scope_values(monkeypatch):
+    import mcp_common.auth.core as auth_core
+
+    now = datetime.now(UTC)
+    raw_payload = {
+        "sub": "mahavishnu",
+        "iss": "mahavishnu",
+        "aud": "session-buddy",
+        "exp": int((now + timedelta(seconds=60)).timestamp()),
+        "iat": int(now.timestamp()),
+        "jti": "test-jti",
+        "scopes": ["read", "not-a-real-scope"],
+    }
+    monkeypatch.setattr(auth_core.pyjwt, "decode", lambda *args, **kwargs: raw_payload)
+
+    payload = auth_core.verify_token(
+        "token",
+        secret=SECRET,
+        expected_audience="session-buddy",
+    )
+
+    assert payload.permissions == frozenset()

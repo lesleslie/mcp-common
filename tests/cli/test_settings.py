@@ -193,6 +193,20 @@ class TestMCPServerSettingsLoad:
         finally:
             os.environ.pop("MCP_SERVER_LOG_LEVEL", None)
 
+    def test_load_explicit_config_path_non_dict_is_ignored(self, tmp_path: Path):
+        """Test explicit config_path values that parse to scalars are ignored."""
+        os.chdir(tmp_path)
+        settings_dir = tmp_path / "settings"
+        settings_dir.mkdir()
+
+        (settings_dir / "test-server.yaml").write_text(yaml.safe_dump({"log_level": "INFO"}))
+        custom_config = tmp_path / "custom.yaml"
+        custom_config.write_text("not-a-mapping")
+
+        settings = MCPServerSettings.load("test-server", config_path=custom_config)
+
+        assert settings.log_level == "INFO"
+
     def test_load_custom_env_prefix(self, tmp_path: Path):
         """Test custom environment variable prefix."""
         os.chdir(tmp_path)

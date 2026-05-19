@@ -228,6 +228,23 @@ def test_load_optional_path_from_env_empty(tmp_path: Path, monkeypatch: pytest.M
     assert settings.data_dir is None
 
 
+def test_load_ignores_non_dict_yaml_layers(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test YAML layers that parse to scalars are ignored safely."""
+    settings_dir = tmp_path / "settings"
+    settings_dir.mkdir()
+    (settings_dir / "test-server.yaml").write_text("not-a-mapping")
+    (settings_dir / "local.yaml").write_text("also-not-a-mapping")
+    config_path = tmp_path / "explicit.yaml"
+    config_path.write_text("still-not-a-mapping")
+
+    monkeypatch.chdir(tmp_path)
+
+    settings = MCPServerSettings.load("test-server", config_path=config_path)
+
+    assert settings.server_name == "test-server"
+    assert settings.base_url == "https://api.example.com"
+
+
 @pytest.mark.unit
 class TestMCPServerSettings:
     """Tests for MCPServerSettings extended configuration."""

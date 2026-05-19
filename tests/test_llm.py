@@ -14,7 +14,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import yaml
-from hypothesis import given, settings as h_settings
+from hypothesis import given
+from hypothesis import settings as h_settings
 from hypothesis import strategies as st
 from pydantic import SecretStr, ValidationError
 
@@ -26,7 +27,6 @@ from mcp_common.llm.exceptions import (
 )
 from mcp_common.llm.fallback import CircuitBreaker, FallbackChain
 from mcp_common.llm.types import TaskType
-
 
 # ---------------------------------------------------------------------------
 # 1. Exceptions
@@ -277,6 +277,11 @@ class TestProviderConfig:
         config = ProviderConfig(api_key=SecretStr("${LLM_API_KEY}"))
         assert config.api_key.get_secret_value() == "sk-resolved-key"
 
+    def test_resolve_env_vars_api_key_unset(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("LLM_API_KEY", raising=False)
+        config = ProviderConfig(api_key=SecretStr("${LLM_API_KEY}"))
+        assert config.api_key.get_secret_value() == "${LLM_API_KEY}"
+
     def test_resolve_env_vars_both(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("MY_URL", "https://api.test.com")
         monkeypatch.setenv("MY_KEY", "key-123")
@@ -424,6 +429,28 @@ class TestLLMSettings:
         assert settings.fallback_chain == ["minimax", "ollama"]
         assert "minimax" in settings.providers
         assert "ollama" in settings.providers
+
+    def test_from_yaml_with_new_providers_schema(self, tmp_path: Path) -> None:
+        content = {
+            "default_provider": "zai",
+            "fallback_chain": ["zai"],
+            "providers": {
+                "zai": {
+                    "enabled": True,
+                    "base_url": "https://api.z.ai/v4",
+                    "api_key": "sk-test",
+                    "require_auth": True,
+                }
+            },
+        }
+        path = tmp_path / "models.yaml"
+        path.write_text(yaml.dump(content))
+
+        settings = LLMSettings.from_yaml(path)
+        assert settings.default_provider == "zai"
+        assert settings.fallback_chain == ["zai"]
+        assert "zai" in settings.providers
+        assert settings.providers["zai"]["base_url"] == "https://api.z.ai/v4"
 
     def test_from_yaml_strips_comments(self, tmp_path: Path) -> None:
         """Keys starting with '#' are skipped."""
@@ -1389,8 +1416,8 @@ class TestHailuoAdapter:
 
     @pytest.mark.asyncio
     async def test_generate_raises_on_api_error(self) -> None:
-        from mcp_common.llm.hailuo import HailuoAdapter
         from mcp_common.llm.exceptions import LLMError
+        from mcp_common.llm.hailuo import HailuoAdapter
 
         submit_resp = {"task_id": "task-err-001", "base_resp": {"status_code": 0}}
         poll_failed = {"task_id": "task-err-001", "status": "Fail", "base_resp": {"status_code": 2013, "status_msg": "quota exceeded"}}
@@ -1409,8 +1436,8 @@ class TestHailuoAdapter:
 
     @pytest.mark.asyncio
     async def test_generate_raises_on_timeout(self) -> None:
-        from mcp_common.llm.hailuo import HailuoAdapter
         from mcp_common.llm.exceptions import LLMError
+        from mcp_common.llm.hailuo import HailuoAdapter
 
         submit_resp = {"task_id": "task-timeout-001", "base_resp": {"status_code": 0}}
         poll_pending = {"task_id": "task-timeout-001", "status": "Processing", "base_resp": {"status_code": 0}}
@@ -1511,6 +1538,17 @@ class TestFallbackChainEdgeCases:
 
         with pytest.raises(AllProvidersExhaustedError):
             await chain.execute({"model": "m", "messages": []})
+
+    def test_circuit_breaker_half_open_after_timeout(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from mcp_common.llm.fallback import CircuitBreaker
+
+        breaker = CircuitBreaker(failure_threshold=2, reset_timeout=10.0)
+        breaker.record_failure()
+        breaker.record_failure()
+
+        monkeypatch.setattr("mcp_common.llm.fallback.time.monotonic", lambda: breaker._last_failure_time + 11.0)
+
+        assert breaker.is_open is False
 
 
 # ---------------------------------------------------------------------------

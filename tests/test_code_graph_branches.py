@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -117,6 +118,21 @@ class TestFileReadingAndParsing:
         await analyzer._process_language(tmp_path, "python", False, stats)
 
         analyze.assert_awaited_once()
+        assert stats["files_indexed"] == 1
+
+    @pytest.mark.asyncio
+    async def test_process_language_non_python_skips_python_analysis(
+        self, tmp_path: Path
+    ) -> None:
+        (tmp_path / "module.js").write_text("export const value = 1;")
+        analyzer = CodeGraphAnalyzer(tmp_path)
+        analyze = AsyncMock()
+        analyzer._analyze_python_file = analyze  # type: ignore[method-assign]
+        stats = {"files_indexed": 0, "functions_indexed": 0, "classes_indexed": 0, "calls_indexed": 0, "imports_indexed": 0, "duration_ms": 0}
+
+        await analyzer._process_language(tmp_path, "javascript", False, stats)
+
+        analyze.assert_not_awaited()
         assert stats["files_indexed"] == 1
 
     @pytest.mark.asyncio
@@ -247,12 +263,53 @@ def top_level():
     return 2
 """
         )
-        class_node = next(node for node in ast.walk(tree) if isinstance(node, ast.ClassDef))
         method_node = next(node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef) and node.name == "method")
         top_level_node = next(node for node in ast.walk(tree) if isinstance(node, ast.FunctionDef) and node.name == "top_level")
 
         assert analyzer._is_method(method_node, tree) is True
         assert analyzer._is_method(top_level_node, tree) is False
+
+    def test_extract_and_add_helpers_skip_none_results(self) -> None:
+        analyzer = _make_analyzer()
+        tree = ast.parse(
+            """
+import os
+
+class Example:
+    pass
+
+def top_level():
+    return 1
+"""
+        )
+        file_node = FileNode(
+            id="pkg/main.py",
+            name="main.py",
+            file_id="pkg/main.py",
+            node_type="file",
+            path="/project/pkg/main.py",
+            language="python",
+        )
+
+        analyzer._extract_import = MagicMock(return_value=None)  # type: ignore[method-assign]
+        analyzer._extract_class = MagicMock(return_value=None)  # type: ignore[method-assign]
+        analyzer._extract_function = MagicMock(return_value=None)  # type: ignore[method-assign]
+
+        analyzer._extract_and_add_imports(tree, file_node, "pkg/main.py")
+        analyzer._extract_and_add_definitions(tree, file_node, "pkg/main.py")
+
+        assert file_node.imports == []
+        assert file_node.classes == []
+        assert file_node.functions == []
+
+    def test_function_node_lookups_ignore_non_function_nodes(self) -> None:
+        analyzer = _make_analyzer()
+        analyzer.nodes = {
+            "bad": SimpleNamespace(node_type="function", name="maybe", file_id="x")
+        }
+
+        assert analyzer._find_function_node("maybe") is None
+        assert analyzer._find_function_by_name("maybe") is None
 
 
 class TestFunctionContextAndRelations:
@@ -396,6 +453,112 @@ class TestFunctionContextAndRelations:
         other = next(item for item in related if item["file_path"] == "pkg/other.py")
         assert set(other["relationship"]) >= {"imported_by", "called_by"}
         assert other["strength"] == 2
+
+    @pytest.mark.asyncio
+    async def test_find_related_files_imports_only(self) -> None:
+        analyzer = self._build_graph()
+
+        related = await analyzer.find_related_files("pkg/main.py", relationship_type="imports", limit=10)
+
+        assert related
+
+    @pytest.mark.asyncio
+    async def test_find_related_files_calls_only(self) -> None:
+        analyzer = self._build_graph()
+
+        related = await analyzer.find_related_files("pkg/main.py", relationship_type="calls", limit=10)
+
+        assert related
+
+    @pytest.mark.asyncio
+    async def test_find_related_files_called_by_only(self) -> None:
+        analyzer = self._build_graph()
+
+        related = await analyzer.find_related_files("pkg/main.py", relationship_type="called_by", limit=10)
+
+        assert related
+
+    def test_relationship_helpers_ignore_non_dataclass_nodes(self) -> None:
+        analyzer = _make_analyzer()
+        analyzer.nodes = {
+            "pkg/main.py": SimpleNamespace(file_id="pkg/main.py", node_type="file", id="pkg/main.py"),
+            "pkg/main.py:import:pkg.utils": SimpleNamespace(
+                file_id="pkg/main.py",
+                node_type="import",
+                id="pkg/main.py:import:pkg.utils",
+                module="utils.py",
+                is_from_import=True,
+                imported_names=["helper"],
+            ),
+            "pkg/other.py:import:pkg.main": SimpleNamespace(
+                file_id="pkg/other.py",
+                node_type="import",
+                id="pkg/other.py:import:pkg.main",
+                module="main.py",
+                is_from_import=False,
+                imported_names=["main.py"],
+            ),
+            "pkg/main.py:function:caller": SimpleNamespace(
+                file_id="pkg/main.py",
+                node_type="function",
+                id="pkg/main.py:function:caller",
+                name="caller",
+                calls=[],
+            ),
+        }
+        analyzer._call_graph = {
+            "pkg/main.py:function:caller": {"helper"},
+            "pkg/other.py:function:external": {"caller"},
+        }
+
+        imports, imports_from = analyzer._get_file_imports("pkg/main.py")
+        imported_by = analyzer._find_imported_by_relationships("pkg/main.py")
+        calls = analyzer._find_calls_relationships(["pkg/main.py:function:caller"], "pkg/main.py")
+        called_by = analyzer._find_called_by_relationships(["pkg/main.py:function:caller"])
+        callers = analyzer._get_callers("caller")
+
+        assert imports == set()
+        assert imports_from == set()
+        assert imported_by == []
+        assert calls == []
+        assert called_by == []
+        assert callers == []
+
+    def test_call_relationship_helpers_skip_missing_nodes(self) -> None:
+        analyzer = _make_analyzer()
+        analyzer.nodes = {
+            "pkg/main.py": FileNode(
+                id="pkg/main.py",
+                name="main.py",
+                file_id="pkg/main.py",
+                node_type="file",
+                path="/project/pkg/main.py",
+                language="python",
+            ),
+            "pkg/main.py:function:caller": FunctionNode(
+                id="pkg/main.py:function:caller",
+                name="caller",
+                file_id="pkg/main.py",
+                node_type="function",
+                is_export=True,
+                start_line=1,
+                end_line=2,
+            ),
+        }
+        analyzer._call_graph = {
+            "pkg/main.py:function:caller": {"other"},
+            "pkg/missing.py:function:ghost": {"caller"},
+        }
+
+        callers = analyzer._get_callers("target")
+        callees = analyzer._get_callees(analyzer.nodes["pkg/main.py:function:caller"])
+        called_by = analyzer._find_called_by_relationships(["pkg/main.py:function:caller"])
+        no_match_called_by = analyzer._find_called_by_relationships(["pkg/other.py:function:ghost"])
+
+        assert callers == []
+        assert callees == []
+        assert called_by == []
+        assert no_match_called_by == []
 
     def test_function_node_lookups_return_none_when_missing(self) -> None:
         analyzer = self._build_graph()

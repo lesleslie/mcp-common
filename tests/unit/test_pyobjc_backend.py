@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import importlib
 import asyncio
 import sys
 from pathlib import Path
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -16,7 +17,11 @@ from mcp_common.prompting.exceptions import (
     DialogDisplayError,
     NotificationError,
 )
-from mcp_common.prompting.models import DialogResult, NotificationLevel, PromptAdapterSettings
+from mcp_common.prompting.models import (
+    DialogResult,
+    NotificationLevel,
+    PromptAdapterSettings,
+)
 
 
 class _AllocInit:
@@ -226,12 +231,48 @@ def reset_backend_state() -> None:
 
 
 class TestAvailabilityAndLifecycle:
+    def test_import_success_path(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        fake_appkit = ModuleType("AppKit")
+        fake_appkit.NSAlert = _FakeAlert
+        fake_appkit.NSTextField = _FakeTextField
+        fake_appkit.NSSecureTextField = _FakeTextField
+        fake_appkit.NSPopUpButton = _FakePopUpButton
+        fake_appkit.NSOpenPanel = _FakeOpenPanel
+        fake_appkit.NSAlertStyleInformational = "informational"
+        fake_appkit.NSAlertStyleWarning = "warning"
+        fake_appkit.NSAlertStyleCritical = "critical"
+        fake_appkit.NSOKButton = 1
+        fake_foundation = ModuleType("Foundation")
+        fake_foundation.NSUserNotificationCenter = SimpleNamespace(
+            defaultUserNotificationCenter=_FakeNotificationCenter.defaultUserNotificationCenter
+        )
+        fake_foundation.NSUserNotification = _FakeNotification
+
+        monkeypatch.setitem(sys.modules, "AppKit", fake_appkit)
+        monkeypatch.setitem(sys.modules, "Foundation", fake_foundation)
+
+        reloaded = importlib.reload(backend_mod)
+        assert reloaded.PYOBJC_AVAILABLE is True
+
     def test_unavailable_constructor(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(backend_mod, "PYOBJC_AVAILABLE", False)
         monkeypatch.setattr(backend_mod.sys, "platform", "linux")
 
         with pytest.raises(BackendUnavailableError):
             backend_mod.PyObjCPromptBackend(PromptAdapterSettings())
+
+    @pytest.mark.asyncio
+    async def test_initialize_raises_when_unavailable(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        _install_fake_frameworks(monkeypatch)
+        backend = object.__new__(backend_mod.PyObjCPromptBackend)
+        backend.config = PromptAdapterSettings()
+        backend._executor = None
+        backend._initialized = False
+        monkeypatch.setattr(backend_mod, "PYOBJC_AVAILABLE", False)
+        monkeypatch.setattr(backend_mod.sys, "platform", "linux")
+
+        with pytest.raises(BackendUnavailableError):
+            await backend.initialize()
 
     def test_initialize_and_shutdown(self, monkeypatch: pytest.MonkeyPatch) -> None:
         _install_fake_frameworks(monkeypatch)
@@ -247,6 +288,18 @@ class TestAvailabilityAndLifecycle:
 
         asyncio.run(backend.shutdown())
         executor.shutdown.assert_called_once_with(wait=True)
+        assert backend._executor is None
+        assert backend._initialized is False
+
+    @pytest.mark.asyncio
+    async def test_shutdown_without_executor(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        _install_fake_frameworks(monkeypatch)
+        backend = backend_mod.PyObjCPromptBackend(PromptAdapterSettings())
+        backend._executor = None
+        backend._initialized = True
+
+        await backend.shutdown()
+
         assert backend._executor is None
         assert backend._initialized is False
 
@@ -275,6 +328,19 @@ class TestDialogs:
         cancelled = backend._alert_sync("T", "M", None, ["Yes"], None, "unknown")
         assert cancelled.cancelled is True
 
+        _FakeAlert.default_run_modal_response = 1000
+        explicit_buttons = backend._alert_sync("T", "M", None, ["Yes", "No"], None, "info")
+        assert explicit_buttons.button_clicked == "Yes"
+
+        button_alert = await backend.alert(
+            "T",
+            "M",
+            buttons=["Yes", "No"],
+            default_button="Yes",
+            style="info",
+        )
+        assert button_alert.button_clicked == "Yes"
+
         monkeypatch.setattr(backend_mod.asyncio, "get_event_loop", lambda: _FailingLoop())
         with pytest.raises(DialogDisplayError):
             await backend.alert("T", "M")
@@ -292,11 +358,31 @@ class TestDialogs:
         _FakeAlert.default_run_modal_response = 1001
         assert backend._prompt_text_sync("T", "M", "default", "ph", True) is None
 
+        monkeypatch.setattr(backend_mod.asyncio, "get_event_loop", lambda: _FailingLoop())
+        with pytest.raises(DialogDisplayError):
+            await backend.prompt_text("T", "M")
+
         _FakeAlert.default_run_modal_response = 1000
         assert backend._prompt_choice_sync("T", "M", ["a", "b"], "b") == "b"
         assert backend._prompt_choice_sync("T", "M", ["a", "b"], "missing") == "a"
+
+        original_init = _FakePopUpButton.__init__
+
+        def init_with_out_of_range(self) -> None:
+            original_init(self)
+            self.selected_index = 99
+
+        _FakePopUpButton.__init__ = init_with_out_of_range
+        try:
+            assert backend._prompt_choice_sync("T", "M", ["a", "b"], None) is None
+        finally:
+            _FakePopUpButton.__init__ = original_init
         _FakeAlert.default_run_modal_response = 1001
         assert backend._prompt_choice_sync("T", "M", ["a", "b"], None) is None
+
+        monkeypatch.setattr(backend_mod.asyncio, "get_event_loop", lambda: _FailingLoop())
+        with pytest.raises(DialogDisplayError):
+            await backend.prompt_choice("T", "M", ["a", "b"])
 
     @pytest.mark.asyncio
     async def test_prompt_text_wrapper(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -317,12 +403,23 @@ class TestNotificationsAndFiles:
         _FakeNotificationCenter.last_instance = None
         assert backend._notify_sync("Title", "Body", NotificationLevel.INFO, False) is False
 
+        _install_fake_frameworks(monkeypatch)
+        assert backend._notify_sync("Title", "Body", NotificationLevel.INFO, False) is True
+        assert _FakeNotificationCenter.last_instance.delivered[0].sound is None
+
         panel = _FakeOpenPanel.openPanel()
         panel.run_modal_response = 1
         panel.urls = _FakeURLList(["/tmp/a.txt", "/tmp/b.txt"])
         monkeypatch.setattr(backend_mod.AppKit, "NSOpenPanel", SimpleNamespace(openPanel=lambda: panel))
         result = backend._select_file_sync("Pick", ["txt"], True)
         assert result == [Path("/tmp/a.txt"), Path("/tmp/b.txt")]
+
+        monkeypatch.setattr(backend_mod.asyncio, "get_event_loop", lambda: _ImmediateLoop())
+        panel = _FakeOpenPanel.openPanel()
+        panel.run_modal_response = 1
+        panel.urls = _FakeURLList(["/tmp/success.txt"])
+        monkeypatch.setattr(backend_mod.AppKit, "NSOpenPanel", SimpleNamespace(openPanel=lambda: panel))
+        assert await backend.select_file("Pick", ["txt"], False) == [Path("/tmp/success.txt")]
 
         panel.run_modal_response = 0
         assert backend._select_file_sync("Pick", None, False) is None
@@ -332,6 +429,9 @@ class TestNotificationsAndFiles:
         panel.urls = _FakeURLList(["/tmp/dir"])
         monkeypatch.setattr(backend_mod.AppKit, "NSOpenPanel", SimpleNamespace(openPanel=lambda: panel))
         assert backend._select_directory_sync("Pick") == Path("/tmp/dir")
+
+        panel.run_modal_response = 0
+        assert backend._select_directory_sync("Pick") is None
 
     @pytest.mark.asyncio
     async def test_wrapped_notification_and_file_errors(self, monkeypatch: pytest.MonkeyPatch) -> None:

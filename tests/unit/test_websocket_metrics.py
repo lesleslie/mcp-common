@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import importlib
 import sys
 from types import ModuleType
-from typing import Any
 
 import pytest
 
@@ -169,6 +169,18 @@ class TestWebSocketMetrics:
         assert handles["connections_active"].set_calls == [7]
         assert "conn-1" not in metrics._connection_start_times
 
+    def test_disconnect_without_known_start_time(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        handles = self._install_metric_stubs(monkeypatch)
+        monkeypatch.setattr(metrics_module, "PROMETHEUS_AVAILABLE", True)
+
+        metrics = WebSocketMetrics("session-buddy", enabled=True)
+        metrics.on_disconnect("missing-conn")
+
+        assert handles["connections_active"].dec_calls == 1
+        assert metrics._connection_start_times == {}
+
     def test_start_metrics_server_success_and_failure(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -228,3 +240,38 @@ class TestWebSocketMetrics:
         summary = get_metrics_summary("session-buddy")
         assert summary["available"] is True
         assert summary["error"] == "boom"
+
+    def test_reload_with_prometheus_client_available(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        class _ReloadMetric:
+            def __init__(self, *args: object, **kwargs: object) -> None:
+                self.label_calls: list[dict[str, object]] = []
+
+            def labels(self, **kwargs: object) -> _ReloadMetric:
+                self.label_calls.append(kwargs)
+                return self
+
+            def inc(self, amount: float = 1) -> None:
+                return None
+
+            def dec(self) -> None:
+                return None
+
+            def set(self, value: float) -> None:
+                return None
+
+            def observe(self, amount: float) -> None:
+                return None
+
+        fake_module = ModuleType("prometheus_client")
+        fake_module.Counter = _ReloadMetric
+        fake_module.Gauge = _ReloadMetric
+        fake_module.Histogram = _ReloadMetric
+        fake_module.start_http_server = lambda port: None
+
+        monkeypatch.setitem(sys.modules, "prometheus_client", fake_module)
+        reloaded = importlib.reload(metrics_module)
+
+        assert reloaded.PROMETHEUS_AVAILABLE is True
+        assert isinstance(reloaded.websocket_connections_total, _ReloadMetric)

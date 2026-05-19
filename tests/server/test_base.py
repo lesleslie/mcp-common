@@ -4,8 +4,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from oneiric.runtime.mcp_health import HealthStatus
-
 
 class TestBaseOneiricServerMixin:
     """Tests for BaseOneiricServerMixin."""
@@ -190,7 +188,7 @@ class TestBaseOneiricServerMixin:
         mock_runtime.cache_manager.get_cache_stats.assert_called_once()
 
         # Get the cache component details
-        cache_component = components[0]
+        components[0]
         # The details should come from get_cache_stats return value
         # (implementation specific, just verify it was called)
 
@@ -221,6 +219,16 @@ class TestBaseOneiricServerMixin:
         assert "http_host" not in config_snapshot
         assert "debug" not in config_snapshot
         assert "enable_http_transport" not in config_snapshot
+
+    def test_extract_config_snapshot_with_no_common_fields(self, server):
+        """Should return an empty snapshot when no common config fields exist."""
+        from types import SimpleNamespace
+
+        server.config = SimpleNamespace()
+
+        config_snapshot = server._extract_config_snapshot()
+
+        assert config_snapshot == {}
 
     def test_extract_config_snapshot_override(self):
         """Should allow overriding to add custom fields."""
@@ -346,7 +354,7 @@ class TestBaseOneiricServerMixinIntegration:
             )
 
             # Create response
-            response = mock_runtime.health_monitor.create_health_response(base_components)
+            mock_runtime.health_monitor.create_health_response(base_components)
 
             # Verify health check flow
             mock_runtime.cache_manager.get_cache_stats.assert_called_once()

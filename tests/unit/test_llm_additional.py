@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+import asyncio
 import sys
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from pydantic import SecretStr
 
 from mcp_common.llm._security import sanitize_error
 from mcp_common.llm.config import LLMSettings, ProviderConfig
@@ -143,4 +143,25 @@ class TestHailuoAdapterAdditionalBranches:
 
         with patch.object(hailuo.httpx, "AsyncClient", return_value=mock_client):
             with pytest.raises(LLMError, match="Hailuo poll failed"):
+                await adapter.generate(prompt="a rocket launch")
+
+    @pytest.mark.asyncio
+    async def test_generate_propagates_cancelled_error(self) -> None:
+        from mcp_common.llm import hailuo
+
+        submit_resp = SimpleNamespace(
+            json=lambda: {"task_id": "task-1", "base_resp": {"status_code": 0}},
+            raise_for_status=lambda: None,
+        )
+
+        mock_client = AsyncMock()
+        mock_client.post = AsyncMock(return_value=submit_resp)
+        mock_client.get = AsyncMock(side_effect=asyncio.CancelledError())
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+
+        adapter = hailuo.HailuoAdapter(api_key="test-key", poll_interval=0.01)
+
+        with patch.object(hailuo.httpx, "AsyncClient", return_value=mock_client):
+            with pytest.raises(asyncio.CancelledError):
                 await adapter.generate(prompt="a rocket launch")

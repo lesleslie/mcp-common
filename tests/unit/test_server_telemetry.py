@@ -178,6 +178,58 @@ async def test_fastmcp_middleware_resource_and_prompt_spans(
 
 
 @pytest.mark.asyncio
+async def test_fastmcp_middleware_resource_span_without_uri(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    tracer = _Tracer()
+    monkeypatch.setattr(
+        "mcp_common.server.telemetry.trace.get_tracer",
+        lambda _name: tracer,
+    )
+
+    middleware = FastMCPOpenTelemetryMiddleware(service_name="session-buddy")
+    context = SimpleNamespace(
+        method="resources/read",
+        type="request",
+        message=SimpleNamespace(),
+    )
+
+    result = await middleware.on_message(
+        context,
+        lambda _ctx: _resource_result(),
+    )
+
+    assert result == {"status": "ok", "resource": True}
+    assert "mcp.resource.uri" not in tracer.span.attributes
+
+
+@pytest.mark.asyncio
+async def test_fastmcp_middleware_prompt_span_without_component_name(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    tracer = _Tracer()
+    monkeypatch.setattr(
+        "mcp_common.server.telemetry.trace.get_tracer",
+        lambda _name: tracer,
+    )
+
+    middleware = FastMCPOpenTelemetryMiddleware(service_name="session-buddy")
+    context = SimpleNamespace(
+        method="prompts/get",
+        type="request",
+        message=SimpleNamespace(),
+    )
+
+    result = await middleware.on_message(
+        context,
+        lambda _ctx: _prompt_result(),
+    )
+
+    assert result == {"status": "ok", "prompt": True}
+    assert tracer.span.attributes["mcp.prompt.name"] == "unknown"
+
+
+@pytest.mark.asyncio
 async def test_fastmcp_middleware_sets_error_status(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -241,6 +293,59 @@ async def test_fastmcp_middleware_handles_span_without_optional_methods(
 
 
 @pytest.mark.asyncio
+async def test_fastmcp_middleware_records_non_dict_tools_result_type(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    tracer = _Tracer()
+    monkeypatch.setattr(
+        "mcp_common.server.telemetry.trace.get_tracer",
+        lambda _name: tracer,
+    )
+
+    middleware = FastMCPOpenTelemetryMiddleware(service_name="session-buddy")
+    context = SimpleNamespace(
+        method="tools/call",
+        type="request",
+        message=SimpleNamespace(name="status"),
+    )
+
+    async def call_next(_ctx: object) -> str:
+        return "ok"
+
+    result = await middleware.on_message(context, call_next)
+
+    assert result == "ok"
+    assert tracer.span.attributes["mcp.result.type"] == "str"
+
+
+@pytest.mark.asyncio
+async def test_fastmcp_middleware_error_without_optional_span_methods(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    tracer = _Tracer()
+    tracer.span = _BareSpan()
+    monkeypatch.setattr(
+        "mcp_common.server.telemetry.trace.get_tracer",
+        lambda _name: tracer,
+    )
+    monkeypatch.setattr("mcp_common.server.telemetry.Status", _Status)
+    monkeypatch.setattr("mcp_common.server.telemetry.StatusCode", _StatusCode)
+
+    middleware = FastMCPOpenTelemetryMiddleware(service_name="session-buddy")
+    context = SimpleNamespace(
+        method="tools/call",
+        type="request",
+        message=SimpleNamespace(name="broken"),
+    )
+
+    with pytest.raises(RuntimeError, match="boom"):
+        await middleware.on_message(context, _raise_runtime_error)
+
+    assert tracer.calls[0][0] == "mcp.tools.call.broken"
+    assert tracer.span.__class__ is _BareSpan
+
+
+@pytest.mark.asyncio
 async def test_fastmcp_middleware_uses_uri_when_name_missing(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -269,6 +374,32 @@ async def test_fastmcp_middleware_uses_uri_when_name_missing(
     assert tracer.calls[0][0] == "mcp.prompts.get.prompt://welcome"
     assert tracer.span.attributes["mcp.component.name"] == "prompt://welcome"
     assert tracer.span.attributes["mcp.prompt.name"] == "prompt://welcome"
+
+
+@pytest.mark.asyncio
+async def test_fastmcp_middleware_prompt_name_falls_back_to_unknown(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    tracer = _Tracer()
+    monkeypatch.setattr(
+        "mcp_common.server.telemetry.trace.get_tracer",
+        lambda _name: tracer,
+    )
+
+    middleware = FastMCPOpenTelemetryMiddleware(service_name="session-buddy")
+    context = SimpleNamespace(
+        method="prompts/get",
+        type="request",
+        message=SimpleNamespace(),
+    )
+
+    async def call_next(_ctx: object) -> dict[str, str]:
+        return {"status": "ok"}
+
+    result = await middleware.on_message(context, call_next)
+
+    assert result == {"status": "ok"}
+    assert tracer.span.attributes["mcp.prompt.name"] == "unknown"
 
 
 @pytest.mark.asyncio
@@ -303,6 +434,36 @@ def test_fastmcp_middleware_span_name_without_component() -> None:
 
     assert middleware._span_name(context) == "mcp.message"
     assert middleware._component_name(context) is None
+
+
+def test_fastmcp_middleware_tool_span_and_result_without_component_name() -> None:
+    middleware = FastMCPOpenTelemetryMiddleware(service_name="session-buddy")
+    context = SimpleNamespace(
+        method="tools/call",
+        type="request",
+        message=SimpleNamespace(),
+    )
+
+    attributes = middleware._span_attributes(context)
+    bare_span = _BareSpan()
+
+    assert attributes["mcp.tool.name"] == "unknown"
+
+    middleware._annotate_result(bare_span, context, "ok")
+    assert not hasattr(bare_span, "attributes")
+
+
+def test_fastmcp_middleware_tool_span_without_name_or_uri() -> None:
+    middleware = FastMCPOpenTelemetryMiddleware(service_name="session-buddy")
+    context = SimpleNamespace(
+        method="tools/call",
+        type="request",
+        message=SimpleNamespace(),
+    )
+
+    attributes = middleware._span_attributes(context)
+
+    assert attributes["mcp.tool.name"] == "unknown"
 
 
 def test_fastmcp_middleware_span_attributes_without_resource_uri() -> None:
