@@ -43,12 +43,11 @@ class HailuoAdapter:
         poll_interval: float = 5.0,
         max_poll_seconds: float = 300.0,
     ) -> None:
-        if httpx is None:
-            msg = (
+        if httpx is None:  # pragma: no cover
+            raise ImportError(
                 "httpx package required for HailuoAdapter. "
                 "Install with: pip install mcp-common[llm]"
             )
-            raise ImportError(msg)
 
         self._api_key = api_key
         self._model = model
@@ -76,7 +75,7 @@ class HailuoAdapter:
         Raises:
             LLMError: On API error, task failure, or poll timeout.
         """
-        payload: dict[str, Any] = {"model": self._model, "prompt": prompt, **kwargs}
+        payload: dict[str, Any] = {"model": self._model, "prompt": prompt} | kwargs
 
         async with httpx.AsyncClient(headers=self._auth_headers()) as client:
             try:

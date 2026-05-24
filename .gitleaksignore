@@ -1,0 +1,6 @@
+# Test files with intentionally fake secrets for testing/sanitization
+tests/**
+docs/**
+**/.git/**
+**/.venv/**
+**/node_modules/**

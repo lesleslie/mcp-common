@@ -228,7 +228,7 @@ class PromptBackend(ABC):
         await self.initialize()
         return self
 
-    async def __aexit__(self, *args) -> None:
+    async def __aexit__(self, *args: BaseException | None) -> None:
         """Context manager exit."""
         await self.shutdown()
 

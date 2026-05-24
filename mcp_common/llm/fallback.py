@@ -83,9 +83,10 @@ class FallbackChain:
         Returns:
             FallbackChain with providers ordered by fallback_chain.
         """
-        providers = []
-        for provider_config in settings.get_enabled_providers():
-            providers.append(OpenAICompatibleProvider(provider_config))
+        providers = [
+            OpenAICompatibleProvider(provider_config)
+            for provider_config in settings.get_enabled_providers()
+        ]
         return cls(providers)
 
     async def execute(self, task: dict[str, Any]) -> dict[str, Any]:

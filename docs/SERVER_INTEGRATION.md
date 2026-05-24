@@ -587,6 +587,7 @@ def main():
     cli_factory.run()
 
 # After
+<!-- lychee:ignore:localhost -->
 def main():
     cli_factory = MCPServerCLIFactory.create_server_cli(
         server_class=MyMCPServer,

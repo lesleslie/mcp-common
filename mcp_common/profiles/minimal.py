@@ -96,9 +96,9 @@ class MinimalServer:
         """
         self.name = name
         self.settings = settings or MinimalServerSettings.load(name)
-        self._tools: dict[str, Callable] = {}
+        self._tools: dict[str, Callable[..., Any]] = {}
 
-    def tool(self, name: str | None = None) -> Callable:
+    def tool(self, name: str | None = None) -> Callable[..., Any]:
         """Decorator to register a tool.
 
         Args:
@@ -114,7 +114,7 @@ class MinimalServer:
             ...     return "result"
         """
 
-        def decorator(func: Callable) -> Callable:
+        def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             tool_name = name or func.__name__
             self._tools[tool_name] = func
             return func
@@ -166,7 +166,7 @@ class MinimalServer:
         """
         return list(self._tools.keys())
 
-    def get_tool(self, name: str) -> Callable | None:
+    def get_tool(self, name: str) -> Callable[..., Any] | None:
         """Get a registered tool by name.
 
         Args:

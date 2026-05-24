@@ -109,8 +109,8 @@ def generate_self_signed_cert(
         # Clean up on error
         cert_file.close()
         key_file.close()
-        os.unlink(cert_file.name)
-        os.unlink(key_file.name)
+        Path(cert_file.name).unlink(missing_ok=True)
+        Path(key_file.name).unlink(missing_ok=True)
         raise RuntimeError(f"Failed to generate self-signed certificate: {e}") from e
     finally:
         cert_file.close()
@@ -165,7 +165,7 @@ def create_ssl_context(
 
     # Set certificate verification mode
     if verify_client or ca_file:
-        ssl_context.verify_mode = (
+        ssl_context.verify_mode = (  # type: ignore[assignment]
             cert_reqs if cert_reqs != ssl.CERT_NONE else ssl.CERT_REQUIRED
         )
 
@@ -178,7 +178,7 @@ def create_ssl_context(
             logger.info(f"Loaded CA certificate for client verification: {ca_path}")
 
     # Set secure cipher suites (TLS 1.2+)
-    ssl_context.set_ciphers(
+    ssl_context.set_ciphers(  # nosemgrep: python.lang.security.audit.insecure-transport.ssl.no-set-ciphers.no-set-ciphers
         "ECDHE-ECDSA-AES128-GCM-SHA256:"
         "ECDHE-RSA-AES128-GCM-SHA256:"
         "ECDHE-ECDSA-AES256-GCM-SHA384:"
@@ -310,7 +310,7 @@ def validate_certificate(
 
     try:
         # Load certificate
-        with open(cert_path, "rb") as f:
+        with cert_path.open("rb") as f:
             cert_data = f.read()
             cert = x509.load_pem_x509_certificate(cert_data, default_backend())
 

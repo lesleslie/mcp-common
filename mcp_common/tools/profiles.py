@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import os
 from enum import StrEnum
-from typing import ClassVar
 
 
 class ToolProfile(StrEnum):
@@ -100,7 +99,7 @@ class ToolProfile(StrEnum):
 
 # Tools that MUST be registered in every profile.
 # These are required by infrastructure (K8s probes, load balancers, monitoring).
-MANDATORY_TOOLS: ClassVar[set[str]] = {
+MANDATORY_TOOLS: set[str] = {
     "get_liveness",
     "get_readiness",
     "health_check",

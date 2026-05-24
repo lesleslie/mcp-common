@@ -172,11 +172,11 @@ class FullServer:
         self.telemetry = telemetry
         self.settings = settings or FullServerSettings.load(name)
 
-        self._tools: dict[str, Callable] = {}
-        self._resources: dict[str, Callable] = {}
-        self._prompts: dict[str, Callable] = {}
+        self._tools: dict[str, Callable[..., Any]] = {}
+        self._resources: dict[str, Callable[..., Any]] = {}
+        self._prompts: dict[str, Callable[..., Any]] = {}
 
-    def tool(self, name: str | None = None) -> Callable:
+    def tool(self, name: str | None = None) -> Callable[..., Any]:
         """Decorator to register a tool.
 
         Tools registered here will automatically have:
@@ -193,14 +193,14 @@ class FullServer:
             ...     return transform(data)
         """
 
-        def decorator(func: Callable) -> Callable:
+        def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             tool_name = name or func.__name__
             self._tools[tool_name] = func
             return func
 
         return decorator
 
-    def resource(self, uri_pattern: str) -> Callable:
+    def resource(self, uri_pattern: str) -> Callable[..., Any]:
         """Decorator to register a resource handler.
 
         Resources registered here will automatically have:
@@ -217,13 +217,13 @@ class FullServer:
             ...     return fetch_data(id)
         """
 
-        def decorator(func: Callable) -> Callable:
+        def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             self._resources[uri_pattern] = func
             return func
 
         return decorator
 
-    def prompt(self, name: str | None = None) -> Callable:
+    def prompt(self, name: str | None = None) -> Callable[..., Any]:
         """Decorator to register a prompt template.
 
         Prompt templates are reusable prompt strings with parameters.
@@ -237,7 +237,7 @@ class FullServer:
             ...     return f"Analyze this data: {data}"
         """
 
-        def decorator(func: Callable) -> Callable:
+        def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             prompt_name = name or func.__name__
             self._prompts[prompt_name] = func
             return func
@@ -288,7 +288,7 @@ class FullServer:
                 "enabled": self.telemetry is not None,
                 "type": type(self.telemetry).__name__ if self.telemetry else None,
             },
-            "workers": self.settings.workers,
+            "workers": self.settings.workers,  # type: ignore[attr-defined]
         }
 
     def list_tools(self) -> list[str]:
@@ -303,14 +303,14 @@ class FullServer:
         """List prompt template names."""
         return list(self._prompts.keys())
 
-    def get_tool(self, name: str) -> Callable | None:
+    def get_tool(self, name: str) -> Callable[..., Any] | None:
         """Get a registered tool by name."""
         return self._tools.get(name)
 
-    def get_resource(self, uri_pattern: str) -> Callable | None:
+    def get_resource(self, uri_pattern: str) -> Callable[..., Any] | None:
         """Get a resource handler by URI pattern."""
         return self._resources.get(uri_pattern)
 
-    def get_prompt(self, name: str) -> Callable | None:
+    def get_prompt(self, name: str) -> Callable[..., Any] | None:
         """Get a prompt template by name."""
         return self._prompts.get(name)

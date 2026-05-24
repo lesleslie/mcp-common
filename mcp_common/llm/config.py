@@ -88,7 +88,7 @@ class LLMSettings(BaseModel):
             return cls()
 
         with open(path) as f:
-            data = yaml.safe_load(f) or {}
+            data: dict[str, Any] = yaml.safe_load(f) or {}
 
         reserved = {
             "default_provider",

@@ -4,7 +4,7 @@
 **Status:** Canonical
 **Purpose:** Define the canonical protocol for iTerm2 AppleScript integration across the Bodai ecosystem (mdinject/Swift, Mahavishnu/Python).
 
----
+______________________________________________________________________
 
 ## 1. Overview
 
@@ -15,10 +15,11 @@ This document defines the canonical protocol for iTerm2 AppleScript integration,
 Canonical session identifier format: `"session_{iTerm2IntId}"`
 
 Examples:
+
 - `session_123` — session with iTerm2 integer ID 123
 - `session_456` — session with iTerm2 integer ID 456
 
----
+______________________________________________________________________
 
 ## 2. Canonical Session Schema
 
@@ -63,7 +64,7 @@ struct ITerm2Session: Identifiable, Hashable {
 }
 ```
 
----
+______________________________________________________________________
 
 ## 3. Escaping Rules (Canonical)
 
@@ -116,7 +117,7 @@ When a string contains multiple lines, AppleScript requires joining with `& retu
 "line1" & return & "line2" & return & "line3"
 ```
 
----
+______________________________________________________________________
 
 ## 4. AppleScript Pattern Templates
 
@@ -217,7 +218,7 @@ tell application "iTerm2"
 end tell
 ```
 
----
+______________________________________________________________________
 
 ## 5. Conformance Requirements
 
@@ -247,11 +248,11 @@ Implementations must satisfy the following conformance requirements:
 Each repository implementing this protocol SHOULD provide conformance tests that:
 
 1. Verify session ID format matches `"session_{int}"`
-2. Verify escaping handles all six character types correctly
-3. Verify multi-line string building with `& return &`
-4. Verify each AppleScript pattern produces valid AppleScript
+1. Verify escaping handles all six character types correctly
+1. Verify multi-line string building with `& return &`
+1. Verify each AppleScript pattern produces valid AppleScript
 
----
+______________________________________________________________________
 
 ## 6. References
 

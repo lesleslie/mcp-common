@@ -1,7 +1,10 @@
 """Factory function for creating prompt adapters with automatic backend detection."""
 
+from __future__ import annotations
+
 import sys
-from typing import TYPE_CHECKING, Literal
+from contextlib import suppress
+from typing import TYPE_CHECKING, Literal, cast
 
 from mcp_common.prompting.base import PromptBackend
 from mcp_common.prompting.exceptions import BackendUnavailableError
@@ -49,7 +52,7 @@ def create_prompt_adapter(
     selected_backend = _resolve_backend(backend, config)
 
     # Import and instantiate the selected backend
-    adapter = None
+    adapter: PromptBackend | None = None
     if selected_backend == "pyobjc":
         try:
             from mcp_common.backends.pyobjc import PyObjCPromptBackend
@@ -94,7 +97,7 @@ def create_prompt_adapter(
     # Initialize the adapter and return it
     # Note: initialize() is synchronous for both backends, so we can't easily call it here
     # Users should call await adapter.initialize() explicitly or use context manager
-    return adapter
+    return cast(PromptBackend, adapter)  # type: ignore[return-value]
 
 
 def _resolve_backend(
@@ -114,28 +117,24 @@ def _resolve_backend(
     """
     # If specific backend requested, use it (will error if unavailable)
     if preference in ("pyobjc", "prompt-toolkit"):
-        return preference
+        return cast(Literal["pyobjc", "prompt-toolkit"], preference)
 
     # Auto-detect: Try PyObjC on macOS, fallback to prompt-toolkit
     if sys.platform == "darwin":
         # Try PyObjC first on macOS
-        try:
+        with suppress(ImportError):
             from mcp_common.backends.pyobjc import PyObjCPromptBackend
 
             # Quick availability check
             if PyObjCPromptBackend.is_available_static():
                 return "pyobjc"
-        except ImportError:
-            pass  # Fall through to prompt-toolkit
 
     # Fallback to prompt-toolkit (cross-platform)
-    try:
+    with suppress(ImportError):
         from mcp_common.backends.toolkit import PromptToolkitBackend
 
         if PromptToolkitBackend.is_available_static():
             return "prompt-toolkit"
-    except ImportError:
-        pass
 
     # No backend available
     raise BackendUnavailableError(
@@ -160,25 +159,21 @@ def list_available_backends() -> list[str]:
         >>> available = list_available_backends()
         >>> print(f"Available backends: {', '.join(available)}")
     """
-    available = []
+    available: list[str] = []
 
     # Check PyObjC
-    try:
+    with suppress(ImportError):
         from mcp_common.backends.pyobjc import PyObjCPromptBackend
 
         if PyObjCPromptBackend.is_available_static():
             available.append("pyobjc")
-    except ImportError:
-        pass
 
     # Check prompt-toolkit
-    try:
+    with suppress(ImportError):
         from mcp_common.backends.toolkit import PromptToolkitBackend
 
         if PromptToolkitBackend.is_available_static():
             available.append("prompt-toolkit")
-    except ImportError:
-        pass
 
     return available
 

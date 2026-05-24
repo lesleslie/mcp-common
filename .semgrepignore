@@ -1,0 +1,7 @@
+# Skip test files with intentionally fake secrets for sanitization testing
+tests/test_security_sanitization.py
+tests/test_sanitization.py
+tests/unit/test_llm_additional.py
+tests/auth/test_decorator.py
+tests/auth/test_core.py
+tests/integration/test_inter_service_auth.py

@@ -49,7 +49,7 @@ def analyze_missing_lines(file_data):
 
 def get_file_imports():
     """Get import statements for each file to understand dependencies."""
-    imports = {}
+    imports: dict[str, list[str]] = {}
 
     for py_file in Path("mcp_common").rglob("*.py"):
         if py_file.name == "__init__.py":
@@ -58,7 +58,7 @@ def get_file_imports():
         try:
             with open(py_file, "r") as f:
                 content = f.read()
-                file_imports = []
+                file_imports: list[str] = []
 
                 # Find import statements
                 import_pattern = r"^(?:from\s+(\w+)\s+import|\s*import\s+(\w+))"
@@ -75,7 +75,7 @@ def get_file_imports():
 
 def generate_test_plan(missing_stats, imports):
     """Generate a plan for improving test coverage."""
-    test_plan = []
+    test_plan: list[dict[str, object]] = []
 
     # Priority 1: Critical modules with low coverage
     critical_modules = [

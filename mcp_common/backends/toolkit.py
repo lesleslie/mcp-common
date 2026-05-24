@@ -148,8 +148,22 @@ class PromptToolkitBackend(PromptBackend):
                     default=default_button,
                 )
                 if result is None:
-                    return DialogResult(cancelled=True)
-                return DialogResult(button_clicked=result)
+                    return DialogResult(
+                        button_clicked="",
+                        text_input="",
+                        cancelled=True,
+                        selected_choice=None,
+                        selected_files=[],
+                        selected_directory=None,
+                    )
+                return DialogResult(
+                    button_clicked=result,
+                    text_input="",
+                    cancelled=False,
+                    selected_choice=None,
+                    selected_files=[],
+                    selected_directory=None,
+                )
             else:
                 # Simple acknowledgment - use print, not input (for testability)
                 print(display_text)
@@ -157,8 +171,22 @@ class PromptToolkitBackend(PromptBackend):
                 try:
                     input("\nPress Enter to continue...")
                 except (EOFError, KeyboardInterrupt):
-                    return DialogResult(cancelled=True)
-                return DialogResult(button_clicked="OK")
+                    return DialogResult(
+                        button_clicked="",
+                        text_input="",
+                        cancelled=True,
+                        selected_choice=None,
+                        selected_files=[],
+                        selected_directory=None,
+                    )
+                return DialogResult(
+                    button_clicked="OK",
+                    text_input="",
+                    cancelled=False,
+                    selected_choice=None,
+                    selected_files=[],
+                    selected_directory=None,
+                )
 
         except Exception as e:
             raise DialogDisplayError(
@@ -177,8 +205,8 @@ class PromptToolkitBackend(PromptBackend):
         try:
             display_text = f"{title}\n\n{message}"
 
-            # Use prompt-toolkit's confirm
-            result = confirm(display_text, default=default)
+            # Use prompt-toolkit's confirm (default param not supported in 3.0.x)
+            result = confirm(display_text)
 
             # Map True/False to yes/no labels for clarity
             if result:
@@ -244,7 +272,7 @@ class PromptToolkitBackend(PromptBackend):
             # Get user selection using prompt
             while True:
                 try:
-                    selection = prompt("> ", default=default if default else "")
+                    selection = prompt("> ", default=default or "")
 
                     if not selection:
                         if default:

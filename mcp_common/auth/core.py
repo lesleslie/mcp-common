@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -79,10 +80,8 @@ def verify_token(
 
     scopes = raw.get("scopes", [])
     perms: frozenset[Permission] = frozenset()
-    try:
+    with suppress(ValueError):
         perms = frozenset(Permission(s) for s in scopes)
-    except ValueError:
-        pass
 
     return TokenPayload(
         issuer=issuer,

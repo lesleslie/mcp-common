@@ -1,0 +1,13 @@
+file:///Users/les/Projects/mcp-common/docs/
+file:///Users/les/Projects/mcp-common/tests/
+http://localhost:*
+http://127.0.0.1:*
+http://0.0.0.0:*
+http://jaeger:*
+.*minimax\.io.*
+api\.cloudflare\.com
+api\.anthropic\.com
+api\.openai\.com
+api\.sendgrid\.com
+schema\.org
+logs\.local

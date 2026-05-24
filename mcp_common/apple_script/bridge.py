@@ -19,10 +19,10 @@ def escape_for_applescript(value: str) -> str:
     5. Carriage return \\r → removed
     """
     escaped = value.replace("\\", "\\\\")  # backslash first
-    escaped = escaped.replace('"', '\\"')   # double-quote
-    escaped = escaped.replace("'", "\\'")   # single-quote
+    escaped = escaped.replace('"', '\\"')  # double-quote
+    escaped = escaped.replace("'", "\\'")  # single-quote
     escaped = escaped.replace("\t", "\\t")  # tab
-    escaped = escaped.replace("\r", "")     # carriage return removed
+    escaped = escaped.replace("\r", "")  # carriage return removed
     return escaped
 
 
@@ -69,7 +69,7 @@ async def run(script: str, timeout: float = 30.0) -> str:
             err = stderr.decode().strip() if stderr else "Unknown AppleScript error"
             raise AppleScriptError(stderr=err)
         return stdout.decode().strip()
-    except asyncio.TimeoutError:
+    except TimeoutError:
         proc.kill()
         raise ScriptTimeoutError(f"AppleScript timed out after {timeout}s")
     except Exception as e:

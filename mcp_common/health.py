@@ -354,7 +354,7 @@ class HealthChecker:
                 )
 
             # Parse response
-            response_json = result.get("json", {}) or {}
+            response_json: dict[str, t.Any] = result.get("json", {}) or {}
             response_status = response_json.get("status", "healthy")
 
             # Map status string to enum
@@ -565,7 +565,7 @@ def register_health_tools(  # noqa: C901  # noqa: C901
     checker = HealthChecker()
     waiter = DependencyWaiter()
 
-    @mcp.tool()
+    @mcp.tool()  # type: ignore[untyped-decorator]
     async def health_check_service(
         service_name_arg: str,
         host: str = "localhost",
@@ -599,7 +599,7 @@ def register_health_tools(  # noqa: C901  # noqa: C901
         )
         return result.to_dict()
 
-    @mcp.tool()
+    @mcp.tool()  # type: ignore[untyped-decorator]
     async def health_check_all() -> dict[str, t.Any]:
         """Check health of all configured dependencies.
 
@@ -628,7 +628,7 @@ def register_health_tools(  # noqa: C901  # noqa: C901
                         "error": str(result),
                     }
                 else:
-                    results[name] = result.to_dict()
+                    results[name] = t.cast(HealthCheckResult, result).to_dict()
 
         all_ok = all(
             r.get("status") in (HealthStatus.HEALTHY.value, HealthStatus.DEGRADED.value)
@@ -648,7 +648,7 @@ def register_health_tools(  # noqa: C901  # noqa: C901
             ),
         }
 
-    @mcp.tool()
+    @mcp.tool()  # type: ignore[untyped-decorator]
     async def wait_for_dependency(
         dep_service_name: str,
         host: str = "localhost",
@@ -709,7 +709,7 @@ def register_health_tools(  # noqa: C901  # noqa: C901
 
         return response
 
-    @mcp.tool()
+    @mcp.tool()  # type: ignore[untyped-decorator]
     async def wait_for_all_dependencies() -> dict[str, t.Any]:
         """Wait for all configured dependencies to become healthy.
 
@@ -746,7 +746,7 @@ def register_health_tools(  # noqa: C901  # noqa: C901
 
         return response
 
-    @mcp.tool()
+    @mcp.tool()  # type: ignore[untyped-decorator]
     async def get_liveness() -> dict[str, t.Any]:
         """Get liveness status for this service.
 
@@ -763,7 +763,7 @@ def register_health_tools(  # noqa: C901  # noqa: C901
             "uptime_seconds": round(time.time() - start_time, 2),
         }
 
-    @mcp.tool()
+    @mcp.tool()  # type: ignore[untyped-decorator]
     async def get_readiness() -> dict[str, t.Any]:
         """Get readiness status for this service.
 

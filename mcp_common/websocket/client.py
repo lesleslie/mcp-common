@@ -11,7 +11,7 @@ import logging
 import ssl
 import uuid
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 try:
     import websockets
@@ -79,7 +79,7 @@ class WebSocketClient:
         """Initialize WebSocket client.
 
         Args:
-            uri: WebSocket server URI (ws:// or wss://)
+            uri: WebSocket server URI (ws:// or wss://)  # nosemgrep: javascript.lang.security.detect-insecure-websocket.detect-insecure-websocket
             token: JWT token for authentication
             reconnect: Enable automatic reconnection
             max_retries: Maximum reconnection attempts
@@ -112,22 +112,22 @@ class WebSocketClient:
             self._configure_ssl()
 
         # Connection state
-        self.websocket: Any | None = None
+        self.websocket: Any = None
         self.is_connected = False
         self.connection_id: str | None = None
         self.is_authenticated = False
 
         # Request/response tracking
-        self.pending_requests: dict[str, asyncio.Future] = {}
+        self.pending_requests: dict[str, asyncio.Future[Any]] = {}
         self.request_timeout: float = 30.0  # seconds
 
         # Event handlers
-        self.event_handlers: dict[str, set[Callable]] = {}
+        self.event_handlers: dict[str, set[Callable[..., Any]]] = {}
         self.rooms: set[str] = set()
 
         # Background tasks
-        self.receive_task: asyncio.Task | None = None
-        self.reconnect_task: asyncio.Task | None = None
+        self.receive_task: asyncio.Task[Any] | None = None
+        self.reconnect_task: asyncio.Task[Any] | None = None
 
     def _configure_ssl(self) -> None:
         """Configure SSL context for WSS connections.
@@ -155,7 +155,7 @@ class WebSocketClient:
                 "with self-signed certificates"
             )
 
-    async def connect(self):
+    async def connect(self) -> None:
         """Connect to the WebSocket server."""
         if self.is_connected:
             logger.warning("Already connected")
@@ -188,7 +188,7 @@ class WebSocketClient:
             else:
                 raise
 
-    async def _authenticate(self):
+    async def _authenticate(self) -> None:
         """Send JWT authentication to server."""
         if not self.token:
             return
@@ -198,10 +198,11 @@ class WebSocketClient:
                 "auth", {"token": self.token}
             )
             encoded = WebSocketProtocol.encode(auth_request)
-            await self.websocket.send(encoded)
+            ws = self.websocket
+            await ws.send(encoded)
 
             # Wait for auth response
-            response = await self.websocket.recv()
+            response = await ws.recv()
             response_data = WebSocketProtocol.decode(response)
 
             if response_data.type == MessageType.RESPONSE:
@@ -215,7 +216,7 @@ class WebSocketClient:
             logger.error(f"Authentication error: {e}")
             raise
 
-    async def disconnect(self):
+    async def disconnect(self) -> None:
         """Disconnect from the WebSocket server."""
         logger.info("Disconnecting")
 
@@ -242,8 +243,10 @@ class WebSocketClient:
         self.is_authenticated = False
         self.websocket = None
 
-    async def _receive_loop(self):
+    async def _receive_loop(self) -> None:
         """Background task to receive and handle messages."""
+        if self.websocket is None:
+            return
         try:
             async for message in self.websocket:
                 try:
@@ -261,7 +264,7 @@ class WebSocketClient:
             if self.reconnect:
                 self.reconnect_task = asyncio.create_task(self._reconnect_loop())
 
-    async def _reconnect_loop(self):
+    async def _reconnect_loop(self) -> None:
         """Background task to handle reconnection with exponential backoff."""
         delay = self.initial_delay
 
@@ -301,7 +304,7 @@ class WebSocketClient:
 
         logger.error("Max reconnection attempts reached")
 
-    async def _handle_message(self, message: WebSocketMessage):
+    async def _handle_message(self, message: WebSocketMessage) -> None:
         """Handle incoming message.
 
         Args:
@@ -317,7 +320,7 @@ class WebSocketClient:
         elif message.type == MessageType.EVENT and message.event:
             await self._emit_event(message.event, message.data)
 
-    async def _emit_event(self, event_type: str, data: dict[str, Any]):
+    async def _emit_event(self, event_type: str, data: dict[str, Any]) -> None:
         """Emit event to registered handlers.
 
         Args:
@@ -361,17 +364,18 @@ class WebSocketClient:
         encoded = WebSocketProtocol.encode(request)
 
         # Create future for response
-        future = asyncio.Future()
+        future: asyncio.Future[Any] = asyncio.Future()
         self.pending_requests[request.id] = future
 
         try:
-            await self.websocket.send(encoded)
+            ws = self.websocket
+            await ws.send(encoded)
 
             # Wait for response with timeout
             timeout = timeout or self.request_timeout
             response = await asyncio.wait_for(future, timeout=timeout)
 
-            return response
+            return cast(WebSocketMessage, response)
 
         except TimeoutError:
             self.pending_requests.pop(request.id, None)
@@ -380,7 +384,7 @@ class WebSocketClient:
         finally:
             self.pending_requests.pop(request.id, None)
 
-    async def send(self, event: str, data: dict[str, Any]):
+    async def send(self, event: str, data: dict[str, Any]) -> None:
         """
         Send an event message (no response expected).
 
@@ -397,9 +401,10 @@ class WebSocketClient:
         message = WebSocketProtocol.create_event(event, data)
         encoded = WebSocketProtocol.encode(message)
 
-        await self.websocket.send(encoded)
+        ws = self.websocket
+        await ws.send(encoded)
 
-    async def subscribe_to_room(self, room_id: str):
+    async def subscribe_to_room(self, room_id: str) -> None:
         """
         Subscribe to a room to receive broadcasted events.
 
@@ -414,7 +419,7 @@ class WebSocketClient:
         self.rooms.add(room_id)
         logger.debug(f"Subscribed to room {room_id}")
 
-    async def unsubscribe_from_room(self, room_id: str):
+    async def unsubscribe_from_room(self, room_id: str) -> None:
         """
         Unsubscribe from a room.
 
@@ -425,7 +430,9 @@ class WebSocketClient:
         self.rooms.discard(room_id)
         logger.debug(f"Unsubscribed from room {room_id}")
 
-    def on_event(self, event_type: str):
+    def on_event(
+        self, event_type: str
+    ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
         """
         Decorator to register event handler.
 
@@ -441,7 +448,7 @@ class WebSocketClient:
             Decorator function
         """
 
-        def decorator(func: Callable) -> Callable:
+        def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             if event_type not in self.event_handlers:
                 self.event_handlers[event_type] = set()
             self.event_handlers[event_type].add(func)

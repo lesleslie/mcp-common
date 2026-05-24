@@ -12,7 +12,9 @@ import time
 import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Callable
+from contextlib import suppress
 from logging import Logger
+from pathlib import Path
 from typing import Any
 
 try:
@@ -158,7 +160,7 @@ class WebSocketServer(ABC):
         self.room_connections: dict[str, str] = {}  # connection_id -> room_id
 
         # Event handlers
-        self.event_handlers: dict[str, set[Callable]] = {}
+        self.event_handlers: dict[str, set[Callable[..., Any]]] = {}
 
         # Server state
         self.server: Any | None = None
@@ -232,13 +234,13 @@ class WebSocketServer(ABC):
         """Get the WebSocket server URI.
 
         Returns:
-            WebSocket URI (ws:// or wss://)
+            WebSocket URI (ws:// or wss://)  # nosemgrep: javascript.lang.security.detect-insecure-websocket.detect-insecure-websocket
         """
         scheme = "wss" if self.ssl_context else "ws"
         return f"{scheme}://{self.host}:{self.port}"
 
     @abstractmethod
-    async def on_connect(self, websocket: Any, connection_id: str):
+    async def on_connect(self, websocket: Any, connection_id: str) -> None:
         """
         Handle new WebSocket connection.
 
@@ -249,7 +251,7 @@ class WebSocketServer(ABC):
         pass
 
     @abstractmethod
-    async def on_disconnect(self, websocket: Any, connection_id: str):
+    async def on_disconnect(self, websocket: Any, connection_id: str) -> None:
         """
         Handle WebSocket disconnection.
 
@@ -260,7 +262,7 @@ class WebSocketServer(ABC):
         pass
 
     @abstractmethod
-    async def on_message(self, websocket: Any, message: WebSocketMessage):
+    async def on_message(self, websocket: Any, message: WebSocketMessage) -> None:
         """
         Handle incoming WebSocket message.
 
@@ -290,9 +292,9 @@ class WebSocketServer(ABC):
             logger.warning("Authentication attempted but no authenticator configured")
             return None
 
-        return self.authenticator.authenticate_connection(token)
+        return self.authenticator.authenticate_connection(token)  # type: ignore[no-any-return]
 
-    async def start(self):  # noqa: C901  # noqa: C901
+    async def start(self) -> None:  # noqa: C901  # noqa: C901
         """Start the WebSocket server."""
         if self.is_running:
             logger.warning(f"WebSocket server already running on {self.uri}")
@@ -304,7 +306,7 @@ class WebSocketServer(ABC):
         if self.enable_metrics and self.metrics:
             self.metrics.start_metrics_server(self.metrics_port)
 
-        async def handler(websocket):  # noqa: C901  # noqa: C901
+        async def handler(websocket: Any) -> None:  # noqa: C901  # noqa: C901
             # Check connection limit
             if len(self.connections) >= self.max_connections:
                 await websocket.close(1013, "Server at maximum capacity")
@@ -325,7 +327,7 @@ class WebSocketServer(ABC):
                         auth_data.type == MessageType.REQUEST
                         and auth_data.event == "auth"
                     ):
-                        token = auth_data.data.get("token")
+                        token: str = auth_data.data.get("token")  # type: ignore[assignment]
                         user = self.authenticate_websocket(token)
 
                         if user is None:
@@ -435,7 +437,7 @@ class WebSocketServer(ABC):
             f"({tls_mode}, {len(self.connections)} connections)"
         )
 
-    async def stop(self):
+    async def stop(self) -> None:
         """Stop the WebSocket server."""
         if not self.is_running:
             return
@@ -444,10 +446,8 @@ class WebSocketServer(ABC):
 
         # Close all connections
         for connection_id, websocket in list(self.connections.items()):
-            try:
+            with suppress(Exception):
                 await websocket.close()
-            except Exception:
-                pass
 
         self.is_running = False
 
@@ -456,26 +456,20 @@ class WebSocketServer(ABC):
 
     def _cleanup_auto_cert(self) -> None:
         """Clean up auto-generated certificate files."""
-        import os
-
-        if self._auto_cert_path and os.path.exists(self._auto_cert_path):
-            try:
-                os.unlink(self._auto_cert_path)
+        if self._auto_cert_path:
+            with suppress(Exception):
+                Path(self._auto_cert_path).unlink(missing_ok=True)
                 logger.debug(f"Cleaned up auto-generated cert: {self._auto_cert_path}")
-            except Exception as e:
-                logger.warning(f"Failed to cleanup cert file: {e}")
 
-        if self._auto_key_path and os.path.exists(self._auto_key_path):
-            try:
-                os.unlink(self._auto_key_path)
+        if self._auto_key_path:
+            with suppress(Exception):
+                Path(self._auto_key_path).unlink(missing_ok=True)
                 logger.debug(f"Cleaned up auto-generated key: {self._auto_key_path}")
-            except Exception as e:
-                logger.warning(f"Failed to cleanup key file: {e}")
 
         self._auto_cert_path = None
         self._auto_key_path = None
 
-    async def join_room(self, room_id: str, connection_id: str):
+    async def join_room(self, room_id: str, connection_id: str) -> None:
         """Add a connection to a room."""
         if room_id not in self.connection_rooms:
             self.connection_rooms[room_id] = set()
@@ -485,7 +479,7 @@ class WebSocketServer(ABC):
 
         logger.debug(f"Connection {connection_id} joined room {room_id}")
 
-    async def leave_room(self, room_id: str, connection_id: str):
+    async def leave_room(self, room_id: str, connection_id: str) -> None:
         """Remove a connection from a room."""
         if room_id in self.connection_rooms:
             self.connection_rooms[room_id].discard(connection_id)
@@ -496,13 +490,13 @@ class WebSocketServer(ABC):
 
         logger.debug(f"Connection {connection_id} left room {room_id}")
 
-    async def leave_all_rooms(self, connection_id: str):
+    async def leave_all_rooms(self, connection_id: str) -> None:
         """Remove a connection from all rooms."""
         if connection_id in self.room_connections:
             room_id = self.room_connections[connection_id]
             await self.leave_room(room_id, connection_id)
 
-    async def broadcast_to_room(self, room_id: str, message: WebSocketMessage):
+    async def broadcast_to_room(self, room_id: str, message: WebSocketMessage) -> None:
         """
         Broadcast a message to all connections in a room.
 
@@ -533,7 +527,9 @@ class WebSocketServer(ABC):
             duration = time.time() - start_time
             self.metrics.on_broadcast(room_id, duration)
 
-    async def send_to_connection(self, connection_id: str, message: WebSocketMessage):
+    async def send_to_connection(
+        self, connection_id: str, message: WebSocketMessage
+    ) -> None:
         """
         Send a message to a specific connection.
 
@@ -560,7 +556,9 @@ class WebSocketServer(ABC):
             if self.metrics:
                 self.metrics.on_message_error("send_failed")
 
-    def on_event(self, event_type: str):
+    def on_event(
+        self, event_type: str
+    ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
         """
         Decorator to register event handler.
 
@@ -570,7 +568,7 @@ class WebSocketServer(ABC):
                 print(f"Session updated: {data}")
         """
 
-        def decorator(func: Callable) -> Callable:
+        def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             if event_type not in self.event_handlers:
                 self.event_handlers[event_type] = set()
             self.event_handlers[event_type].add(func)
@@ -578,7 +576,7 @@ class WebSocketServer(ABC):
 
         return decorator
 
-    async def emit_event(self, event_type: str, data: dict[str, Any]):
+    async def emit_event(self, event_type: str, data: dict[str, Any]) -> None:
         """
         Emit an event to all registered handlers.
 

@@ -201,10 +201,7 @@ class PythonHandler:
         docstring = self._extract_docstring(node, source)
 
         # Check for async
-        modifiers = []
-        for child in node.children:
-            if child.type == "async":
-                modifiers.append("async")
+        modifiers = ["async" for child in node.children if child.type == "async"]
 
         return SymbolInfo(
             name=name,
@@ -293,7 +290,7 @@ class PythonHandler:
 
         return ImportInfo(
             module=names[0],
-            names=tuple(names[1:]) if len(names) > 1 else tuple(),
+            names=tuple(names[1:]) if len(names) > 1 else (),
             line=node.start_point[0] + 1,
         )
 

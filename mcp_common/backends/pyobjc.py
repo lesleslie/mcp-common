@@ -33,8 +33,8 @@ if TYPE_CHECKING:
 
 # PyObjC imports (lazy, will fail if not installed)
 try:
-    import AppKit
-    import Foundation
+    import AppKit  # type: ignore[import-not-found]
+    import Foundation  # type: ignore[import-not-found]
 
     PYOBJC_AVAILABLE = True
 except ImportError:
@@ -123,7 +123,7 @@ class PyObjCPromptBackend(PromptBackend):
         """
         if hasattr(self, "_executor") and self._executor is not None:
             self._executor.shutdown(wait=True)
-            self._executor = None
+            self._executor = None  # type: ignore[assignment]
 
         self._initialized = False
 
@@ -193,9 +193,23 @@ class PyObjCPromptBackend(PromptBackend):
         # Map response to button (NSAlertFirstButtonReturn = 1000, etc.)
         button_index = response - 1000
         if 0 <= button_index < len(buttons):
-            return DialogResult(button_clicked=buttons[button_index])
+            return DialogResult(
+                button_clicked=buttons[button_index],
+                text_input="",
+                cancelled=False,
+                selected_choice=None,
+                selected_files=[],
+                selected_directory=None,
+            )
 
-        return DialogResult(cancelled=True, button_clicked=None)
+        return DialogResult(
+            button_clicked="",
+            text_input="",
+            cancelled=True,
+            selected_choice=None,
+            selected_files=[],
+            selected_directory=None,
+        )
 
     async def confirm(
         self,
@@ -272,7 +286,7 @@ class PyObjCPromptBackend(PromptBackend):
         response = alert.runModal()
 
         if response == 1000:  # OK button (first button)
-            return text_field.stringValue()
+            return str(text_field.stringValue())
 
         return None  # Cancelled
 
@@ -329,7 +343,7 @@ class PyObjCPromptBackend(PromptBackend):
         if response == 1000:  # OK button
             selected_index = popup.indexOfSelectedItem()
             if 0 <= selected_index < len(choices):
-                return choices[selected_index]
+                return str(choices[selected_index])
 
         return None
 

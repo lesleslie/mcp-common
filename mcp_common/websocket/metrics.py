@@ -12,7 +12,12 @@ from typing import Any
 
 # Try to import prometheus_client, make it optional
 try:
-    from prometheus_client import Counter, Gauge, Histogram, start_http_server
+    from prometheus_client import (  # type: ignore[import-not-found]
+        Counter,
+        Gauge,
+        Histogram,
+        start_http_server,
+    )
 
     PROMETHEUS_AVAILABLE = True
 except ImportError:
@@ -23,7 +28,7 @@ except ImportError:
         def __init__(self, *args: Any, **kwargs: Any):
             pass
 
-        def labels(self, **kwargs: Any):
+        def labels(self, **kwargs: Any) -> Counter:
             return self
 
         def inc(self, amount: float = 1) -> None:
@@ -33,7 +38,7 @@ except ImportError:
         def __init__(self, *args: Any, **kwargs: Any):
             pass
 
-        def labels(self, **kwargs: Any):
+        def labels(self, **kwargs: Any) -> Gauge:
             return self
 
         def set(self, value: float) -> None:
@@ -43,7 +48,7 @@ except ImportError:
         def __init__(self, *args: Any, **kwargs: Any):
             pass
 
-        def labels(self, **kwargs: Any):
+        def labels(self, **kwargs: Any) -> Histogram:
             return self
 
         def observe(self, amount: float) -> None:
@@ -305,9 +310,9 @@ def get_metrics_summary(server_name: str) -> dict[str, Any]:
         return {"available": False}
 
     try:
-        from prometheus_client import REGISTRY
+        from prometheus_client import REGISTRY  # type: ignore[import-not-found]
 
-        summary = {
+        summary: dict[str, Any] = {
             "available": True,
             "server": server_name,
             "metrics_count": len(REGISTRY.getCollectorNames()),

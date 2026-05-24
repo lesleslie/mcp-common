@@ -122,10 +122,10 @@ class StandardServer:
         self.name = name
         self.description = description
         self.settings = settings or StandardServerSettings.load(name)
-        self._tools: dict[str, Callable] = {}
-        self._resources: dict[str, Callable] = {}
+        self._tools: dict[str, Callable[..., Any]] = {}
+        self._resources: dict[str, Callable[..., Any]] = {}
 
-    def tool(self, name: str | None = None) -> Callable:
+    def tool(self, name: str | None = None) -> Callable[..., Any]:
         """Decorator to register a tool.
 
         Args:
@@ -137,14 +137,14 @@ class StandardServer:
             ...     return {"results": []}
         """
 
-        def decorator(func: Callable) -> Callable:
+        def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             tool_name = name or func.__name__
             self._tools[tool_name] = func
             return func
 
         return decorator
 
-    def resource(self, uri_pattern: str) -> Callable:
+    def resource(self, uri_pattern: str) -> Callable[..., Any]:
         """Decorator to register a resource handler.
 
         Args:
@@ -160,7 +160,7 @@ class StandardServer:
             ...     return json.dumps(fetch_table(table))
         """
 
-        def decorator(func: Callable) -> Callable:
+        def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             self._resources[uri_pattern] = func
             return func
 
@@ -218,10 +218,10 @@ class StandardServer:
         """
         return list(self._resources.keys())
 
-    def get_tool(self, name: str) -> Callable | None:
+    def get_tool(self, name: str) -> Callable[..., Any] | None:
         """Get a registered tool by name."""
         return self._tools.get(name)
 
-    def get_resource(self, uri_pattern: str) -> Callable | None:
+    def get_resource(self, uri_pattern: str) -> Callable[..., Any] | None:
         """Get a resource handler by URI pattern."""
         return self._resources.get(uri_pattern)

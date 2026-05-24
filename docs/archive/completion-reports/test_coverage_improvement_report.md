@@ -117,6 +117,7 @@ def test_message_serialization_roundtrip(message_type, content):
 async def test_websocket_server_client_full_cycle():
     # Arrange
     server = WebSocketServer(config)
+<!-- lychee:ignore:localhost -->
     client = WebSocketClient("ws://localhost:8765")
 
     # Act

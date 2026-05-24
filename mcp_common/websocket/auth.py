@@ -178,8 +178,7 @@ def generate_test_token(
     Example:
         >>> token = generate_test_token("user123", ["read", "write"])
     """
-    auth = WebSocketAuthenticator(secret=secret)
-    return auth.create_token(
+    return WebSocketAuthenticator(secret=secret).create_token(
         {
             "user_id": user_id,
             "permissions": permissions or ["read"],

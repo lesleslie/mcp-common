@@ -581,6 +581,7 @@ ServerPanels.startup_success(
         "YAML Configuration",
         "Rich Console UI",
     ],
+<!-- lychee:ignore:localhost -->
     http_endpoint="http://localhost:8000",
     config_info={
         "Timeout": f"{settings.timeout}s",
