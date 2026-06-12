@@ -107,6 +107,7 @@ class WebSocketServer(ABC):
         server_name: str | None = None,  # For metrics
         enable_metrics: bool = False,  # Enable Prometheus metrics
         metrics_port: int = 9090,  # Prometheus metrics port
+        process_request: Callable[..., Any] | None = None,
     ):
         """Initialize WebSocket server.
 
@@ -171,6 +172,12 @@ class WebSocketServer(ABC):
         self.metrics_port = metrics_port
         self.server_name = server_name or self.__class__.__name__
         self.metrics: WebSocketMetrics | None = None
+
+        # Optional pre-handshake hook (e.g. origin allowlist). Forwarded
+        # to ``websockets.serve`` as ``process_request``. Returning a
+        # Response from the hook causes the handshake to be rejected
+        # with that response; returning ``None`` accepts the connection.
+        self.process_request = process_request
 
         # Initialize SSL context if TLS enabled
         if self.tls_enabled and self.ssl_context is None:
@@ -428,6 +435,7 @@ class WebSocketServer(ABC):
             self.host,
             self.port,
             ssl=self.ssl_context,
+            process_request=self.process_request,
         )
         self.is_running = True
 
