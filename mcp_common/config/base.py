@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 import typing as t
+import warnings
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +22,19 @@ try:
     SECURITY_AVAILABLE = True
 except ImportError:
     SECURITY_AVAILABLE = False
+
+# Deprecation sentinel. ``MCPBaseSettings`` is retained for backward
+# compatibility but is superseded by OneiricMCPConfig (cross-cuts with
+# Plan 8). We emit a DeprecationWarning on every instantiation so
+# consumers see the migration signal each time they touch a legacy
+# settings class — silencing is left to the consumer (Python's standard
+# warnings filter mechanism).
+_MCPBASESETTINGS_DEPRECATION_MESSAGE = (
+    "MCPBaseSettings (and MCPServerSettings) are deprecated; "
+    "migrate to oneiric.core.config.OneiricMCPConfig (re-exported as "
+    "mcp_common.fastmcp.OneiricMCPConfig). MCPBaseSettings will be "
+    "removed in a future major release."
+)
 
 
 class MCPBaseSettings(BaseModel):
@@ -80,6 +94,20 @@ class MCPBaseSettings(BaseModel):
     )
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    def model_post_init(self, __context: Any) -> None:
+        """Emit a DeprecationWarning on instantiation.
+
+        ``MCPBaseSettings`` and ``MCPServerSettings`` are retained for
+        backward compatibility but are superseded by OneiricMCPConfig.
+        We warn on every instantiation so consumers see the migration
+        signal. Silencing is left to the standard ``warnings`` filter.
+        """
+        warnings.warn(
+            _MCPBASESETTINGS_DEPRECATION_MESSAGE,
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
     @field_validator("server_name", mode="after")
     @classmethod
