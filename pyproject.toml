@@ -45,43 +45,6 @@ dependencies = [
     "fastmcp>=3.4.0,<4",
 ]
 
-[project.optional-dependencies]
-# Prompting/notification backends
-macos-prompts = [
-    "pyobjc-core>=12.2",
-    "pyobjc-framework-Cocoa>=10.0",
-]
-terminal-prompts = [
-    "prompt-toolkit>=3.0.52",
-]
-all-prompts = [
-    "mcp-common[macos-prompts,terminal-prompts]",
-]
-
-# Tree-sitter parsing support
-treesitter = [
-    "tree-sitter>=0.25.2",
-    "tree-sitter-python>=0.25.0",
-    "tree-sitter-go>=0.25.0",
-]
-
-# LLM provider support
-llm = [
-    "openai>=2.41.0",
-]
-
-# Development dependencies
-dev = [
-    "crackerjack>=0.65.3",
-    "pytest-benchmark>=5.2.3",
-    "uv-bump>=0.5.0",
-]
-
-# All optional features
-all = [
-    "mcp-common[all-prompts,dev,treesitter,llm]",
-]
-
 [project.license]
 text = "BSD-3-CLAUSE"
 
@@ -259,7 +222,39 @@ exclude_patterns = [
 ]
 max_complexity = 15
 
+# PEP 735 dependency-groups (replaces [project.optional-dependencies]).
+# Install with: uv sync --group dev --group treesitter --group llm --group macos-prompts --group terminal-prompts
+#
+# Note: previous consumers depended on `mcp-common[treesitter,llm]` extras.
+# Those have been removed; downstream repos must now include the treesitter
+# and openai deps directly in their own dependency-groups.
 [dependency-groups]
 dev = [
     "crackerjack>=0.65.3",
+    "pytest-benchmark>=5.2.3",
+    "uv-bump>=0.5.0",
+]
+
+# Tree-sitter parsing support (used by session-buddy, mahavishnu, etc.)
+treesitter = [
+    "tree-sitter>=0.25.2",
+    "tree-sitter-python>=0.25.0",
+    "tree-sitter-go>=0.25.0",
+]
+
+# LLM provider support (openai is the canonical provider; anthropic etc.
+# live in their respective downstream repos).
+llm = [
+    "openai>=2.41.0",
+]
+
+# Prompting/notification backends (macOS native prompts via pyobjc).
+macos-prompts = [
+    "pyobjc-core>=12.2",
+    "pyobjc-framework-Cocoa>=10.0",
+]
+
+# Terminal-based prompts (cross-platform fallback).
+terminal-prompts = [
+    "prompt-toolkit>=3.0.52",
 ]
