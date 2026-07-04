@@ -43,7 +43,7 @@ def _reject_blank_strings(value: object, path: str = "input") -> None:
             _reject_blank_strings(item, f"{path}[{index}]")
 
 
-def validate_output(output: dict[str, Any], schema: type[T]) -> T:
+def validate_output[T: BaseModel](output: dict[str, Any], schema: type[T]) -> T:
     """Validate tool output against a Pydantic schema.
 
     This function ensures that tool outputs conform to expected schemas, catching
@@ -107,7 +107,7 @@ def validate_output(output: dict[str, Any], schema: type[T]) -> T:
         raise ValueError("\n".join(error_lines)) from e
 
 
-def validate_input(input_data: dict[str, Any], schema: type[T]) -> T:
+def validate_input[T: BaseModel](input_data: dict[str, Any], schema: type[T]) -> T:
     """Validate tool input against a Pydantic schema.
 
     Similar to validate_output but for input validation. Use this when tools

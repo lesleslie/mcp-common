@@ -5,6 +5,76 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.3] - 2026-07-04
+
+### Added
+
+- Add @require_auth() decorator with Permission-level enforcement
+- Add AuthAuditEvent and AuditLogger with custom sink support
+- Add AuthConfig with env-var secret loading and placeholder rejection
+- Add mcp_common/auth package skeleton with exception hierarchy
+- apple_script: Add canonical multi-line escaping functions
+- apple_script: Add shared async AppleScript bridge
+- auth: Add JWT create/verify with issuer, audience, and permission claims
+- auth: Add KNOWN_SERVICES registry and issuer/audience verification
+- auth: Add Permission enum and Role definitions
+- llm: Add edge case tests, Hypothesis property tests, format pass; bump to 0.14.0
+- llm: Add HailuoAdapter for MiniMax video generation with SSRF-safe polling
+- llm: Add llama_server support and fail-closed API key validation
+- llm: Add multimodal TaskType variants and VISION deprecation alias
+- llm: Add per-tier retry loop, error sanitization, and CancelledError propagation
+- llm: Add task_routing model resolution in OpenAICompatibleProvider; bump to 0.14.1
+- llm: Add timeout_seconds, require_auth, api_key_env to ProviderConfig
+- llm: Add UnsupportedModalityError exception
+- mcp-common: Plan 7 Phase 1 — FastMCP 3.4 foundation
+
+### Changed
+
+- Mcp-common (quality: 60/100) - 2026-04-14 02:37:34
+
+### Fixed
+
+- apple_script: Export escape_for_applescript and build_applescript_string
+- auth: Remove bare except — verify_issuer already raises UnknownIssuerError
+
+### Documentation
+
+- Add iTerm2 AppleScript protocol spec
+
+### Testing
+
+- Add inter-service auth integration tests
+- auth: Add missing branch coverage for permissions and audit logger
+- coverage: Add 31 comprehensive tests and fix path traversal security issue
+
+### Internal
+
+- Bump version to 0.11.0
+- Bump version to 0.11.1
+- Bump version to 0.12.0
+- Bump version to 0.12.1
+- Bump version to 0.12.2
+- Bump version to 0.12.3
+- Bump version to 0.13.0
+- Bump version to 0.13.1
+- Bump version to 0.13.2
+- Bump version to 0.13.3
+- Bump version to 0.15.0
+- Bump version to 0.15.1
+- Bump version to 0.15.2
+- Bump version to 0.15.3
+- Bump version to 0.16.0
+- Bump version to 0.16.1
+- Bump version to 0.16.2
+- Bump version to 0.16.3
+- Bump version to 0.16.4
+- Bump version to 0.17.0
+- Bump version to 0.17.1
+- gitignore: Add backup file patterns to silence checkpoint tool artifacts
+- Ignore .worktrees directory
+- Untrack and delete 2 historical *.backup/*.bak files
+- Untrack large coverage JSONs and add gitignore pattern
+
 ## [0.17.0] - 2026-06-26
 
 ### Added

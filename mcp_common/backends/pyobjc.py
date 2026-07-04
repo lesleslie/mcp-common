@@ -30,6 +30,7 @@ from mcp_common.prompting.models import (
 
 if TYPE_CHECKING:
     from pathlib import Path
+
     # PyObjC is a platform-only optional dependency (macos-prompts extra).
     # Type checkers see the real modules; runtime values come from the
     # try/except below.

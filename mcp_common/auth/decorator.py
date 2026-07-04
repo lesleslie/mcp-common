@@ -45,9 +45,7 @@ def require_auth(
             func_name = _func_name(func)
 
             if cfg is None or not cfg.enabled:
-                logger.debug(
-                    "auth disabled for %s — allowing anonymous", func_name
-                )
+                logger.debug("auth disabled for %s — allowing anonymous", func_name)
                 return await func(*args, **kwargs)
 
             token_str = kwargs.pop("__auth_token__", None)
