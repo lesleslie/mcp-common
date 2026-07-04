@@ -190,6 +190,9 @@ class TestTokenClaims:
         token = auth.create_token({"user_id": "user123"})
 
         payload = auth.verify_token(token)
+        # ``verify_token`` returns ``dict | None``; narrow before subscripting
+        # so strict type checkers are satisfied.
+        assert payload is not None
 
         # Check iat (issued at) claim
         assert "iat" in payload
@@ -213,6 +216,7 @@ class TestTokenClaims:
         token = auth.create_token({"user_id": "user123"})
 
         payload = auth.verify_token(token)
+        assert payload is not None
 
         exp = datetime.fromtimestamp(payload["exp"], UTC)
         expected_expiry = before + timedelta(seconds=3600)

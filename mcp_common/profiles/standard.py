@@ -45,6 +45,17 @@ from pydantic import Field
 from mcp_common.config import MCPBaseSettings
 
 
+def _func_name(func: Callable[..., Any], default: str | None) -> str:
+    """Return ``func.__name__`` when available, else ``default``.
+
+    ``Callable[..., Any]`` does not expose ``__name__`` in the type system,
+    so we use ``getattr`` to read it without a broad ``type: ignore``.
+    """
+    if default is not None:
+        return default
+    return getattr(func, "__name__", "<anonymous>")
+
+
 class StandardServerSettings(MCPBaseSettings):
     """Settings for standard MCP server.
 
@@ -138,7 +149,7 @@ class StandardServer:
         """
 
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
-            tool_name = name or func.__name__
+            tool_name = _func_name(func, name)
             self._tools[tool_name] = func
             return func
 

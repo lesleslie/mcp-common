@@ -9,20 +9,40 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastmcp.server.middleware import Middleware, MiddlewareContext
 
-try:
+if TYPE_CHECKING:
+    # Type checkers see the real opentelemetry types so callers get proper
+    # signatures. Runtime values come from the try/except below.
     from opentelemetry import trace
     from opentelemetry.trace import Status, StatusCode
 
     _OTEL_AVAILABLE = True
-except ImportError:  # pragma: no cover - optional dependency
-    trace = None  # type: ignore[assignment]
-    Status = None  # type: ignore[assignment]
-    StatusCode = None  # type: ignore[assignment]
-    _OTEL_AVAILABLE = False
+else:
+    # At runtime ``trace`` / ``Status`` / ``StatusCode`` may legitimately be
+    # ``None`` when opentelemetry is not installed. Annotate them as ``Any``
+    # so the module-level binding accepts ``None`` without a ``type: ignore``,
+    # while the call sites still narrow via ``if Status is not None``.
+    trace: Any
+    Status: Any
+    StatusCode: Any
+
+    try:
+        from opentelemetry import trace as _trace
+        from opentelemetry.trace import Status as _Status
+        from opentelemetry.trace import StatusCode as _StatusCode
+
+        trace = _trace
+        Status = _Status
+        StatusCode = _StatusCode
+        _OTEL_AVAILABLE = True
+    except ImportError:  # pragma: no cover - optional dependency
+        trace = None
+        Status = None
+        StatusCode = None
+        _OTEL_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 

@@ -241,7 +241,10 @@ class TestValidationMixinURLParts:
     def test_port_wrong_type(self) -> None:
         """Test validation fails with non-integer port."""
         with pytest.raises(ServerConfigurationError):
-            VM.validate_url_parts(host="localhost", port="8080")  # type: ignore[arg-type]
+            # ``port`` is typed as ``int | None``; pass a ``str`` deliberately
+            # so the validator rejects it. Both mypy and ty ignore the
+            # incompatible argument below.
+            VM.validate_url_parts(host="localhost", port="8080")  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
 
     def test_none_port_passes(self) -> None:
         """Test validation passes with None port (optional)."""

@@ -487,6 +487,8 @@ class TestToolResponseRealWorldScenarios:
         )
 
         assert response.success is True
+        # ``data`` is optional on the schema; narrow before subscripting.
+        assert response.data is not None
         assert response.data["bytes_copied"] == 1024
 
     def test_validation_error_response(self) -> None:
@@ -507,4 +509,6 @@ class TestToolResponseRealWorldScenarios:
         )
 
         assert response.success is False
+        # ``error`` is optional on the schema; narrow before ``in``.
+        assert response.error is not None
         assert "not a valid format" in response.error

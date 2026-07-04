@@ -334,7 +334,23 @@ class WebSocketServer(ABC):
                         auth_data.type == MessageType.REQUEST
                         and auth_data.event == "auth"
                     ):
-                        token: str = auth_data.data.get("token")  # type: ignore[assignment]
+                        # ``auth_data.data`` is typed as a generic dict; coerce
+                        # to ``str | None`` before passing to the authenticator
+                        # so we can raise a clear error for missing tokens
+                        # rather than letting ``None`` propagate downstream.
+                        raw_token: object = auth_data.data.get("token")
+                        if not isinstance(raw_token, str):
+                            error = WebSocketProtocol.create_error(
+                                error_code="AUTH_FAILED",
+                                error_message="Missing or malformed auth token",
+                                correlation_id=auth_data.correlation_id,
+                            )
+                            await websocket.send(WebSocketProtocol.encode(error))
+                            await websocket.close(1008, "Authentication failed")
+                            if self.metrics:
+                                self.metrics.on_connection_error("auth_missing")
+                            return
+                        token = raw_token
                         user = self.authenticate_websocket(token)
 
                         if user is None:

@@ -119,7 +119,8 @@ class TestConstructorAndSsl:
         default_context.assert_called_once_with()
 
     def test_is_secure_property(self) -> None:
-        assert WebSocketClient("wss://example.com", ssl_context=_FakeSSLContext()).is_secure is True
+        assert WebSocketClient("wss://example.com", ssl_context=_FakeSSLContext()  # ty: ignore[invalid-argument-type]
+                          ).is_secure is True
         assert WebSocketClient("ws://example.com").is_secure is False
 
 
@@ -251,8 +252,8 @@ class TestDisconnectAndReceive:
         client.websocket = websocket
         client.is_connected = True
         client.is_authenticated = True
-        client.receive_task = _FakeTask(cancel_raises=True)
-        client.reconnect_task = _FakeTask(cancel_raises=True)
+        client.receive_task = _FakeTask(cancel_raises=True)  # ty: ignore[invalid-assignment]
+        client.reconnect_task = _FakeTask(cancel_raises=True)  # ty: ignore[invalid-assignment]
 
         await client.disconnect()
 

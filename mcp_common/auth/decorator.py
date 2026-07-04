@@ -20,6 +20,15 @@ logger = logging.getLogger(__name__)
 _default_audit = AuditLogger()
 
 
+def _func_name(func: Callable[..., Any]) -> str:
+    """Return ``func.__name__`` for audit logging.
+
+    ``Callable[..., Any]`` does not expose ``__name__`` in the type system,
+    so we use ``getattr`` to read it without a broad ``type: ignore``.
+    """
+    return getattr(func, "__name__", "<unknown>")
+
+
 def require_auth(
     permission: Permission = Permission.READ,
     *,
@@ -33,9 +42,12 @@ def require_auth(
             cfg = config
             svc = service_name or (cfg.service_name if cfg else "unknown")
             along = audit_logger or _default_audit
+            func_name = _func_name(func)
 
             if cfg is None or not cfg.enabled:
-                logger.debug("auth disabled for %s — allowing anonymous", func.__name__)
+                logger.debug(
+                    "auth disabled for %s — allowing anonymous", func_name
+                )
                 return await func(*args, **kwargs)
 
             token_str = kwargs.pop("__auth_token__", None)
@@ -46,7 +58,7 @@ def require_auth(
                         service=svc,
                         caller_service="unknown",
                         caller_id="unknown",
-                        action=func.__name__,
+                        action=func_name,
                         permission=permission,
                         result="denied",
                         reason="no __auth_token__ provided",
@@ -67,7 +79,7 @@ def require_auth(
                         service=svc,
                         caller_service="unknown",
                         caller_id="unknown",
-                        action=func.__name__,
+                        action=func_name,
                         permission=permission,
                         result="denied",
                         reason=str(exc),
@@ -84,7 +96,7 @@ def require_auth(
                         service=svc,
                         caller_service=payload.issuer,
                         caller_id=payload.subject,
-                        action=func.__name__,
+                        action=func_name,
                         permission=permission,
                         result="denied",
                         reason=f"insufficient permission: needs {permission.value!r}",
@@ -93,7 +105,7 @@ def require_auth(
                     )
                 )
                 raise InsufficientPermissionError(
-                    f"{func.__name__!r} requires {permission.value!r}; "
+                    f"{func_name!r} requires {permission.value!r}; "
                     f"caller has {[p.value for p in payload.permissions]}"
                 )
 
@@ -103,7 +115,7 @@ def require_auth(
                     service=svc,
                     caller_service=payload.issuer,
                     caller_id=payload.subject,
-                    action=func.__name__,
+                    action=func_name,
                     permission=permission,
                     result="allowed",
                     reason=None,

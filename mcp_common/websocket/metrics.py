@@ -8,54 +8,91 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-# Try to import prometheus_client, make it optional
-try:
-    from prometheus_client import (  # type: ignore[import-not-found]
-        Counter,
-        Gauge,
-        Histogram,
-        start_http_server,
+if TYPE_CHECKING:
+    # Type checkers see the real prometheus_client types so callers get
+    # accurate signatures. Runtime values come from the try/except below.
+    # ``prometheus_client`` is an optional dependency not pulled into the
+    # dev venv, so we silence ty's import resolution error here too.
+    from prometheus_client import (  # ty: ignore[unresolved-import]
+        REGISTRY as REGISTRY,
+    )
+    from prometheus_client import (  # ty: ignore[unresolved-import]
+        Counter as Counter,
+    )
+    from prometheus_client import (  # ty: ignore[unresolved-import]
+        Gauge as Gauge,
+    )
+    from prometheus_client import (  # ty: ignore[unresolved-import]
+        Histogram as Histogram,
+    )
+    from prometheus_client import (  # ty: ignore[unresolved-import]
+        start_http_server as start_http_server,
     )
 
     PROMETHEUS_AVAILABLE = True
-except ImportError:
+else:
     PROMETHEUS_AVAILABLE = False
+    Counter: Any
+    Gauge: Any
+    Histogram: Any
+    start_http_server: Any
+    # ``REGISTRY`` is intentionally NOT in the runtime import list because
+    # ``get_metrics_summary`` re-imports it at call time so test code that
+    # patches ``sys.modules["prometheus_client"]`` is observed.
 
-    # Create stubs for when prometheus_client is not available
-    class Counter:  # type: ignore
-        def __init__(self, *args: Any, **kwargs: Any):
+    try:
+        from prometheus_client import (  # type: ignore[import-not-found]
+            Counter,
+            Gauge,
+            Histogram,
+            start_http_server,
+        )
+
+        PROMETHEUS_AVAILABLE = True
+    except ImportError:  # pragma: no cover - optional dependency
+        # Fallback stubs so the module still imports. Stubs only need the
+        # methods exercised by this file; missing methods raise ``AttributeError``
+        # at call time, which the ``PROMETHEUS_AVAILABLE`` guard prevents.
+        class Counter:
+            def __init__(self, *args: Any, **kwargs: Any) -> None:
+                pass
+
+            def labels(self, **kwargs: Any) -> Counter:
+                return self
+
+            def inc(self, amount: float = 1) -> None:
+                pass
+
+        class Gauge:
+            def __init__(self, *args: Any, **kwargs: Any) -> None:
+                pass
+
+            def labels(self, **kwargs: Any) -> Gauge:
+                return self
+
+            def inc(self, amount: float = 1) -> None:
+                pass
+
+            def dec(self, amount: float = 1) -> None:
+                pass
+
+            def set(self, value: float) -> None:
+                pass
+
+        class Histogram:
+            def __init__(self, *args: Any, **kwargs: Any) -> None:
+                pass
+
+            def labels(self, **kwargs: Any) -> Histogram:
+                return self
+
+            def observe(self, amount: float) -> None:
+                pass
+
+        def start_http_server(port: int) -> None:
             pass
-
-        def labels(self, **kwargs: Any) -> Counter:
-            return self
-
-        def inc(self, amount: float = 1) -> None:
-            pass
-
-    class Gauge:  # type: ignore
-        def __init__(self, *args: Any, **kwargs: Any):
-            pass
-
-        def labels(self, **kwargs: Any) -> Gauge:
-            return self
-
-        def set(self, value: float) -> None:
-            pass
-
-    class Histogram:  # type: ignore
-        def __init__(self, *args: Any, **kwargs: Any):
-            pass
-
-        def labels(self, **kwargs: Any) -> Histogram:
-            return self
-
-        def observe(self, amount: float) -> None:
-            pass
-
-    def start_http_server(port: int) -> None:  # type: ignore
-        pass
 
 
 logger = logging.getLogger(__name__)
@@ -309,13 +346,19 @@ def get_metrics_summary(server_name: str) -> dict[str, Any]:
     if not PROMETHEUS_AVAILABLE:
         return {"available": False}
 
+    # Re-import ``REGISTRY`` at call time so test code that patches
+    # ``sys.modules["prometheus_client"]`` is observed. Using a module-level
+    # binding would freeze the reference to whatever ``prometheus_client``
+    # was at import time and ignore later patches.
     try:
-        from prometheus_client import REGISTRY  # type: ignore[import-not-found]
+        from prometheus_client import (  # type: ignore[import-not-found]  # ty: ignore[unresolved-import]
+            REGISTRY as _runtime_registry,
+        )
 
         summary: dict[str, Any] = {
             "available": True,
             "server": server_name,
-            "metrics_count": len(REGISTRY.getCollectorNames()),
+            "metrics_count": len(_runtime_registry.getCollectorNames()),
         }
         return summary
     except Exception as e:

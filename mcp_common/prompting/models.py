@@ -91,18 +91,18 @@ class PromptAdapterSettings(BaseSettings):
         2. Environment variables (MCP_COMMON_PROMPT_*)
         3. Default values
 
+        Note:
+            ``PromptAdapterSettings`` is a pydantic ``BaseSettings`` subclass
+            with ``env_prefix="MCP_COMMON_PROMPT_"`` and an optional ``.env``
+            file, so instantiating ``cls()`` already picks up both layers.
+            We deliberately do not call into oneiric's runtime config loader
+            here because doing so forces every consumer to depend on oneiric
+            for what is otherwise a self-contained settings class.
+
         Returns:
             Configured settings instance
         """
-        try:
-            from oneiric import load_config
-
-            oneiric_config = load_config()
-            prompt_config = oneiric_config.get("prompting", {})
-            return cls(**prompt_config)
-        except ImportError:
-            # Oneiric not available, use defaults
-            return cls()
+        return cls()
 
 
 # Backward compatibility alias

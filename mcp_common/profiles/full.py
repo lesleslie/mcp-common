@@ -39,12 +39,24 @@ Example:
 
 from __future__ import annotations
 
+import typing as t
 from collections.abc import Callable
 from typing import Any
 
 from pydantic import Field
 
 from mcp_common.config import MCPBaseSettings
+
+
+def _func_name(func: Callable[..., Any], default: str | None) -> str:
+    """Return ``func.__name__`` when available, else ``default``.
+
+    ``Callable[..., Any]`` does not expose ``__name__`` in the type system,
+    so we use ``getattr`` to read it without a broad ``type: ignore``.
+    """
+    if default is not None:
+        return default
+    return getattr(func, "__name__", "<anonymous>")
 
 
 # Type aliases for auth/telemetry (these would be imported from actual modules)
@@ -170,7 +182,19 @@ class FullServer:
         self.description = description
         self.auth = auth
         self.telemetry = telemetry
-        self.settings = settings or FullServerSettings.load(name)
+        # ``FullServerSettings`` is the concrete subclass that defines ``workers``;
+        # the ``or`` fallback guarantees ``settings`` is always non-None at
+        # access time, so we annotate as the concrete type to avoid
+        # ``attr-defined`` errors when reading subclass-only fields. The
+        # parent ``MCPBaseSettings.load`` return type is widened to the
+        # concrete subclass via ``cast`` so strict type checkers see the
+        # same type we annotate.
+        loaded_settings = FullServerSettings.load(name)
+        self.settings: FullServerSettings = (
+            settings
+            if settings is not None
+            else t.cast("FullServerSettings", loaded_settings)
+        )
 
         self._tools: dict[str, Callable[..., Any]] = {}
         self._resources: dict[str, Callable[..., Any]] = {}
@@ -194,7 +218,7 @@ class FullServer:
         """
 
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
-            tool_name = name or func.__name__
+            tool_name = _func_name(func, name)
             self._tools[tool_name] = func
             return func
 
@@ -238,7 +262,7 @@ class FullServer:
         """
 
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
-            prompt_name = name or func.__name__
+            prompt_name = _func_name(func, name)
             self._prompts[prompt_name] = func
             return func
 
@@ -288,7 +312,7 @@ class FullServer:
                 "enabled": self.telemetry is not None,
                 "type": type(self.telemetry).__name__ if self.telemetry else None,
             },
-            "workers": self.settings.workers,  # type: ignore[attr-defined]
+            "workers": self.settings.workers,
         }
 
     def list_tools(self) -> list[str]:

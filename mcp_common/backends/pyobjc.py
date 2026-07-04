@@ -14,7 +14,7 @@ import asyncio
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from mcp_common.prompting.base import PromptBackend
 from mcp_common.prompting.exceptions import (
@@ -30,19 +30,30 @@ from mcp_common.prompting.models import (
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-# PyObjC imports (lazy, will fail if not installed)
-try:
-    import AppKit  # type: ignore[import-not-found]
-    import Foundation  # type: ignore[import-not-found]
+    # PyObjC is a platform-only optional dependency (macos-prompts extra).
+    # Type checkers see the real modules; runtime values come from the
+    # try/except below.
+    import AppKit  # ty: ignore[unresolved-import]
+    import Foundation  # ty: ignore[unresolved-import]
 
     PYOBJC_AVAILABLE = True
-except ImportError:
+else:
     PYOBJC_AVAILABLE = False
+    # ``AppKit`` and ``Foundation`` are deliberately typed as ``Any`` so the
+    # ``AppKit.NSAlert.alloc()`` etc. call sites below don't trip strict
+    # type checkers when PyObjC is missing at runtime. The
+    # ``PYOBJC_AVAILABLE`` guard ensures these attributes are never reached.
+    AppKit: Any
+    Foundation: Any
 
-    # Create stubs for type checking
-    AppKit = None  # type: ignore
-    Foundation = None  # type: ignore
+    try:
+        import AppKit  # type: ignore[import-not-found]
+        import Foundation  # type: ignore[import-not-found]
+
+        PYOBJC_AVAILABLE = True
+    except ImportError:  # pragma: no cover - platform-only optional dep
+        AppKit = None
+        Foundation = None
 
 
 class PyObjCPromptBackend(PromptBackend):

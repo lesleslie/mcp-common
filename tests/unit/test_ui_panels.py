@@ -328,7 +328,7 @@ class TestServerPanelsGenericHelpers:
             {"pid": 5678, "memory_mb": 256.0, "cpu_percent": 10.8},
         ]
 
-        ServerPanels.process_list(processes=processes)
+        ServerPanels.process_list(processes=processes)  # ty: ignore[invalid-argument-type]
 
         mock_console.print.assert_called_once()
 
@@ -340,7 +340,7 @@ class TestServerPanelsGenericHelpers:
             (5678, 256.0, 10.8),
         ]
 
-        ServerPanels.process_list(processes=processes)
+        ServerPanels.process_list(processes=processes)  # ty: ignore[invalid-argument-type]
 
         mock_console.print.assert_called_once()
 
@@ -352,7 +352,7 @@ class TestServerPanelsGenericHelpers:
         ]
 
         ServerPanels.process_list(
-            processes=processes,
+            processes=processes,  # ty: ignore[invalid-argument-type]
             headers=("Process ID", "Memory", "CPU"),
             title="Worker Processes",
         )

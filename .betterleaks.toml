@@ -1,0 +1,22 @@
+# Betterleaks configuration for mcp-common.
+#
+# The default rule set is intentionally broad (matches fake test fixtures too)
+# so we explicitly skip artifacts and self-generated cache files that
+# betterleaks would otherwise scan on subsequent runs.
+#
+# See https://github.com/gitleaks/gitleaks/blob/master/config/reference.md
+title = "mcp-common betterleaks config"
+
+# Pre-existing build / cache / worktree directories that should never be
+# scanned: betterleaks recurses into them by default and emits a flood of
+# false positives (cache files re-emitting their own scan output, tarballs,
+# coverage HTML, etc.).
+[allowlist]
+paths = [
+  '''^\.cache/''',
+  '''^\.worktrees/''',
+  '''^dist/''',
+  '''^htmlcov/''',
+  '''^\.coverage(?:\..*)?$''',
+  '''\.egg-info/''',
+]

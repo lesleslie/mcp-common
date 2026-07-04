@@ -1,6 +1,13 @@
-# Test files with intentionally fake secrets for testing/sanitization
-tests/**
-docs/**
-**/.git/**
-**/.venv/**
-**/node_modules/**
+# .gitleaksignore format: one entry per line as ``<fingerprint>:<path>``.
+#
+# Betterleaks / gitleaks will only honour this file if each entry is a
+# fingerprint (the 32-hex digest reported by ``betterleaks dir --report-format
+# json``) followed by ``:path/to/file``. Plain glob patterns are *not*
+# accepted; gitleaks rejects them with "Invalid .gitleaksignore entry".
+#
+# To silence a real leak permanently, run ``betterleaks dir . --baseline-path
+# .gitleaks-baseline.json`` (which uses the binary ``baseline.json`` format)
+# or use the path-based allowlist in ``.betterleaks.toml``.
+#
+# This file is intentionally empty - all exclusions are handled by the
+# allowlist in ``.betterleaks.toml``.

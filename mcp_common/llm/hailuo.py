@@ -5,12 +5,20 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-try:
+if TYPE_CHECKING:
+    # ``httpx`` is provided by the optional ``llm`` extra and may be absent
+    # in some installs. Type checkers see the real module; runtime values
+    # come from the try/except below.
     import httpx
-except ImportError:
-    httpx = None  # type: ignore[assignment]
+else:
+    httpx: Any
+
+    try:
+        import httpx  # type: ignore[import-not-found]
+    except ImportError:  # pragma: no cover - optional dependency
+        httpx = None
 
 from ._security import sanitize_error as _sanitize_error
 from .exceptions import LLMError

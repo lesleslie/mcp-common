@@ -165,9 +165,16 @@ def create_ssl_context(
 
     # Set certificate verification mode
     if verify_client or ca_file:
-        ssl_context.verify_mode = (  # type: ignore[assignment]
-            cert_reqs if cert_reqs != ssl.CERT_NONE else ssl.CERT_REQUIRED
-        )
+        # ``cert_reqs`` is narrowed by the type system to exclude
+        # ``CERT_NONE``; pick ``CERT_REQUIRED`` when caller asked for none
+        # but still requested client verification. ``cert_reqs`` is typed
+        # as ``int`` at the module level, so explicitly wrap it in
+        # ``ssl.VerifyMode`` before assigning to the typed attribute.
+        if cert_reqs == ssl.CERT_NONE:
+            verify_mode: ssl.VerifyMode = ssl.VerifyMode.CERT_REQUIRED
+        else:
+            verify_mode = ssl.VerifyMode(cert_reqs)
+        ssl_context.verify_mode = verify_mode
 
         # Load CA for client verification
         if ca_file:

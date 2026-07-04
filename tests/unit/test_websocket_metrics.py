@@ -224,7 +224,7 @@ class TestWebSocketMetrics:
             {"getCollectorNames": lambda self: {"a", "b", "c"}},
         )()
         fake_module = ModuleType("prometheus_client")
-        fake_module.REGISTRY = registry
+        fake_module.REGISTRY = registry  # ty: ignore[unresolved-attribute]
         monkeypatch.setitem(sys.modules, "prometheus_client", fake_module)
 
         summary = get_metrics_summary("session-buddy")
@@ -236,7 +236,7 @@ class TestWebSocketMetrics:
             def getCollectorNames(self) -> set[str]:
                 raise RuntimeError("boom")
 
-        fake_module.REGISTRY = BrokenRegistry()
+        fake_module.REGISTRY = BrokenRegistry()  # ty: ignore[unresolved-attribute]
         summary = get_metrics_summary("session-buddy")
         assert summary["available"] is True
         assert summary["error"] == "boom"
@@ -265,10 +265,10 @@ class TestWebSocketMetrics:
                 return None
 
         fake_module = ModuleType("prometheus_client")
-        fake_module.Counter = _ReloadMetric
-        fake_module.Gauge = _ReloadMetric
-        fake_module.Histogram = _ReloadMetric
-        fake_module.start_http_server = lambda port: None
+        fake_module.Counter = _ReloadMetric  # ty: ignore[unresolved-attribute]
+        fake_module.Gauge = _ReloadMetric  # ty: ignore[unresolved-attribute]
+        fake_module.Histogram = _ReloadMetric  # ty: ignore[unresolved-attribute]
+        fake_module.start_http_server = lambda port: None  # ty: ignore[unresolved-attribute]
 
         monkeypatch.setitem(sys.modules, "prometheus_client", fake_module)
         reloaded = importlib.reload(metrics_module)

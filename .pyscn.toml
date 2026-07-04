@@ -18,9 +18,10 @@ directory = ""                   # Output directory for reports (empty = current
 [complexity]
 enabled = true                   # Enable complexity analysis
 low_threshold = 9                # Functions with complexity ≤ 9 are low risk
-medium_threshold = 19            # Functions with complexity 10-19 are medium risk
-                                # Functions with complexity ≥ 20 are high risk
+medium_threshold = 14            # Functions with complexity 10-14 are medium risk
+                                # Functions with complexity ≥ 15 are high risk
 max_complexity = 15              # Maximum allowed complexity (0 = no limit)
+                                # Must be > medium_threshold (pyscn rejects otherwise) or 0.
 report_unchanged = true          # Report functions with complexity = 1
 
 # =============================================================================

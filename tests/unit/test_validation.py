@@ -308,6 +308,8 @@ class TestValidationIntegration:
         validated_output = validate_output(raw_output, ToolResponse)
 
         assert validated_output.success is True
+        # ``data`` is optional on the schema; narrow before subscripting.
+        assert validated_output.data is not None
         assert validated_output.data["user"] == "Alice"
 
     def test_validation_error_propagation(self) -> None:
@@ -372,6 +374,8 @@ class TestValidationEdgeCases:
         validated = validate_output(output, ToolResponse)
 
         assert "special chars" in validated.message
+        # ``data`` is optional on the schema; narrow before subscripting.
+        assert validated.data is not None
         assert validated.data["special"] == "🎉 emojis too!"
 
     def test_validate_input_with_null_values(self) -> None:

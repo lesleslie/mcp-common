@@ -44,7 +44,11 @@ class _SpanContextManager:
 class _Tracer:
     def __init__(self) -> None:
         self.calls: list[tuple[str, dict[str, object]]] = []
-        self.span: object = _Span()
+        # Tests swap ``span`` between ``_Span`` (full OpenTelemetry surface)
+        # and ``_BareSpan`` (no optional methods); type as a union so both
+        # assignments type-check while access to ``.attributes`` /
+        # ``.status`` still narrows correctly.
+        self.span: _Span | _BareSpan = _Span()
 
     def start_as_current_span(
         self, name: str, attributes: dict[str, object] | None = None
@@ -83,7 +87,7 @@ async def test_fastmcp_middleware_emits_span(monkeypatch: pytest.MonkeyPatch) ->
         message=SimpleNamespace(name="track_session_start"),
     )
 
-    result = await middleware.on_message(context, lambda _ctx: _success_result())
+    result = await middleware.on_message(context, lambda _ctx: _success_result())  # ty: ignore[invalid-argument-type]
 
     assert result == {"status": "ok", "count": 1}
     assert tracer.calls[0][0] == "mcp.tools.call.track_session_start"
@@ -108,7 +112,7 @@ async def test_fastmcp_middleware_records_error(monkeypatch: pytest.MonkeyPatch)
     )
 
     with pytest.raises(RuntimeError, match="boom"):
-        await middleware.on_message(context, _raise_runtime_error)
+        await middleware.on_message(context, _raise_runtime_error)  # ty: ignore[invalid-argument-type]
 
     assert tracer.calls[0][0] == "mcp.tools.call.broken"
     assert tracer.span.exceptions
@@ -130,7 +134,7 @@ async def test_fastmcp_middleware_bypasses_when_tracing_unavailable(
         called = True
         return {"status": "ok"}
 
-    result = await middleware.on_message(context, call_next)
+    result = await middleware.on_message(context, call_next)  # ty: ignore[invalid-argument-type]
 
     assert called is True
     assert result == {"status": "ok"}
@@ -164,10 +168,10 @@ async def test_fastmcp_middleware_resource_and_prompt_spans(
     )
 
     resource_result = await middleware.on_message(
-        resource_context, lambda _ctx: _resource_result()
+        resource_context, lambda _ctx: _resource_result()  # ty: ignore[invalid-argument-type]
     )
     prompt_result = await middleware.on_message(
-        prompt_context, lambda _ctx: _prompt_result()
+        prompt_context, lambda _ctx: _prompt_result()  # ty: ignore[invalid-argument-type]
     )
 
     assert resource_result == {"status": "ok", "resource": True}
@@ -195,7 +199,7 @@ async def test_fastmcp_middleware_resource_span_without_uri(
     )
 
     result = await middleware.on_message(
-        context,
+        context,  # ty: ignore[invalid-argument-type]
         lambda _ctx: _resource_result(),
     )
 
@@ -221,7 +225,7 @@ async def test_fastmcp_middleware_prompt_span_without_component_name(
     )
 
     result = await middleware.on_message(
-        context,
+        context,  # ty: ignore[invalid-argument-type]
         lambda _ctx: _prompt_result(),
     )
 
@@ -249,11 +253,11 @@ async def test_fastmcp_middleware_sets_error_status(
     )
 
     with pytest.raises(ValueError, match="boom"):
-        await middleware.on_message(context, _raise_value_error)
+        await middleware.on_message(context, _raise_value_error)  # ty: ignore[invalid-argument-type]
 
     assert tracer.span.status is not None
-    assert tracer.span.status.code == _StatusCode.ERROR
-    assert tracer.span.status.description == "boom"
+    assert tracer.span.status.code == _StatusCode.ERROR  # ty: ignore[unresolved-attribute]
+    assert tracer.span.status.description == "boom"  # ty: ignore[unresolved-attribute]
     assert tracer.span.exceptions
 
 
@@ -282,7 +286,7 @@ async def test_fastmcp_middleware_handles_span_without_optional_methods(
         return {"error": "bad", "status": 123, "payload": True}
 
     result = await middleware.on_message(
-        context,
+        context,  # ty: ignore[invalid-argument-type]
         call_next,
     )
 
@@ -339,7 +343,7 @@ async def test_fastmcp_middleware_error_without_optional_span_methods(
     )
 
     with pytest.raises(RuntimeError, match="boom"):
-        await middleware.on_message(context, _raise_runtime_error)
+        await middleware.on_message(context, _raise_runtime_error)  # ty: ignore[invalid-argument-type]
 
     assert tracer.calls[0][0] == "mcp.tools.call.broken"
     assert tracer.span.__class__ is _BareSpan
@@ -366,7 +370,7 @@ async def test_fastmcp_middleware_uses_uri_when_name_missing(
         return {"status": "ok"}
 
     result = await middleware.on_message(
-        context,
+        context,  # ty: ignore[invalid-argument-type]
         call_next,
     )
 
@@ -396,7 +400,7 @@ async def test_fastmcp_middleware_prompt_name_falls_back_to_unknown(
     async def call_next(_ctx: object) -> dict[str, str]:
         return {"status": "ok"}
 
-    result = await middleware.on_message(context, call_next)
+    result = await middleware.on_message(context, call_next)  # ty: ignore[invalid-argument-type]
 
     assert result == {"status": "ok"}
     assert tracer.span.attributes["mcp.prompt.name"] == "unknown"
@@ -422,7 +426,7 @@ async def test_fastmcp_middleware_tool_result_type_for_non_dict(
     async def call_next(_ctx: object) -> list[str]:
         return ["a", "b"]
 
-    result = await middleware.on_message(context, call_next)
+    result = await middleware.on_message(context, call_next)  # ty: ignore[invalid-argument-type]
 
     assert result == ["a", "b"]
     assert tracer.span.attributes["mcp.result.type"] == "list"
@@ -432,8 +436,8 @@ def test_fastmcp_middleware_span_name_without_component() -> None:
     middleware = FastMCPOpenTelemetryMiddleware(service_name="session-buddy")
     context = SimpleNamespace(method=None, type="event", message=SimpleNamespace())
 
-    assert middleware._span_name(context) == "mcp.message"
-    assert middleware._component_name(context) is None
+    assert middleware._span_name(context) == "mcp.message"  # ty: ignore[invalid-argument-type]
+    assert middleware._component_name(context) is None  # ty: ignore[invalid-argument-type]
 
 
 def test_fastmcp_middleware_tool_span_and_result_without_component_name() -> None:
@@ -444,12 +448,12 @@ def test_fastmcp_middleware_tool_span_and_result_without_component_name() -> Non
         message=SimpleNamespace(),
     )
 
-    attributes = middleware._span_attributes(context)
+    attributes = middleware._span_attributes(context)  # ty: ignore[invalid-argument-type]
     bare_span = _BareSpan()
 
     assert attributes["mcp.tool.name"] == "unknown"
 
-    middleware._annotate_result(bare_span, context, "ok")
+    middleware._annotate_result(bare_span, context, "ok")  # ty: ignore[invalid-argument-type]
     assert not hasattr(bare_span, "attributes")
 
 
@@ -461,7 +465,7 @@ def test_fastmcp_middleware_tool_span_without_name_or_uri() -> None:
         message=SimpleNamespace(),
     )
 
-    attributes = middleware._span_attributes(context)
+    attributes = middleware._span_attributes(context)  # ty: ignore[invalid-argument-type]
 
     assert attributes["mcp.tool.name"] == "unknown"
 
@@ -474,7 +478,7 @@ def test_fastmcp_middleware_span_attributes_without_resource_uri() -> None:
         message=SimpleNamespace(),
     )
 
-    attributes = middleware._span_attributes(context)
+    attributes = middleware._span_attributes(context)  # ty: ignore[invalid-argument-type]
 
     assert "mcp.resource.uri" not in attributes
     assert "mcp.component.name" not in attributes
@@ -489,15 +493,15 @@ def test_fastmcp_middleware_annotate_result_variants() -> None:
     )
 
     bare_span = _BareSpan()
-    middleware._annotate_result(bare_span, context, {"status": "ok"})
+    middleware._annotate_result(bare_span, context, {"status": "ok"})  # ty: ignore[invalid-argument-type]
 
     span = _Span()
     middleware._annotate_result(
         span,
-        context,
+        context,  # ty: ignore[invalid-argument-type]
         {"status": 123, "error": "failed", "payload": True},
     )
-    middleware._annotate_result(span, context, ["a", "b"])
+    middleware._annotate_result(span, context, ["a", "b"])  # ty: ignore[invalid-argument-type]
 
     assert span.attributes["mcp.result.error"] == "failed"
     assert span.attributes["mcp.result.type"] == "list"
