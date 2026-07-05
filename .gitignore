@@ -190,3 +190,6 @@ wheels/
 *.backup
 *.bak
 *.backup.json
+# Catch-all for .backup.<ext> (tool file modifiers write these next to
+# every edit). *.backup.json covers JSON variants specifically.
+*.backup.*
