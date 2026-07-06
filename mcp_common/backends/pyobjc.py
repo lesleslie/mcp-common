@@ -29,13 +29,15 @@ from mcp_common.prompting.models import (
 )
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
     # PyObjC is a platform-only optional dependency (macos-prompts extra).
-    # Type checkers see the real modules; runtime values come from the
-    # try/except below.
-    import AppKit  # ty: ignore[unresolved-import]
-    import Foundation  # ty: ignore[unresolved-import]
+    # It exposes every framework class through a dynamic ``__getattr__``
+    # installed at runtime (``objc.createFrameworkDirAndGetattr``); there
+    # are no ``.pyi`` stubs and no static namespace for ty to inspect.
+    # Declaring the modules as ``Any`` matches the runtime fallback below
+    # and silences false-positive ``unresolved-attribute`` errors on every
+    # ``AppKit.NSAlert``/``Foundation.NSUserNotificationCenter`` access.
+    AppKit: Any
+    Foundation: Any
 
     PYOBJC_AVAILABLE = True
 else:

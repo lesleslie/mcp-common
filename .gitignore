@@ -36,6 +36,7 @@ env/
 .complexipy_cache/
 .cache/
 .lycheecache/
+.lycheecache
 
 # XDG - State directories
 .claude/
