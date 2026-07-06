@@ -53,16 +53,21 @@ class TestSanitizeOutput:
 
     def test_sanitize_jwt_token_in_string(self) -> None:
         """Should mask JWT tokens in strings."""
-        import secrets
-        # Build a fake JWT-like string that exercises sanitization without triggering detector
-        # Format: header.payload.signature (where each is base64-like)
-        def make_fake_jwt():
-            return ".".join([
-                secrets.token_urlsafe(32)[:32].replace("=", ""),
-                secrets.token_urlsafe(32)[:32].replace("=", ""),
-                secrets.token_urlsafe(32)[:43].replace("=", "")
-            ])
-        jwt = make_fake_jwt()
+        import base64
+        import json
+        # Build a JWT-shaped string that matches the detector (header & payload
+        # start with "eyJ" = base64("{"), so the detector actually fires).
+        def make_jwt_like_token() -> str:
+            header = base64.urlsafe_b64encode(
+                json.dumps({"alg": "HS256", "typ": "JWT"}).encode()
+            ).rstrip(b"=").decode()
+            payload = base64.urlsafe_b64encode(
+                json.dumps({"sub": "1234567890"}).encode()
+            ).rstrip(b"=").decode()
+            signature = base64.urlsafe_b64encode(b"a" * 32).rstrip(b"=").decode()
+            return f"{header}.{payload}.{signature}"
+
+        jwt = make_jwt_like_token()
         data = f"Authorization: Bearer {jwt}"
         result = sanitize_output(data)
         assert "[REDACTED-JWT]" in result
@@ -427,14 +432,18 @@ class TestSensitivePatterns:
     def test_jwt_pattern_matches(self) -> None:
         """JWT pattern should match valid tokens."""
         pattern = SENSITIVE_PATTERNS["jwt"]
-        import secrets
-        def make_fake_jwt():
-            return ".".join([
-                secrets.token_urlsafe(32)[:32].replace("=", ""),
-                secrets.token_urlsafe(32)[:32].replace("=", ""),
-                secrets.token_urlsafe(32)[:43].replace("=", "")
-            ])
-        jwt = make_fake_jwt()
+        import base64
+        import json
+        # Real JWTs base64-encode a JSON header and payload, both of which start
+        # with "eyJ" (= base64("{")). Use that so the pattern actually matches.
+        header = base64.urlsafe_b64encode(
+            json.dumps({"alg": "HS256", "typ": "JWT"}).encode()
+        ).rstrip(b"=").decode()
+        payload = base64.urlsafe_b64encode(
+            json.dumps({"sub": "1234567890"}).encode()
+        ).rstrip(b"=").decode()
+        signature = base64.urlsafe_b64encode(b"a" * 32).rstrip(b"=").decode()
+        jwt = f"{header}.{payload}.{signature}"
         assert pattern.search(jwt)
 
     def test_generic_hex_pattern_matches(self) -> None:

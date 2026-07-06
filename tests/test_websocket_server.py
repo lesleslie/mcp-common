@@ -633,7 +633,7 @@ class TestStartHandlerBranches:
         srv.metrics = MagicMock()
         captured: dict[str, Any] = {}
 
-        async def fake_serve(handler, host, port, ssl=None):
+        async def fake_serve(handler, host, port, ssl=None, **kwargs):
             captured["handler"] = handler
             return SimpleNamespace()
 
@@ -652,7 +652,7 @@ class TestStartHandlerBranches:
         srv.metrics = MagicMock()
         captured: dict[str, Any] = {}
 
-        async def fake_serve(handler, host, port, ssl=None):
+        async def fake_serve(handler, host, port, ssl=None, **kwargs):
             captured["handler"] = handler
             return SimpleNamespace()
 
@@ -690,7 +690,7 @@ class TestStartHandlerBranches:
     async def test_handler_branches_without_metrics(self, monkeypatch: pytest.MonkeyPatch) -> None:
         captured: dict[str, Any] = {}
 
-        async def fake_serve(handler, host, port, ssl=None):
+        async def fake_serve(handler, host, port, ssl=None, **kwargs):
             captured["handler"] = handler
             return SimpleNamespace()
 
@@ -764,7 +764,7 @@ class TestStartHandlerBranches:
         srv = ConcreteServer(enable_metrics=False)
         captured: dict[str, Any] = {}
 
-        async def fake_serve(handler, host, port, ssl=None):
+        async def fake_serve(handler, host, port, ssl=None, **kwargs):
             captured["handler"] = handler
             return SimpleNamespace()
 
@@ -794,7 +794,7 @@ class TestStartHandlerBranches:
             def __str__(self) -> str:
                 return "conn-1"
 
-        async def fake_serve(handler, host, port, ssl=None):
+        async def fake_serve(handler, host, port, ssl=None, **kwargs):
             captured["handler"] = handler
             return SimpleNamespace()
 

@@ -31,6 +31,8 @@ Usage:
 
 from __future__ import annotations
 
+from importlib.metadata import version as _pkg_version
+
 from oneiric.adapters.http import HTTPClientAdapter, HTTPClientSettings
 
 from mcp_common.cli import MCPServerCLIFactory, MCPServerSettings, RuntimeHealthSnapshot
@@ -63,7 +65,13 @@ from mcp_common.tools import MANDATORY_TOOLS, ToolProfile, trim_description
 from mcp_common.ui import ServerPanels
 from mcp_common.validation import validate_input, validate_output
 
-__version__ = "0.6.0"  # Added tool profiles and description trimming
+# Read the version from package metadata so it stays in sync with releases.
+# Falls back to a dev sentinel if the package is imported without being
+# installed (e.g. running tests directly from a source checkout).
+try:
+    __version__ = _pkg_version("mcp-common")
+except Exception:  # pragma: no cover - dev/source-checkout path
+    __version__ = "0.0.0+unknown"
 
 __all__: list[str] = [
     "APIKeyFormatError",

@@ -198,13 +198,17 @@ class TestPromptAdapterSettingsFromOneiric:
     def test_from_settings_with_oneiric(self):
         from mcp_common.prompting.models import PromptAdapterSettings
 
+        # from_settings() deliberately does not consume oneiric.load_config
+        # (see ``PromptAdapterSettings.from_settings`` docstring). Mocking
+        # oneiric must not change the returned settings -- the oneiric path
+        # is intentionally a no-op so this class has no oneiric dependency.
         mock_load = MagicMock(return_value={
             "prompting": {"max_tokens": 500, "temperature": 0.9}
         })
         with patch.dict("sys.modules", {"oneiric": MagicMock(load_config=mock_load)}):
             result = PromptAdapterSettings.from_settings()
-        assert result.max_tokens == 500
-        assert result.temperature == 0.9
+        assert isinstance(result, PromptAdapterSettings)
+        mock_load.assert_not_called()
 
 
 # ── parsing/tree_sitter/queries.py (lines 122-148) ──
