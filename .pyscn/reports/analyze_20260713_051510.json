@@ -1,0 +1,1724 @@
+{
+  "complexity": {
+    "Functions": [
+      {
+        "Name": "verify_token",
+        "FilePath": "mcp_common/auth/core.py",
+        "StartLine": 58,
+        "StartColumn": 0,
+        "EndLine": 95,
+        "Metrics": {
+          "Complexity": 14,
+          "Nodes": 10,
+          "Edges": 21,
+          "NestingDepth": 2,
+          "IfStatements": 0,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 13,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "medium"
+      },
+      {
+        "Name": "FallbackChain.execute",
+        "FilePath": "mcp_common/llm/fallback.py",
+        "StartLine": 92,
+        "StartColumn": 4,
+        "EndLine": 158,
+        "Metrics": {
+          "Complexity": 14,
+          "Nodes": 20,
+          "Edges": 31,
+          "NestingDepth": 5,
+          "IfStatements": 6,
+          "LoopStatements": 2,
+          "ExceptionHandlers": 7,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "medium"
+      },
+      {
+        "Name": "ensure_dual_use",
+        "FilePath": "mcp_common/interfaces/__init__.py",
+        "StartLine": 78,
+        "StartColumn": 0,
+        "EndLine": 136,
+        "Metrics": {
+          "Complexity": 12,
+          "Nodes": 13,
+          "Edges": 20,
+          "NestingDepth": 2,
+          "IfStatements": 6,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 5,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "medium"
+      },
+      {
+        "Name": "create_ssl_context",
+        "FilePath": "mcp_common/websocket/tls.py",
+        "StartLine": 120,
+        "StartColumn": 0,
+        "EndLine": 206,
+        "Metrics": {
+          "Complexity": 12,
+          "Nodes": 19,
+          "Edges": 28,
+          "NestingDepth": 3,
+          "IfStatements": 7,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 4,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "medium"
+      },
+      {
+        "Name": "run",
+        "FilePath": "mcp_common/apple_script/bridge.py",
+        "StartLine": 42,
+        "StartColumn": 0,
+        "EndLine": 76,
+        "Metrics": {
+          "Complexity": 12,
+          "Nodes": 8,
+          "Edges": 16,
+          "NestingDepth": 2,
+          "IfStatements": 2,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 9,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "medium"
+      },
+      {
+        "Name": "PromptToolkitBackend.prompt_choice",
+        "FilePath": "mcp_common/backends/toolkit.py",
+        "StartLine": 256,
+        "StartColumn": 4,
+        "EndLine": 296,
+        "Metrics": {
+          "Complexity": 11,
+          "Nodes": 25,
+          "Edges": 36,
+          "NestingDepth": 5,
+          "IfStatements": 8,
+          "LoopStatements": 2,
+          "ExceptionHandlers": 2,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "medium"
+      },
+      {
+        "Name": "sanitize_path",
+        "FilePath": "mcp_common/security/sanitization.py",
+        "StartLine": 178,
+        "StartColumn": 0,
+        "EndLine": 237,
+        "Metrics": {
+          "Complexity": 11,
+          "Nodes": 14,
+          "Edges": 21,
+          "NestingDepth": 3,
+          "IfStatements": 5,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 5,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "medium"
+      },
+      {
+        "Name": "trim_description",
+        "FilePath": "mcp_common/tools/descriptions.py",
+        "StartLine": 33,
+        "StartColumn": 0,
+        "EndLine": 82,
+        "Metrics": {
+          "Complexity": 10,
+          "Nodes": 22,
+          "Edges": 32,
+          "NestingDepth": 3,
+          "IfStatements": 9,
+          "LoopStatements": 2,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "medium"
+      },
+      {
+        "Name": "PromptToolkitBackend.select_file",
+        "FilePath": "mcp_common/backends/toolkit.py",
+        "StartLine": 330,
+        "StartColumn": 4,
+        "EndLine": 376,
+        "Metrics": {
+          "Complexity": 10,
+          "Nodes": 22,
+          "Edges": 31,
+          "NestingDepth": 3,
+          "IfStatements": 7,
+          "LoopStatements": 2,
+          "ExceptionHandlers": 2,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "medium"
+      },
+      {
+        "Name": "PythonHandler._extract_function",
+        "FilePath": "mcp_common/parsing/tree_sitter/handlers/python.py",
+        "StartLine": 156,
+        "StartColumn": 4,
+        "EndLine": 221,
+        "Metrics": {
+          "Complexity": 10,
+          "Nodes": 23,
+          "Edges": 33,
+          "NestingDepth": 5,
+          "IfStatements": 9,
+          "LoopStatements": 2,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "medium"
+      },
+      {
+        "Name": "ValidationMixin.validate_url_parts",
+        "FilePath": "mcp_common/config/validation_mixin.py",
+        "StartLine": 190,
+        "StartColumn": 4,
+        "EndLine": 232,
+        "Metrics": {
+          "Complexity": 9,
+          "Nodes": 9,
+          "Edges": 14,
+          "NestingDepth": 2,
+          "IfStatements": 4,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 4,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "PythonHandler._extract_from_node",
+        "FilePath": "mcp_common/parsing/tree_sitter/handlers/python.py",
+        "StartLine": 70,
+        "StartColumn": 4,
+        "EndLine": 154,
+        "Metrics": {
+          "Complexity": 9,
+          "Nodes": 21,
+          "Edges": 30,
+          "NestingDepth": 4,
+          "IfStatements": 8,
+          "LoopStatements": 3,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "sanitize_input",
+        "FilePath": "mcp_common/security/sanitization.py",
+        "StartLine": 240,
+        "StartColumn": 0,
+        "EndLine": 289,
+        "Metrics": {
+          "Complexity": 8,
+          "Nodes": 9,
+          "Edges": 14,
+          "NestingDepth": 1,
+          "IfStatements": 4,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 3,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "PythonHandler._compute_complexity_for_node",
+        "FilePath": "mcp_common/parsing/tree_sitter/handlers/python.py",
+        "StartLine": 418,
+        "StartColumn": 4,
+        "EndLine": 445,
+        "Metrics": {
+          "Complexity": 8,
+          "Nodes": 17,
+          "Edges": 25,
+          "NestingDepth": 5,
+          "IfStatements": 7,
+          "LoopStatements": 2,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "_reject_blank_strings",
+        "FilePath": "mcp_common/validation/__init__.py",
+        "StartLine": 29,
+        "StartColumn": 0,
+        "EndLine": 43,
+        "Metrics": {
+          "Complexity": 8,
+          "Nodes": 15,
+          "Edges": 22,
+          "NestingDepth": 2,
+          "IfStatements": 6,
+          "LoopStatements": 2,
+          "ExceptionHandlers": 1,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "validate_certificate",
+        "FilePath": "mcp_common/websocket/tls.py",
+        "StartLine": 285,
+        "StartColumn": 0,
+        "EndLine": 355,
+        "Metrics": {
+          "Complexity": 8,
+          "Nodes": 17,
+          "Edges": 25,
+          "NestingDepth": 4,
+          "IfStatements": 4,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 3,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "TreeSitterParser.parse_file",
+        "FilePath": "mcp_common/parsing/tree_sitter/core.py",
+        "StartLine": 285,
+        "StartColumn": 4,
+        "EndLine": 355,
+        "Metrics": {
+          "Complexity": 8,
+          "Nodes": 12,
+          "Edges": 18,
+          "NestingDepth": 2,
+          "IfStatements": 4,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 3,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "validate_input",
+        "FilePath": "mcp_common/validation/__init__.py",
+        "StartLine": 110,
+        "StartColumn": 0,
+        "EndLine": 190,
+        "Metrics": {
+          "Complexity": 8,
+          "Nodes": 7,
+          "Edges": 13,
+          "NestingDepth": 3,
+          "IfStatements": 1,
+          "LoopStatements": 1,
+          "ExceptionHandlers": 6,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "PythonHandler._extract_docstring",
+        "FilePath": "mcp_common/parsing/tree_sitter/handlers/python.py",
+        "StartLine": 373,
+        "StartColumn": 4,
+        "EndLine": 391,
+        "Metrics": {
+          "Complexity": 8,
+          "Nodes": 17,
+          "Edges": 25,
+          "NestingDepth": 6,
+          "IfStatements": 7,
+          "LoopStatements": 2,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "_resolve_backend",
+        "FilePath": "mcp_common/prompting/factory.py",
+        "StartLine": 103,
+        "StartColumn": 0,
+        "EndLine": 149,
+        "Metrics": {
+          "Complexity": 8,
+          "Nodes": 17,
+          "Edges": 24,
+          "NestingDepth": 3,
+          "IfStatements": 4,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 3,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "validate_api_key_startup",
+        "FilePath": "mcp_common/security/api_keys.py",
+        "StartLine": 297,
+        "StartColumn": 0,
+        "EndLine": 352,
+        "Metrics": {
+          "Complexity": 7,
+          "Nodes": 13,
+          "Edges": 19,
+          "NestingDepth": 3,
+          "IfStatements": 4,
+          "LoopStatements": 1,
+          "ExceptionHandlers": 2,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "WebSocketClient._authenticate",
+        "FilePath": "mcp_common/websocket/client.py",
+        "StartLine": 191,
+        "StartColumn": 4,
+        "EndLine": 217,
+        "Metrics": {
+          "Complexity": 7,
+          "Nodes": 10,
+          "Edges": 15,
+          "NestingDepth": 3,
+          "IfStatements": 3,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 3,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "_sanitize_string",
+        "FilePath": "mcp_common/security/sanitization.py",
+        "StartLine": 42,
+        "StartColumn": 0,
+        "EndLine": 73,
+        "Metrics": {
+          "Complexity": 7,
+          "Nodes": 15,
+          "Edges": 22,
+          "NestingDepth": 3,
+          "IfStatements": 6,
+          "LoopStatements": 2,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "CodeGraphAnalyzer._extract_and_add_definitions",
+        "FilePath": "mcp_common/code_graph/analyzer.py",
+        "StartLine": 287,
+        "StartColumn": 4,
+        "EndLine": 306,
+        "Metrics": {
+          "Complexity": 7,
+          "Nodes": 14,
+          "Edges": 21,
+          "NestingDepth": 5,
+          "IfStatements": 6,
+          "LoopStatements": 1,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "WebSocketServer._initialize_ssl_context",
+        "FilePath": "mcp_common/websocket/server.py",
+        "StartLine": 194,
+        "StartColumn": 4,
+        "EndLine": 237,
+        "Metrics": {
+          "Complexity": 7,
+          "Nodes": 12,
+          "Edges": 18,
+          "NestingDepth": 3,
+          "IfStatements": 4,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 2,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "MCPServerCLIFactory._get_server_pid",
+        "FilePath": "mcp_common/cli/factory.py",
+        "StartLine": 494,
+        "StartColumn": 4,
+        "EndLine": 543,
+        "Metrics": {
+          "Complexity": 7,
+          "Nodes": 17,
+          "Edges": 24,
+          "NestingDepth": 3,
+          "IfStatements": 5,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 1,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "PythonHandler._extract_from_import",
+        "FilePath": "mcp_common/parsing/tree_sitter/handlers/python.py",
+        "StartLine": 297,
+        "StartColumn": 4,
+        "EndLine": 340,
+        "Metrics": {
+          "Complexity": 7,
+          "Nodes": 15,
+          "Edges": 22,
+          "NestingDepth": 4,
+          "IfStatements": 6,
+          "LoopStatements": 1,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "ValidationMixin.validate_one_of_required",
+        "FilePath": "mcp_common/config/validation_mixin.py",
+        "StartLine": 235,
+        "StartColumn": 4,
+        "EndLine": 270,
+        "Metrics": {
+          "Complexity": 7,
+          "Nodes": 7,
+          "Edges": 11,
+          "NestingDepth": 2,
+          "IfStatements": 3,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 3,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "PromptToolkitBackend.alert",
+        "FilePath": "mcp_common/backends/toolkit.py",
+        "StartLine": 126,
+        "StartColumn": 4,
+        "EndLine": 194,
+        "Metrics": {
+          "Complexity": 7,
+          "Nodes": 12,
+          "Edges": 18,
+          "NestingDepth": 4,
+          "IfStatements": 3,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 3,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "LLMSettings.from_yaml",
+        "FilePath": "mcp_common/llm/config.py",
+        "StartLine": 72,
+        "StartColumn": 4,
+        "EndLine": 121,
+        "Metrics": {
+          "Complexity": 7,
+          "Nodes": 16,
+          "Edges": 23,
+          "NestingDepth": 3,
+          "IfStatements": 5,
+          "LoopStatements": 1,
+          "ExceptionHandlers": 1,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "FastMCPOpenTelemetryMiddleware.on_message",
+        "FilePath": "mcp_common/server/telemetry.py",
+        "StartLine": 69,
+        "StartColumn": 4,
+        "EndLine": 95,
+        "Metrics": {
+          "Complexity": 7,
+          "Nodes": 13,
+          "Edges": 19,
+          "NestingDepth": 4,
+          "IfStatements": 3,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 3,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "AuthConfig._load_secret",
+        "FilePath": "mcp_common/auth/config.py",
+        "StartLine": 32,
+        "StartColumn": 4,
+        "EndLine": 55,
+        "Metrics": {
+          "Complexity": 7,
+          "Nodes": 9,
+          "Edges": 14,
+          "NestingDepth": 1,
+          "IfStatements": 4,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 2,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "FastMCPOpenTelemetryMiddleware._annotate_result",
+        "FilePath": "mcp_common/server/telemetry.py",
+        "StartLine": 131,
+        "StartColumn": 4,
+        "EndLine": 147,
+        "Metrics": {
+          "Complexity": 6,
+          "Nodes": 11,
+          "Edges": 17,
+          "NestingDepth": 2,
+          "IfStatements": 5,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "CodeGraphAnalyzer._process_language",
+        "FilePath": "mcp_common/code_graph/analyzer.py",
+        "StartLine": 159,
+        "StartColumn": 4,
+        "EndLine": 179,
+        "Metrics": {
+          "Complexity": 6,
+          "Nodes": 12,
+          "Edges": 18,
+          "NestingDepth": 2,
+          "IfStatements": 5,
+          "LoopStatements": 1,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "WebSocketServer.broadcast_to_room",
+        "FilePath": "mcp_common/websocket/server.py",
+        "StartLine": 523,
+        "StartColumn": 4,
+        "EndLine": 552,
+        "Metrics": {
+          "Complexity": 6,
+          "Nodes": 13,
+          "Edges": 19,
+          "NestingDepth": 4,
+          "IfStatements": 4,
+          "LoopStatements": 1,
+          "ExceptionHandlers": 1,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "WebSocketClient.connect",
+        "FilePath": "mcp_common/websocket/client.py",
+        "StartLine": 158,
+        "StartColumn": 4,
+        "EndLine": 189,
+        "Metrics": {
+          "Complexity": 6,
+          "Nodes": 11,
+          "Edges": 16,
+          "NestingDepth": 3,
+          "IfStatements": 3,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 2,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "WebSocketClient.disconnect",
+        "FilePath": "mcp_common/websocket/client.py",
+        "StartLine": 219,
+        "StartColumn": 4,
+        "EndLine": 244,
+        "Metrics": {
+          "Complexity": 6,
+          "Nodes": 13,
+          "Edges": 19,
+          "NestingDepth": 3,
+          "IfStatements": 3,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 2,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "MCPServerCLIFactory._handle_stale_pid",
+        "FilePath": "mcp_common/cli/factory.py",
+        "StartLine": 330,
+        "StartColumn": 4,
+        "EndLine": 365,
+        "Metrics": {
+          "Complexity": 6,
+          "Nodes": 12,
+          "Edges": 18,
+          "NestingDepth": 3,
+          "IfStatements": 4,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 1,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "MCPBaseSettings.validate_api_keys_at_startup",
+        "FilePath": "mcp_common/config/base.py",
+        "StartLine": 206,
+        "StartColumn": 4,
+        "EndLine": 258,
+        "Metrics": {
+          "Complexity": 6,
+          "Nodes": 12,
+          "Edges": 18,
+          "NestingDepth": 4,
+          "IfStatements": 5,
+          "LoopStatements": 1,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "HealthChecker.check",
+        "FilePath": "mcp_common/health.py",
+        "StartLine": 316,
+        "StartColumn": 4,
+        "EndLine": 390,
+        "Metrics": {
+          "Complexity": 6,
+          "Nodes": 11,
+          "Edges": 17,
+          "NestingDepth": 3,
+          "IfStatements": 3,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 2,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "WebSocketClient._receive_loop",
+        "FilePath": "mcp_common/websocket/client.py",
+        "StartLine": 246,
+        "StartColumn": 4,
+        "EndLine": 265,
+        "Metrics": {
+          "Complexity": 6,
+          "Nodes": 15,
+          "Edges": 22,
+          "NestingDepth": 4,
+          "IfStatements": 3,
+          "LoopStatements": 1,
+          "ExceptionHandlers": 2,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "ProviderConfig.resolve_env_vars",
+        "FilePath": "mcp_common/llm/config.py",
+        "StartLine": 36,
+        "StartColumn": 4,
+        "EndLine": 55,
+        "Metrics": {
+          "Complexity": 6,
+          "Nodes": 11,
+          "Edges": 17,
+          "NestingDepth": 2,
+          "IfStatements": 5,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "ServerPanels.startup_success",
+        "FilePath": "mcp_common/ui/panels.py",
+        "StartLine": 47,
+        "StartColumn": 4,
+        "EndLine": 103,
+        "Metrics": {
+          "Complexity": 6,
+          "Nodes": 12,
+          "Edges": 18,
+          "NestingDepth": 2,
+          "IfStatements": 5,
+          "LoopStatements": 1,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "LLMSettings.get_enabled_providers",
+        "FilePath": "mcp_common/llm/config.py",
+        "StartLine": 140,
+        "StartColumn": 4,
+        "EndLine": 165,
+        "Metrics": {
+          "Complexity": 6,
+          "Nodes": 12,
+          "Edges": 18,
+          "NestingDepth": 3,
+          "IfStatements": 5,
+          "LoopStatements": 1,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "validate_cache_ownership",
+        "FilePath": "mcp_common/cli/security.py",
+        "StartLine": 53,
+        "StartColumn": 0,
+        "EndLine": 85,
+        "Metrics": {
+          "Complexity": 6,
+          "Nodes": 7,
+          "Edges": 11,
+          "NestingDepth": 1,
+          "IfStatements": 3,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 2,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "validate_pid_integrity",
+        "FilePath": "mcp_common/cli/security.py",
+        "StartLine": 127,
+        "StartColumn": 0,
+        "EndLine": 181,
+        "Metrics": {
+          "Complexity": 6,
+          "Nodes": 14,
+          "Edges": 20,
+          "NestingDepth": 2,
+          "IfStatements": 2,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 3,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "sanitize_dict_for_logging",
+        "FilePath": "mcp_common/security/sanitization.py",
+        "StartLine": 114,
+        "StartColumn": 0,
+        "EndLine": 175,
+        "Metrics": {
+          "Complexity": 6,
+          "Nodes": 16,
+          "Edges": 22,
+          "NestingDepth": 3,
+          "IfStatements": 5,
+          "LoopStatements": 2,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "APIKeyValidator._validate_pattern_match",
+        "FilePath": "mcp_common/security/api_keys.py",
+        "StartLine": 159,
+        "StartColumn": 4,
+        "EndLine": 177,
+        "Metrics": {
+          "Complexity": 6,
+          "Nodes": 7,
+          "Edges": 11,
+          "NestingDepth": 3,
+          "IfStatements": 3,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 2,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "APIKeyValidator._validate_key_missing",
+        "FilePath": "mcp_common/security/api_keys.py",
+        "StartLine": 139,
+        "StartColumn": 4,
+        "EndLine": 157,
+        "Metrics": {
+          "Complexity": 6,
+          "Nodes": 7,
+          "Edges": 11,
+          "NestingDepth": 3,
+          "IfStatements": 3,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 2,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "CodeGraphAnalyzer._extract_function",
+        "FilePath": "mcp_common/code_graph/analyzer.py",
+        "StartLine": 385,
+        "StartColumn": 4,
+        "EndLine": 432,
+        "Metrics": {
+          "Complexity": 6,
+          "Nodes": 13,
+          "Edges": 19,
+          "NestingDepth": 3,
+          "IfStatements": 5,
+          "LoopStatements": 2,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "PythonHandler._extract_import",
+        "FilePath": "mcp_common/parsing/tree_sitter/handlers/python.py",
+        "StartLine": 276,
+        "StartColumn": 4,
+        "EndLine": 295,
+        "Metrics": {
+          "Complexity": 6,
+          "Nodes": 12,
+          "Edges": 18,
+          "NestingDepth": 4,
+          "IfStatements": 5,
+          "LoopStatements": 1,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "PythonHandler._analyze_complexity",
+        "FilePath": "mcp_common/parsing/tree_sitter/handlers/python.py",
+        "StartLine": 488,
+        "StartColumn": 4,
+        "EndLine": 544,
+        "Metrics": {
+          "Complexity": 6,
+          "Nodes": 12,
+          "Edges": 18,
+          "NestingDepth": 2,
+          "IfStatements": 5,
+          "LoopStatements": 1,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "_parse_sync",
+        "FilePath": "mcp_common/parsing/tree_sitter/core.py",
+        "StartLine": 85,
+        "StartColumn": 0,
+        "EndLine": 168,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 9,
+          "Edges": 14,
+          "NestingDepth": 2,
+          "IfStatements": 3,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 1,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "ServerPanels.backups_table",
+        "FilePath": "mcp_common/ui/panels.py",
+        "StartLine": 397,
+        "StartColumn": 4,
+        "EndLine": 434,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 11,
+          "Edges": 16,
+          "NestingDepth": 2,
+          "IfStatements": 4,
+          "LoopStatements": 1,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "PythonHandler._calculate_function_complexity",
+        "FilePath": "mcp_common/parsing/tree_sitter/handlers/python.py",
+        "StartLine": 447,
+        "StartColumn": 4,
+        "EndLine": 486,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 10,
+          "Edges": 15,
+          "NestingDepth": 3,
+          "IfStatements": 4,
+          "LoopStatements": 1,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "CodeGraphAnalyzer._get_file_imports",
+        "FilePath": "mcp_common/code_graph/analyzer.py",
+        "StartLine": 585,
+        "StartColumn": 4,
+        "EndLine": 596,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 11,
+          "Edges": 16,
+          "NestingDepth": 4,
+          "IfStatements": 4,
+          "LoopStatements": 1,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "CodeGraphAnalyzer._is_method",
+        "FilePath": "mcp_common/code_graph/analyzer.py",
+        "StartLine": 308,
+        "StartColumn": 4,
+        "EndLine": 315,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 11,
+          "Edges": 16,
+          "NestingDepth": 4,
+          "IfStatements": 4,
+          "LoopStatements": 2,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "list_available_backends",
+        "FilePath": "mcp_common/prompting/factory.py",
+        "StartLine": 152,
+        "StartColumn": 0,
+        "EndLine": 178,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 13,
+          "Edges": 18,
+          "NestingDepth": 2,
+          "IfStatements": 2,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 2,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "CodeGraphAnalyzer.find_related_files",
+        "FilePath": "mcp_common/code_graph/analyzer.py",
+        "StartLine": 540,
+        "StartColumn": 4,
+        "EndLine": 583,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 9,
+          "Edges": 14,
+          "NestingDepth": 1,
+          "IfStatements": 4,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "CodeGraphAnalyzer._find_imported_by_relationships",
+        "FilePath": "mcp_common/code_graph/analyzer.py",
+        "StartLine": 598,
+        "StartColumn": 4,
+        "EndLine": 615,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 10,
+          "Edges": 15,
+          "NestingDepth": 4,
+          "IfStatements": 4,
+          "LoopStatements": 1,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "MCPServerSettings.validate_base_url",
+        "FilePath": "mcp_common/config/base.py",
+        "StartLine": 479,
+        "StartColumn": 4,
+        "EndLine": 501,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 5,
+          "Edges": 8,
+          "NestingDepth": 1,
+          "IfStatements": 2,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 2,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "CodeGraphAnalyzer.get_function_context",
+        "FilePath": "mcp_common/code_graph/analyzer.py",
+        "StartLine": 442,
+        "StartColumn": 4,
+        "EndLine": 478,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 7,
+          "Edges": 11,
+          "NestingDepth": 1,
+          "IfStatements": 3,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 1,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "ValidationMixin.validate_required_field",
+        "FilePath": "mcp_common/config/validation_mixin.py",
+        "StartLine": 49,
+        "StartColumn": 4,
+        "EndLine": 74,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 5,
+          "Edges": 8,
+          "NestingDepth": 2,
+          "IfStatements": 2,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 2,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "CodeGraphAnalyzer._count_totals",
+        "FilePath": "mcp_common/code_graph/analyzer.py",
+        "StartLine": 207,
+        "StartColumn": 4,
+        "EndLine": 219,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 11,
+          "Edges": 16,
+          "NestingDepth": 3,
+          "IfStatements": 4,
+          "LoopStatements": 2,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "MCPServerSettings._load_environment_layer",
+        "FilePath": "mcp_common/cli/settings.py",
+        "StartLine": 146,
+        "StartColumn": 4,
+        "EndLine": 158,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 11,
+          "Edges": 16,
+          "NestingDepth": 4,
+          "IfStatements": 4,
+          "LoopStatements": 1,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "BaseOneiricServerMixin._extract_config_snapshot",
+        "FilePath": "mcp_common/server/base.py",
+        "StartLine": 286,
+        "StartColumn": 4,
+        "EndLine": 313,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 9,
+          "Edges": 14,
+          "NestingDepth": 1,
+          "IfStatements": 4,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "ContentHashLRUCache.prune_expired",
+        "FilePath": "mcp_common/parsing/tree_sitter/cache.py",
+        "StartLine": 213,
+        "StartColumn": 4,
+        "EndLine": 233,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 14,
+          "Edges": 19,
+          "NestingDepth": 2,
+          "IfStatements": 3,
+          "LoopStatements": 2,
+          "ExceptionHandlers": 1,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "MCPBaseSettings.get_api_key",
+        "FilePath": "mcp_common/config/base.py",
+        "StartLine": 131,
+        "StartColumn": 4,
+        "EndLine": 165,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 5,
+          "Edges": 8,
+          "NestingDepth": 1,
+          "IfStatements": 2,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 2,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "MCPServerCLIFactory._wait_for_pid_removal",
+        "FilePath": "mcp_common/cli/factory.py",
+        "StartLine": 649,
+        "StartColumn": 4,
+        "EndLine": 673,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 11,
+          "Edges": 16,
+          "NestingDepth": 2,
+          "IfStatements": 4,
+          "LoopStatements": 1,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "CodeGraphAnalyzer._extract_import",
+        "FilePath": "mcp_common/code_graph/analyzer.py",
+        "StartLine": 317,
+        "StartColumn": 4,
+        "EndLine": 347,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 11,
+          "Edges": 16,
+          "NestingDepth": 2,
+          "IfStatements": 4,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "MCPBaseSettings.get_data_dir",
+        "FilePath": "mcp_common/config/base.py",
+        "StartLine": 167,
+        "StartColumn": 4,
+        "EndLine": 204,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 5,
+          "Edges": 8,
+          "NestingDepth": 1,
+          "IfStatements": 2,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 2,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "MCPServerCLIFactory._validate_and_stop_server",
+        "FilePath": "mcp_common/cli/factory.py",
+        "StartLine": 545,
+        "StartColumn": 4,
+        "EndLine": 573,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 11,
+          "Edges": 16,
+          "NestingDepth": 3,
+          "IfStatements": 3,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 1,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "MCPServerCLIFactory._validate_cache_and_check_process",
+        "FilePath": "mcp_common/cli/factory.py",
+        "StartLine": 383,
+        "StartColumn": 4,
+        "EndLine": 428,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 12,
+          "Edges": 17,
+          "NestingDepth": 3,
+          "IfStatements": 3,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 1,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "MCPBaseSettings.get_masked_key",
+        "FilePath": "mcp_common/config/base.py",
+        "StartLine": 298,
+        "StartColumn": 4,
+        "EndLine": 330,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 9,
+          "Edges": 14,
+          "NestingDepth": 1,
+          "IfStatements": 4,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "WebSocketClient._emit_event",
+        "FilePath": "mcp_common/websocket/client.py",
+        "StartLine": 323,
+        "StartColumn": 4,
+        "EndLine": 340,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 12,
+          "Edges": 17,
+          "NestingDepth": 3,
+          "IfStatements": 3,
+          "LoopStatements": 1,
+          "ExceptionHandlers": 1,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "ValidationMixin._validate_password_strength",
+        "FilePath": "mcp_common/config/validation_mixin.py",
+        "StartLine": 139,
+        "StartColumn": 4,
+        "EndLine": 155,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 5,
+          "Edges": 8,
+          "NestingDepth": 2,
+          "IfStatements": 2,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 2,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "ValidationMixin._validate_password",
+        "FilePath": "mcp_common/config/validation_mixin.py",
+        "StartLine": 125,
+        "StartColumn": 4,
+        "EndLine": 136,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 5,
+          "Edges": 8,
+          "NestingDepth": 2,
+          "IfStatements": 2,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 2,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "WebSocketClient._reconnect_loop",
+        "FilePath": "mcp_common/websocket/client.py",
+        "StartLine": 267,
+        "StartColumn": 4,
+        "EndLine": 305,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 12,
+          "Edges": 17,
+          "NestingDepth": 3,
+          "IfStatements": 3,
+          "LoopStatements": 2,
+          "ExceptionHandlers": 1,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "WebSocketClient.send_request",
+        "FilePath": "mcp_common/websocket/client.py",
+        "StartLine": 342,
+        "StartColumn": 4,
+        "EndLine": 385,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 7,
+          "Edges": 11,
+          "NestingDepth": 2,
+          "IfStatements": 1,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 3,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "ValidationMixin._validate_username",
+        "FilePath": "mcp_common/config/validation_mixin.py",
+        "StartLine": 111,
+        "StartColumn": 4,
+        "EndLine": 122,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 5,
+          "Edges": 8,
+          "NestingDepth": 2,
+          "IfStatements": 2,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 2,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "WebSocketServer._cleanup_auto_cert",
+        "FilePath": "mcp_common/websocket/server.py",
+        "StartLine": 481,
+        "StartColumn": 4,
+        "EndLine": 494,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 13,
+          "Edges": 18,
+          "NestingDepth": 2,
+          "IfStatements": 2,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 2,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "MCPServerCLIFactory._emit_health_snapshot",
+        "FilePath": "mcp_common/cli/factory.py",
+        "StartLine": 775,
+        "StartColumn": 4,
+        "EndLine": 798,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 10,
+          "Edges": 15,
+          "NestingDepth": 1,
+          "IfStatements": 4,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 0,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "WebSocketServer.emit_event",
+        "FilePath": "mcp_common/websocket/server.py",
+        "StartLine": 603,
+        "StartColumn": 4,
+        "EndLine": 623,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 12,
+          "Edges": 17,
+          "NestingDepth": 3,
+          "IfStatements": 3,
+          "LoopStatements": 1,
+          "ExceptionHandlers": 1,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "ValidationMixin.validate_min_length",
+        "FilePath": "mcp_common/config/validation_mixin.py",
+        "StartLine": 77,
+        "StartColumn": 4,
+        "EndLine": 108,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 5,
+          "Edges": 8,
+          "NestingDepth": 2,
+          "IfStatements": 2,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 2,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "WebSocketServer.__init__",
+        "FilePath": "mcp_common/websocket/server.py",
+        "StartLine": 92,
+        "StartColumn": 4,
+        "EndLine": 192,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 7,
+          "Edges": 11,
+          "NestingDepth": 1,
+          "IfStatements": 3,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 1,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "WebSocketServer.send_to_connection",
+        "FilePath": "mcp_common/websocket/server.py",
+        "StartLine": 554,
+        "StartColumn": 4,
+        "EndLine": 581,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 10,
+          "Edges": 15,
+          "NestingDepth": 3,
+          "IfStatements": 3,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 1,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "PromptToolkitBackend.prompt_text",
+        "FilePath": "mcp_common/backends/toolkit.py",
+        "StartLine": 223,
+        "StartColumn": 4,
+        "EndLine": 254,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 10,
+          "Edges": 15,
+          "NestingDepth": 2,
+          "IfStatements": 3,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 1,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      },
+      {
+        "Name": "PromptToolkitBackend.select_directory",
+        "FilePath": "mcp_common/backends/toolkit.py",
+        "StartLine": 378,
+        "StartColumn": 4,
+        "EndLine": 407,
+        "Metrics": {
+          "Complexity": 5,
+          "Nodes": 7,
+          "Edges": 11,
+          "NestingDepth": 2,
+          "IfStatements": 2,
+          "LoopStatements": 0,
+          "ExceptionHandlers": 2,
+          "SwitchCases": 0
+        },
+        "RiskLevel": "low"
+      }
+    ],
+    "Summary": {
+      "TotalFunctions": 88,
+      "AverageComplexity": 6.613636363636363,
+      "MaxComplexity": 14,
+      "MinComplexity": 5,
+      "FilesAnalyzed": 81,
+      "LowRiskFunctions": 78,
+      "MediumRiskFunctions": 10,
+      "HighRiskFunctions": 0,
+      "ComplexityDistribution": {
+        "11-20": 7,
+        "2-5": 36,
+        "6-10": 45
+      }
+    },
+    "Warnings": null,
+    "Errors": null,
+    "GeneratedAt": "2026-07-13T05:15:10-07:00",
+    "Version": "1.5.0",
+    "Config": {
+      "exclude_patterns": [
+        "**/test_*.py",
+        "**/*_test.py",
+        "**/__pycache__/*",
+        "**/*.pyc",
+        "**/.pytest_cache/",
+        ".tox/",
+        "venv/",
+        "env/",
+        ".venv/",
+        ".env/"
+      ],
+      "include_patterns": [
+        "**/*.py"
+      ],
+      "low_threshold": 9,
+      "max_complexity": 15,
+      "medium_threshold": 14,
+      "min_complexity": 5,
+      "output_format": "json",
+      "recursive": false,
+      "show_details": false,
+      "sort_by": "complexity"
+    }
+  },
+  "dead_code": {
+    "files": null,
+    "summary": {
+      "total_files": 81,
+      "total_functions": 0,
+      "total_findings": 0,
+      "files_with_dead_code": 0,
+      "functions_with_dead_code": 0,
+      "critical_findings": 0,
+      "warning_findings": 0,
+      "info_findings": 0,
+      "findings_by_reason": {},
+      "total_blocks": 0,
+      "dead_blocks": 0,
+      "overall_dead_ratio": 0
+    },
+    "warnings": null,
+    "errors": null,
+    "generated_at": "2026-07-13T05:15:10-07:00",
+    "version": "1.5.0",
+    "config": {
+      "context_lines": 3,
+      "detect_after_break": true,
+      "detect_after_continue": true,
+      "detect_after_raise": true,
+      "detect_after_return": true,
+      "detect_unreachable_branches": true,
+      "exclude_patterns": [
+        "**/test_*.py",
+        "**/*_test.py",
+        "**/__pycache__/*",
+        "**/*.pyc",
+        "**/.pytest_cache/",
+        ".tox/",
+        "venv/",
+        "env/",
+        ".venv/",
+        ".env/"
+      ],
+      "ignore_patterns": [],
+      "include_patterns": [
+        "**/*.py"
+      ],
+      "min_severity": "warning",
+      "show_context": false,
+      "sort_by": "severity"
+    }
+  },
+  "summary": {
+    "total_files": 81,
+    "analyzed_files": 81,
+    "skipped_files": 0,
+    "complexity_enabled": true,
+    "dead_code_enabled": true,
+    "clone_enabled": false,
+    "cbo_enabled": false,
+    "deps_enabled": false,
+    "arch_enabled": false,
+    "deps_total_modules": 0,
+    "deps_modules_in_cycles": 0,
+    "deps_max_depth": 0,
+    "deps_main_sequence_deviation": 0,
+    "arch_compliance": 0,
+    "total_functions": 88,
+    "average_complexity": 6.613636363636363,
+    "high_complexity_count": 0,
+    "dead_code_count": 0,
+    "critical_dead_code": 0,
+    "warning_dead_code": 0,
+    "info_dead_code": 0,
+    "total_clones": 0,
+    "clone_pairs": 0,
+    "clone_groups": 0,
+    "code_duplication_percentage": 0,
+    "cbo_classes": 0,
+    "high_coupling_classes": 0,
+    "medium_coupling_classes": 0,
+    "average_coupling": 0,
+    "health_score": 93,
+    "grade": "A",
+    "complexity_score": 65,
+    "dead_code_score": 100,
+    "duplication_score": 100,
+    "coupling_score": 100,
+    "dependency_score": 100,
+    "architecture_score": 100
+  },
+  "generated_at": "2026-07-13T05:15:10.724273-07:00",
+  "duration_ms": 348,
+  "version": "1.5.0"
+}
