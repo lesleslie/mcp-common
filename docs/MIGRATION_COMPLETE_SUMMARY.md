@@ -1,3 +1,13 @@
+---
+status: complete
+role: historical
+date: 2026-07-16
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: mcp-design
+---
+
 # MCP Server Migration to Oneiric Runtime - ACTUAL STATUS
 
 ## ⚠️ CRITICAL ACCURACY UPDATE (2026-01-02)
@@ -10,7 +20,7 @@
 
 ## Migration Execution Summary
 
-**Status**: 🔧 **40% COMPLETE - Dependencies Fixed, Testing Required**
+**Status**: 🔧 **40% COMPLETE - Dependencies Fixed, Testing Required**  <!-- legacy status — see YAML frontmatter -->
 **Duration**: 5 days (Dec 27, 2025 - Dec 31, 2025) + fixes (Jan 2, 2026)
 **Servers Migrated**: 5/5 code written, 1/5 fully tested
 **Test Coverage**: 0% (no runtime test files exist despite claims)

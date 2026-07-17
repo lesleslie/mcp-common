@@ -1,7 +1,17 @@
+---
+status: complete
+role: historical
+date: 2026-07-16
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: mcp-design
+---
+
 # Phase 1 Implementation Complete ✅
 
 **Date:** 2026-01-02
-**Status:** Ready for Version Bump to 0.4.0
+**Status:** Ready for Version Bump to 0.4.0  <!-- legacy status — see YAML frontmatter -->
 **Current Version:** 0.3.6
 
 ______________________________________________________________________

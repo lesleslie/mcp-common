@@ -1,3 +1,13 @@
+---
+status: active
+role: canonical
+date: 2026-07-16
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: mcp-design
+---
+
 # MCP Server Integration Guide
 
 This guide explains how to integrate mcp-common into MCP servers using the enhanced CLI factory and server utilities.

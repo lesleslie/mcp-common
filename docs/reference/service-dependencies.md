@@ -1,3 +1,13 @@
+---
+status: active
+role: canonical
+date: 2026-07-16
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: lifecycle
+---
+
 # MCP Common Dependencies
 
 This document describes the dependency architecture of mcp-common, including runtime requirements, optional dependencies, and usage across the ecosystem.

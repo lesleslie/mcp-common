@@ -1,3 +1,13 @@
+---
+status: active
+role: canonical
+date: 2026-07-16
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: mcp-design
+---
+
 # MCP Server Development Guide
 
 This comprehensive guide covers everything you need to build production-ready MCP servers using mcp-common patterns.

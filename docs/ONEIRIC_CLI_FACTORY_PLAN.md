@@ -1,3 +1,13 @@
+---
+status: complete
+role: historical
+date: 2026-07-16
+last_reviewed: 2026-07-17
+superseded_by: null
+blocks_on: []
+topic: oneiric-config
+---
+
 ## Oneiric MCP CLI Factory Plan
 
 Purpose: define the shared CLI lifecycle commands, health/status semantics, and
