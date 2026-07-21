@@ -352,10 +352,29 @@ class MCPServerCLIFactory:
             return (False, f"Corrupted PID file (use --force to remove): {e}")
 
         if not is_process_alive(pid, self.server_name):
-            # Stale PID file
+            # Stale PID file (points to a dead process). Default behavior is
+            # auto-clean because operators almost always want the next start
+            # to succeed after a crash — refusing without --force was the
+            # source of repeated user confusion. The --force flag and the
+            # ``stale_pid_action="refuse"`` setting both opt back into the
+            # legacy behavior. The legacy "Removed stale PID file" wording
+            # is preserved when --force is used, so scripts that grep for
+            # the old message keep working.
+            auto_clean = (
+                getattr(self.settings, "stale_pid_action", "auto_clean") == "auto_clean"
+            )
             if force:
                 pid_path.unlink(missing_ok=True)
-                return (True, f"Removed stale PID file (process {pid} not found)")
+                return (
+                    True,
+                    f"Removed stale PID file (process {pid} not found)",
+                )
+            if auto_clean:
+                pid_path.unlink(missing_ok=True)
+                return (
+                    True,
+                    f"Auto-removed stale PID file (process {pid} not found)",
+                )
             return (
                 False,
                 f"Stale PID file found (process {pid} dead). Use --force to remove.",

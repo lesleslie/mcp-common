@@ -161,11 +161,14 @@ class TestStalePIDHandling:
         assert not pid_path.exists()  # Should be removed
 
     def test_handle_stale_pid_dead_process_without_force(self, factory, tmp_path):
-        """Test stale PID (dead process) without force."""
+        """Test stale PID (dead process) without force — refuses by default
+        when stale_pid_action is set to "refuse" (preserves legacy behavior)."""
         pid_path = tmp_path / "test.pid"
         fake_pid = 999999  # Unlikely to exist
         write_pid_file(pid_path, fake_pid)
 
+        # Override default to legacy "refuse" mode for this test
+        object.__setattr__(factory.settings, "stale_pid_action", "refuse")
         can_continue, message = factory._handle_stale_pid(pid_path, force=False)
 
         assert can_continue is False
@@ -183,6 +186,64 @@ class TestStalePIDHandling:
         assert can_continue is True
         assert "Removed stale" in message or "not found" in message
         assert not pid_path.exists()  # Should be removed
+
+    def test_handle_stale_pid_auto_clean_default(self, factory, tmp_path):
+        """Test stale PID auto-cleanup is the default behavior.
+
+        Regression test for the css-mcp "can't connect" issue: when the
+        server crashes and leaves a stale PID file, the next start should
+        succeed without requiring --force. This is the new default.
+        """
+        pid_path = tmp_path / "test.pid"
+        fake_pid = 999999  # Unlikely to exist
+        write_pid_file(pid_path, fake_pid)
+
+        # Default settings (no override) — auto_clean is the new default
+        can_continue, message = factory._handle_stale_pid(pid_path, force=False)
+
+        assert can_continue is True
+        assert "Removed stale" in message or "not found" in message
+        assert not pid_path.exists()  # Auto-removed without --force
+
+    def test_handle_stale_pid_explicit_refuse_mode(self, tmp_path: Path):
+        """Test stale PID respects explicit stale_pid_action='refuse' setting.
+
+        When a project consciously opts into legacy behavior, the factory
+        must respect that and refuse to start without --force.
+        """
+        settings = MCPServerSettings(
+            server_name="test-server-refuse",
+            cache_root=tmp_path,
+            health_ttl_seconds=60.0,
+            stale_pid_action="refuse",
+        )
+        factory = MCPServerCLIFactory("test-server-refuse", settings=settings)
+        pid_path = tmp_path / "test.pid"
+        write_pid_file(pid_path, 999999)
+
+        can_continue, message = factory._handle_stale_pid(pid_path, force=False)
+
+        assert can_continue is False
+        assert "Stale PID" in message
+        assert pid_path.exists()  # Refused, not removed
+
+    def test_handle_stale_pid_auto_clean_explicit_setting(self, tmp_path: Path):
+        """Test stale_pid_action='auto_clean' explicitly also works."""
+        settings = MCPServerSettings(
+            server_name="test-server-auto",
+            cache_root=tmp_path,
+            health_ttl_seconds=60.0,
+            stale_pid_action="auto_clean",
+        )
+        factory = MCPServerCLIFactory("test-server-auto", settings=settings)
+        pid_path = tmp_path / "test.pid"
+        write_pid_file(pid_path, 999999)
+
+        can_continue, message = factory._handle_stale_pid(pid_path, force=False)
+
+        assert can_continue is True
+        assert "stale" in message and "removed" in message.lower()
+        assert not pid_path.exists()
 
     def test_handle_stale_pid_alive_process(self, factory, tmp_path):
         """Test alive process prevents start."""

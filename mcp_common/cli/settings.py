@@ -6,7 +6,7 @@ following the Oneiric configuration pattern.
 
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
@@ -45,6 +45,15 @@ class MCPServerSettings(BaseModel):
     )
     log_level: str = Field(default="INFO", description="Logging level")
     log_file: Path | None = Field(default=None, description="Optional log file path")
+    stale_pid_action: Literal["auto_clean", "refuse"] = Field(
+        default="auto_clean",
+        description=(
+            "Behavior when a stale PID file is found (points to a dead process). "
+            "'auto_clean' removes the stale file and continues starting (default, "
+            "matches operator expectation after a crash). 'refuse' preserves the "
+            "legacy behavior of requiring --force to remove it."
+        ),
+    )
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 

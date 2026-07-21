@@ -1,17 +1,11 @@
----
-status: active
-role: canonical
-date: 2026-07-16
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: mcp-design
----
+______________________________________________________________________
+
+## status: active role: canonical date: 2026-07-16 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: mcp-design
 
 # iTerm2 AppleScript Protocol Specification
 
 **Date:** 2026-05-23
-**Status:** Canonical  <!-- legacy status — see YAML frontmatter -->
+**Status:** Canonical <!-- legacy status — see YAML frontmatter -->
 **Purpose:** Define the canonical protocol for iTerm2 AppleScript integration across the Bodai ecosystem (mdinject/Swift, Mahavishnu/Python).
 
 ______________________________________________________________________

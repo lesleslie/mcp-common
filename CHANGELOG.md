@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.7] - 2026-07-21
+
+### Documentation
+
+- mcp-common: Apply plan-lifecycle-unification playbook (P7.B)
+
+### Internal
+
+- mcp-common: Remove 3 point-in-time completion reports from archive
+- mcp-common: Remove LICENSE (consolidated to root-level LICENSE)
+- mcp-common: Sync uv.lock to pyproject.toml (0.17.6)
+
 ## [0.17.4] - 2026-07-06
 
 ### Internal

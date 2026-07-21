@@ -1,12 +1,6 @@
----
-status: complete
-role: historical
-date: 2026-07-16
-last_reviewed: 2026-07-17
-superseded_by: null
-blocks_on: []
-topic: oneiric-config
----
+______________________________________________________________________
+
+## status: complete role: historical date: 2026-07-16 last_reviewed: 2026-07-17 superseded_by: null blocks_on: [] topic: oneiric-config
 
 # Oneiric CLI Factory - Audit Response
 
@@ -20,7 +14,7 @@ ______________________________________________________________________
 
 This document tracks how the **ONEIRIC_CLI_FACTORY_IMPLEMENTATION.md** specification addresses all 15 issues identified in the critical audit.
 
-**Status:** ✅ ALL ISSUES ADDRESSED  <!-- legacy status — see YAML frontmatter -->
+**Status:** ✅ ALL ISSUES ADDRESSED <!-- legacy status — see YAML frontmatter -->
 
 - **High Severity (4):** All resolved
 - **Medium Severity (7):** All resolved
