@@ -798,6 +798,61 @@ def register_health_tools(  # noqa: C901  # noqa: C901
         }
 
 
+# =============================================================================
+# HTTP /health Route Helper
+# =============================================================================
+
+
+def register_http_health_route(
+    mcp: t.Any,
+    *,
+    service_name: str,
+    version: str,
+    extra_components: list[dict[str, t.Any]] | None = None,
+) -> None:
+    """Register an HTTP ``/health`` route on the FastMCP server.
+
+    This is the HTTP counterpart to :func:`register_health_tools`. It is
+    intended for launchd wrappers, orchestrators, and ad-hoc ``curl`` checks
+    that need a plain HTTP ``GET`` to confirm server readiness. Use
+    :func:`register_health_tools` for MCP-protocol health endpoints and
+    :func:`register_http_health_route` for HTTP readiness probes - the two
+    answer different audiences and intentionally coexist.
+
+    The handler always returns HTTP 200 with body shape::
+
+        {"status": "ok", "service": <service_name>, "version": <version>, "components": [...]}
+
+    Args:
+        mcp: The FastMCP server instance to register the route on.
+        service_name: Short identifier for the service (e.g. ``"css-mcp"``).
+        version: Version string for the service (semver, commit sha, or
+            ``"unknown"``).
+        extra_components: Optional list of component health dicts to merge
+            into the response. Each dict is passed through verbatim
+            (e.g. ``[{"name": "db", "status": "ok"}]``).
+
+    Example:
+        >>> from fastmcp import FastMCP
+        >>> from mcp_common.health import register_http_health_route
+        >>> mcp = FastMCP(name="my-mcp")
+        >>> register_http_health_route(mcp, service_name="my-mcp", version="1.0.0")
+    """
+
+    @mcp.custom_route("/health", methods=["GET"])  # type: ignore[untyped-decorator]
+    async def http_health(request: t.Any) -> t.Any:
+        from starlette.responses import JSONResponse
+
+        return JSONResponse(
+            {
+                "status": "ok",
+                "service": service_name,
+                "version": version,
+                "components": extra_components or [],
+            }
+        )
+
+
 __all__ = [
     # Core types
     "ComponentHealth",
@@ -812,4 +867,5 @@ __all__ = [
     "DependencyWaiter",
     # FastMCP integration
     "register_health_tools",
+    "register_http_health_route",
 ]
