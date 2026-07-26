@@ -4,14 +4,11 @@ from __future__ import annotations
 
 import sys
 from contextlib import suppress
-from typing import TYPE_CHECKING, Literal, cast
+from typing import Literal, TypeGuard, cast
 
 from mcp_common.prompting.base import PromptBackend
 from mcp_common.prompting.exceptions import BackendUnavailableError
 from mcp_common.prompting.models import PromptAdapterSettings
-
-if TYPE_CHECKING:
-    pass
 
 
 def create_prompt_adapter(
@@ -100,6 +97,15 @@ def create_prompt_adapter(
     return cast(PromptBackend, adapter)  # type: ignore[return-value]
 
 
+def _is_resolvable_preference(p: str) -> TypeGuard[Literal["pyobjc", "prompt-toolkit"]]:
+    """Type guard: returns True when ``p`` is a valid backend preference string.
+
+    Used to narrow ``preference: str`` to the literal type so the function
+    return type is satisfied without ``cast()`` or ``ty: ignore``.
+    """
+    return p in ("pyobjc", "prompt-toolkit")
+
+
 def _resolve_backend(
     preference: str, config: PromptAdapterSettings
 ) -> Literal["pyobjc", "prompt-toolkit"]:
@@ -116,8 +122,8 @@ def _resolve_backend(
         BackendUnavailableError: If no suitable backend is available
     """
     # If specific backend requested, use it (will error if unavailable)
-    if preference in ("pyobjc", "prompt-toolkit"):
-        return cast(Literal["pyobjc", "prompt-toolkit"], preference)
+    if _is_resolvable_preference(preference):
+        return preference
 
     # Auto-detect: Try PyObjC on macOS, fallback to prompt-toolkit
     if sys.platform == "darwin":

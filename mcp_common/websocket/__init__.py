@@ -18,14 +18,14 @@ from .protocol import (
 from .server import WebSocketServer
 
 __all__ = [
-    "WebSocketServer",
-    "WebSocketClient",
-    "WebSocketProtocol",
-    "WebSocketMessage",
-    "MessageType",
     "EventTypes",
+    "MessageType",
     "WebSocketAuthenticator",
+    "WebSocketClient",
+    "WebSocketMessage",
+    "WebSocketProtocol",
+    "WebSocketServer",
     "generate_test_token",
-    "tls",
     "metrics",
+    "tls",
 ]

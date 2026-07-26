@@ -16,19 +16,10 @@ if TYPE_CHECKING:
     # ``prometheus_client`` is an optional dependency not pulled into the
     # dev venv, so we silence ty's import resolution error here too.
     from prometheus_client import (  # ty: ignore[unresolved-import]
-        REGISTRY as REGISTRY,
-    )
-    from prometheus_client import (  # ty: ignore[unresolved-import]
-        Counter as Counter,
-    )
-    from prometheus_client import (  # ty: ignore[unresolved-import]
-        Gauge as Gauge,
-    )
-    from prometheus_client import (  # ty: ignore[unresolved-import]
-        Histogram as Histogram,
-    )
-    from prometheus_client import (  # ty: ignore[unresolved-import]
-        start_http_server as start_http_server,
+        Counter,
+        Gauge,
+        Histogram,
+        start_http_server,
     )
 
     PROMETHEUS_AVAILABLE = True
@@ -326,7 +317,7 @@ class WebSocketMetrics:
             logger.info(f"Prometheus metrics server started on port {port}")
             logger.info(f"Metrics available at http://0.0.0.0:{port}/metrics")
             return True
-        except Exception as e:
+        except (OSError, ValueError) as e:
             logger.error(f"Failed to start metrics server: {e}")
             return False
 
@@ -361,5 +352,5 @@ def get_metrics_summary(server_name: str) -> dict[str, Any]:
             "metrics_count": len(_runtime_registry.getCollectorNames()),
         }
         return summary
-    except Exception as e:
+    except (OSError, ValueError, KeyError, AttributeError, TypeError) as e:
         return {"available": True, "error": str(e)}

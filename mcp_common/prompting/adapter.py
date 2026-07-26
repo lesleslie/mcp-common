@@ -4,7 +4,7 @@ This module provides a convenient wrapper class for users who prefer
 class-based instantiation over factory functions.
 """
 
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, Self
 
 from mcp_common.prompting.factory import create_prompt_adapter
 from mcp_common.prompting.models import (
@@ -167,11 +167,11 @@ class PromptAdapter:
         """Get backend name."""
         return self._backend.backend_name
 
-    async def __aenter__(self) -> "PromptAdapter":
+    async def __aenter__(self) -> Self:
         """Context manager entry."""
         await self.initialize()
         return self
 
-    async def __aexit__(self, *args: BaseException | None) -> None:
+    async def __aexit__(self, *args: object) -> None:
         """Context manager exit."""
         await self.shutdown()

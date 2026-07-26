@@ -195,9 +195,7 @@ class CodeGraphAnalyzer:
         if file_path.name.startswith("test_"):
             return True
         # Skip if filename is "test_*.py"
-        if file_path.stem.startswith("test_"):
-            return True
-        return False
+        return bool(file_path.stem.startswith("test_"))
 
     def _should_skip_non_source_dir(self, file_path: Path) -> bool:
         """Check if file is in a non-source directory that should be skipped."""
@@ -480,9 +478,12 @@ class CodeGraphAnalyzer:
     def _find_function_node(self, function_name: str) -> FunctionNode | None:
         """Find a function node by name."""
         for node in self.nodes.values():
-            if node.node_type == "function" and node.name == function_name:
-                if isinstance(node, FunctionNode):
-                    return node
+            if (
+                node.node_type == "function"
+                and node.name == function_name
+                and isinstance(node, FunctionNode)
+            ):
+                return node
         return None
 
     def _build_function_metadata(self, func_node: FunctionNode) -> dict[str, Any]:
@@ -587,32 +588,33 @@ class CodeGraphAnalyzer:
         imports = set()
         imports_from = set()
         for node in self.nodes.values():
-            if node.file_id == file_id and node.node_type == "import":
-                if isinstance(node, ImportNode):
-                    if node.is_from_import:
-                        imports_from.add(node.module)
-                    else:
-                        imports.add(node.module)
+            if (
+                node.file_id == file_id
+                and node.node_type == "import"
+                and isinstance(node, ImportNode)
+            ):
+                if node.is_from_import:
+                    imports_from.add(node.module)
+                else:
+                    imports.add(node.module)
         return imports, imports_from
 
     def _find_imported_by_relationships(self, file_id: str) -> list[dict[str, Any]]:
         """Find files that import this file's modules."""
-        related_files = []
-        for node in self.nodes.values():
-            if node.node_type == "import" and node.file_id != file_id:
-                if isinstance(node, ImportNode):
-                    # Check if this import references our file
-                    if any(
-                        imp in file_id for imp in [node.module] + node.imported_names
-                    ):
-                        related_files.append(
-                            {
-                                "file_path": node.file_id,
-                                "relationship": "imported_by",
-                                "strength": 1,
-                            }
-                        )
-        return related_files
+        return [
+            {
+                "file_path": node.file_id,
+                "relationship": "imported_by",
+                "strength": 1,
+            }
+            for node in self.nodes.values()
+            if (
+                node.node_type == "import"
+                and node.file_id != file_id
+                and isinstance(node, ImportNode)
+                and any(imp in file_id for imp in [node.module] + node.imported_names)
+            )
+        ]
 
     def _find_imports_relationships(
         self, all_imports: set[str]

@@ -1,7 +1,7 @@
 """Abstract base interface for prompting backends."""
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
 
 from mcp_common.prompting.models import DialogResult, NotificationLevel
 
@@ -43,7 +43,6 @@ class PromptBackend(ABC):
             BackendUnavailableError: If backend cannot be used
             PromptAdapterError: If dialog fails to display
         """
-        pass
 
     @abstractmethod
     async def confirm(
@@ -70,7 +69,6 @@ class PromptBackend(ABC):
             BackendUnavailableError: If backend cannot be used
             PromptAdapterError: If dialog fails to display
         """
-        pass
 
     @abstractmethod
     async def prompt_text(
@@ -97,7 +95,6 @@ class PromptBackend(ABC):
             BackendUnavailableError: If backend cannot be used
             PromptAdapterError: If prompt fails to display
         """
-        pass
 
     @abstractmethod
     async def prompt_choice(
@@ -122,7 +119,6 @@ class PromptBackend(ABC):
             BackendUnavailableError: If backend cannot be used
             PromptAdapterError: If prompt fails to display
         """
-        pass
 
     @abstractmethod
     async def notify(
@@ -147,7 +143,6 @@ class PromptBackend(ABC):
             BackendUnavailableError: If backend cannot be used
             PromptAdapterError: If notification fails to send
         """
-        pass
 
     @abstractmethod
     async def select_file(
@@ -170,7 +165,6 @@ class PromptBackend(ABC):
             BackendUnavailableError: If backend cannot be used
             PromptAdapterError: If dialog fails to display
         """
-        pass
 
     @abstractmethod
     async def select_directory(
@@ -189,7 +183,6 @@ class PromptBackend(ABC):
             BackendUnavailableError: If backend cannot be used
             PromptAdapterError: If dialog fails to display
         """
-        pass
 
     @abstractmethod
     def is_available(self) -> bool:
@@ -198,7 +191,6 @@ class PromptBackend(ABC):
         Returns:
             True if backend can be used, False otherwise
         """
-        pass
 
     @abstractmethod
     async def initialize(self) -> None:
@@ -210,7 +202,6 @@ class PromptBackend(ABC):
         Raises:
             BackendUnavailableError: If backend cannot be initialized
         """
-        pass
 
     @abstractmethod
     async def shutdown(self) -> None:
@@ -221,14 +212,13 @@ class PromptBackend(ABC):
 
         Implementations should be idempotent (safe to call multiple times).
         """
-        pass
 
-    async def __aenter__(self) -> "PromptBackend":
+    async def __aenter__(self) -> Self:
         """Context manager entry."""
         await self.initialize()
         return self
 
-    async def __aexit__(self, *args: BaseException | None) -> None:
+    async def __aexit__(self, *args: object) -> None:
         """Context manager exit."""
         await self.shutdown()
 
@@ -240,4 +230,3 @@ class PromptBackend(ABC):
         Returns:
             Backend name (e.g., "pyobjc", "prompt-toolkit")
         """
-        pass

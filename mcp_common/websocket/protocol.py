@@ -1,7 +1,7 @@
 """WebSocket protocol and message definitions."""
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
@@ -40,7 +40,7 @@ class WebSocketMessage(BaseModel):
     data: dict[str, Any] = Field(default_factory=dict)
 
     # Metadata
-    timestamp: str = Field(default_factory=lambda: datetime.now().isoformat())
+    timestamp: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
     room: str | None = None  # For room-based broadcasting
 
     # Error information (if type == ERROR)

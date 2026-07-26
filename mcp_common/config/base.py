@@ -95,7 +95,7 @@ class MCPBaseSettings(BaseModel):
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    def model_post_init(self, __context: Any) -> None:
+    def model_post_init(self, __context: Any, /) -> None:
         """Emit a DeprecationWarning on instantiation.
 
         ``MCPBaseSettings`` and ``MCPServerSettings`` are retained for

@@ -28,7 +28,9 @@ settings = MCPBaseSettings.load("my-server")
 http_adapter = HTTPClientAdapter(settings=HTTPClientSettings())
 
 # Display startup panel
-ServerPanels.startup_success(server_name="My MCP Server", features=["Feature 1", "Feature 2"])
+ServerPanels.startup_success(
+    server_name="My MCP Server", features=["Feature 1", "Feature 2"]
+)
 ```
 
 ## Development Notes

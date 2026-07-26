@@ -13,7 +13,7 @@ import asyncio
 import time
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol
 
 from mcp_common.parsing.tree_sitter.cache import ContentHashLRUCache, ParseResultCache
 from mcp_common.parsing.tree_sitter.exceptions import (
@@ -159,7 +159,15 @@ def _parse_sync(
             parse_time_ms=parse_time_ms,
             error_node_count=error_count,
         )
-    except Exception as e:
+    except (
+        OSError,
+        ValueError,
+        TypeError,
+        KeyError,
+        RuntimeError,
+        AttributeError,
+        IndexError,
+    ) as e:
         return ParseResult(
             success=False,
             file_path=str(file_path),
@@ -175,9 +183,9 @@ class LanguageRegistry:
     Thread-safe through lazy initialization.
     """
 
-    _handlers: dict[SupportedLanguage, LanguageHandler] = {}
-    _grammars: dict[SupportedLanguage, tree_sitter.Language] = {}
-    _initialized: bool = False
+    _handlers: ClassVar[dict[SupportedLanguage, LanguageHandler]] = {}
+    _grammars: ClassVar[dict[SupportedLanguage, tree_sitter.Language]] = {}
+    _initialized: ClassVar[bool] = False
 
     @classmethod
     def register(cls, handler: LanguageHandler) -> None:

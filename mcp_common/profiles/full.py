@@ -63,13 +63,9 @@ def _func_name(func: Callable[..., Any], default: str | None) -> str:
 class AuthBackend:
     """Base class for authentication backends."""
 
-    pass
-
 
 class TelemetryBackend:
     """Base class for telemetry backends."""
-
-    pass
 
 
 class FullServerSettings(MCPBaseSettings):

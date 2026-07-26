@@ -35,12 +35,11 @@ class CircuitBreaker:
     @property
     def is_open(self) -> bool:
         """Whether the circuit breaker is open (provider should be skipped)."""
-        if self._failure_count < self.failure_threshold:
-            return False
-        elapsed = time.monotonic() - self._last_failure_time
-        if elapsed >= self.reset_timeout:
-            return False  # Half-open: allow one attempt
-        return True
+        if self._failure_count >= self.failure_threshold:
+            elapsed = time.monotonic() - self._last_failure_time
+            # Half-open: allow one attempt when reset_timeout has elapsed
+            return elapsed < self.reset_timeout
+        return False
 
     def record_success(self) -> None:
         """Record a successful call — resets the breaker."""
@@ -127,7 +126,7 @@ class FallbackChain:
                 except asyncio.CancelledError:
                     raise  # never swallow
 
-                except Exception as e:
+                except (ValueError, TimeoutError, OSError) as e:
                     last_error = e
                     sanitized = _sanitize_error(str(e))
                     if attempt < self._max_attempts - 1:

@@ -216,7 +216,7 @@ class PromptToolkitBackend(PromptBackend):
 
             return result
 
-        except Exception:
+        except (OSError, EOFError, KeyboardInterrupt):
             # On any exception, return safe default (False)
             return False
 
@@ -291,7 +291,7 @@ class PromptToolkitBackend(PromptBackend):
                 except (EOFError, KeyboardInterrupt):
                     return None
 
-        except Exception:
+        except (OSError, EOFError, KeyboardInterrupt):
             # On error, return None
             return None
 
@@ -321,7 +321,7 @@ class PromptToolkitBackend(PromptBackend):
 
             return True
 
-        except Exception:
+        except (OSError, EOFError, KeyboardInterrupt):
             # Fallback silently
             return False
 
@@ -368,7 +368,7 @@ class PromptToolkitBackend(PromptBackend):
 
             return paths
 
-        except Exception:
+        except (OSError, EOFError, KeyboardInterrupt):
             raise DialogDisplayError(
                 backend="prompt-toolkit",
                 dialog_type="file selection",
@@ -399,7 +399,7 @@ class PromptToolkitBackend(PromptBackend):
 
             return path
 
-        except Exception:
+        except (OSError, EOFError, KeyboardInterrupt):
             raise DialogDisplayError(
                 backend="prompt-toolkit",
                 dialog_type="directory selection",

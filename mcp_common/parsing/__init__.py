@@ -26,6 +26,6 @@ __all__ = [
     "SymbolInfo",
     "SymbolKind",
     "SymbolRelationship",
-    "TreeSitterParser",
     "TreeSitterError",
+    "TreeSitterParser",
 ]

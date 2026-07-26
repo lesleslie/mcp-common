@@ -62,7 +62,6 @@ class MinimalServerSettings(MCPBaseSettings):
     """
 
     # Minimal server has no additional settings beyond MCPBaseSettings
-    pass
 
 
 class MinimalServer:

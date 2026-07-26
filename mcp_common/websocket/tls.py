@@ -80,41 +80,41 @@ def generate_self_signed_cert(
     )
 
     # Write to temporary files
-    cert_file = tempfile.NamedTemporaryFile(mode="wb", delete=False, suffix=".pem")
-    key_file = tempfile.NamedTemporaryFile(mode="wb", delete=False, suffix=".pem")
+    with (
+        tempfile.NamedTemporaryFile(
+            mode="wb", delete=False, suffix=".pem"
+        ) as cert_file,
+        tempfile.NamedTemporaryFile(mode="wb", delete=False, suffix=".pem") as key_file,
+    ):
+        try:
+            # Write certificate
+            cert_file.write(cert.public_bytes(serialization.Encoding.PEM))
+            cert_file_path = cert_file.name
 
-    try:
-        # Write certificate
-        cert_file.write(cert.public_bytes(serialization.Encoding.PEM))
-        cert_file_path = cert_file.name
-
-        # Write private key
-        key_file.write(
-            key.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.TraditionalOpenSSL,
-                encryption_algorithm=serialization.NoEncryption(),
+            # Write private key
+            key_file.write(
+                key.private_bytes(
+                    encoding=serialization.Encoding.PEM,
+                    format=serialization.PrivateFormat.TraditionalOpenSSL,
+                    encryption_algorithm=serialization.NoEncryption(),
+                )
             )
-        )
-        key_file_path = key_file.name
+            key_file_path = key_file.name
 
-        logger.info(
-            f"Generated self-signed certificate: {cert_file_path}, "
-            f"key: {key_file_path} (valid for {valid_days} days)"
-        )
+            logger.info(
+                f"Generated self-signed certificate: {cert_file_path}, "
+                f"key: {key_file_path} (valid for {valid_days} days)"
+            )
 
-        return cert_file_path, key_file_path
+            return cert_file_path, key_file_path
 
-    except Exception as e:
-        # Clean up on error
-        cert_file.close()
-        key_file.close()
-        Path(cert_file.name).unlink(missing_ok=True)
-        Path(key_file.name).unlink(missing_ok=True)
-        raise RuntimeError(f"Failed to generate self-signed certificate: {e}") from e
-    finally:
-        cert_file.close()
-        key_file.close()
+        except (OSError, ValueError, TypeError) as e:
+            # Clean up on error
+            Path(cert_file.name).unlink(missing_ok=True)
+            Path(key_file.name).unlink(missing_ok=True)
+            raise RuntimeError(
+                f"Failed to generate self-signed certificate: {e}"
+            ) from e
 
 
 def create_ssl_context(
@@ -349,7 +349,7 @@ def validate_certificate(
 
     except FileNotFoundError:
         result["error"] = f"Certificate file not found: {cert_path}"
-    except Exception as e:
+    except (OSError, ValueError, TypeError, AttributeError, KeyError) as e:
         result["error"] = f"Failed to validate certificate: {e}"
 
     return result

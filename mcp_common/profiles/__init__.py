@@ -30,7 +30,7 @@ from mcp_common.profiles.minimal import MinimalServer
 from mcp_common.profiles.standard import StandardServer
 
 __all__ = [
+    "FullServer",
     "MinimalServer",
     "StandardServer",
-    "FullServer",
 ]

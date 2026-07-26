@@ -105,6 +105,7 @@ from mcp_common.prompting import PromptConfig
 
 # Had to manually load from environment
 import os
+
 backend = os.getenv("PROMPT_BACKEND", "auto")
 timeout = int(os.getenv("PROMPT_TIMEOUT", "30"))
 config = PromptConfig(backend=backend, timeout=timeout)

@@ -3,4 +3,4 @@
 from mcp_common.backends.pyobjc import PyObjCPromptBackend
 from mcp_common.backends.toolkit import PromptToolkitBackend
 
-__all__ = ["PyObjCPromptBackend", "PromptToolkitBackend"]
+__all__ = ["PromptToolkitBackend", "PyObjCPromptBackend"]

@@ -12,11 +12,14 @@ See docs/plans/2026-02-27-health-check-system-design.md for design rationale.
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 import typing as t
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
+
+logger = logging.getLogger(__name__)
 
 
 class HealthStatus(StrEnum):
@@ -380,7 +383,7 @@ class HealthChecker:
                 latency_ms=latency_ms,
                 error="Timeout",
             )
-        except Exception as e:
+        except (OSError, ValueError, KeyError, TypeError, AttributeError) as e:
             latency_ms = (time.time() - start_time) * 1000
             return HealthCheckResult(
                 service_name=service_name,
@@ -412,7 +415,8 @@ class _HttpxFallback:
                 }
             except httpx.TimeoutException:
                 return {"ok": False, "status_code": None, "json": None}
-            except Exception:
+            except (OSError, ValueError, TypeError) as e:
+                logger.debug("HTTP fallback failed: %s", e)
                 return {"ok": False, "status_code": None, "json": None}
 
 
@@ -856,15 +860,15 @@ def register_http_health_route(
 __all__ = [
     # Core types
     "ComponentHealth",
-    "HealthCheckFunc",
-    "HealthCheckResponse",
-    "HealthStatus",
     # HTTP dependency checking
     "DependencyConfig",
-    "HealthCheckResult",
-    "WaitResult",
-    "HealthChecker",
     "DependencyWaiter",
+    "HealthCheckFunc",
+    "HealthCheckResponse",
+    "HealthCheckResult",
+    "HealthChecker",
+    "HealthStatus",
+    "WaitResult",
     # FastMCP integration
     "register_health_tools",
     "register_http_health_route",

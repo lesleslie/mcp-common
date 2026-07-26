@@ -14,7 +14,6 @@ class TreeSitterError(Exception):
 
     domain: str = "treesitter"
     code: str = "UNKNOWN"
-    details: dict[str, Any] = {}
 
     def __init__(
         self,
@@ -24,10 +23,9 @@ class TreeSitterError(Exception):
         details: dict[str, Any] | None = None,
     ) -> None:
         super().__init__(message)
+        self.details: dict[str, Any] = details if details is not None else {}
         if code:
             self.code = code
-        if details:
-            self.details = details
 
     def to_dict(self) -> dict[str, Any]:
         """Convert exception to dictionary for API responses."""

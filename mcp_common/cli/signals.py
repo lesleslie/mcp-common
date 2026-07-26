@@ -67,7 +67,15 @@ class SignalHandler:
 
         try:
             self.on_shutdown()
-        except Exception:
+        except (
+            OSError,
+            ValueError,
+            RuntimeError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+        ):
             sys.exit(1)
 
         sys.exit(0)

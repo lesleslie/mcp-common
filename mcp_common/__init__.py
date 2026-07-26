@@ -31,6 +31,7 @@ Usage:
 
 from __future__ import annotations
 
+from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _pkg_version
 
 from oneiric.adapters.http import HTTPClientAdapter, HTTPClientSettings
@@ -70,10 +71,11 @@ from mcp_common.validation import validate_input, validate_output
 # installed (e.g. running tests directly from a source checkout).
 try:
     __version__ = _pkg_version("mcp-common")
-except Exception:  # pragma: no cover - dev/source-checkout path
+except PackageNotFoundError:  # pragma: no cover - dev/source-checkout path
     __version__ = "0.0.0+unknown"
 
 __all__: list[str] = [
+    "MANDATORY_TOOLS",
     "APIKeyFormatError",
     "APIKeyLengthError",
     "APIKeyMissingError",
@@ -83,29 +85,28 @@ __all__: list[str] = [
     "DependencyMissingError",
     "DependencyWaiter",
     "DualUseTool",
+    "FullServer",
     "HTTPClientAdapter",
     "HTTPClientSettings",
-    "HealthChecker",
     "HealthCheckResponse",
     "HealthCheckResult",
+    "HealthChecker",
     "HealthStatus",
     "MCPBaseSettings",
     "MCPServerCLIFactory",
     "MCPServerError",
     "MCPServerSettings",
-    "MANDATORY_TOOLS",
+    "MinimalServer",
     "RuntimeHealthSnapshot",
     "ServerConfigurationError",
     "ServerInitializationError",
     "ServerPanels",
+    "StandardServer",
     "ToolInput",
     "ToolProfile",
     "ToolResponse",
     "ValidationMixin",
     "WaitResult",
-    "FullServer",
-    "MinimalServer",
-    "StandardServer",
     "__version__",
     "ensure_dual_use",
     "register_health_tools",

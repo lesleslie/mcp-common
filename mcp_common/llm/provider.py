@@ -110,7 +110,16 @@ class OpenAICompatibleProvider:
         try:
             await self._client.models.list()
             return True
-        except Exception as e:
+        except (
+            OSError,
+            TimeoutError,
+            ValueError,
+            TypeError,
+            AttributeError,
+            KeyError,
+            IndexError,
+            RuntimeError,
+        ) as e:
             logger.warning(
                 "Health check failed for %s: %s", self.name, _sanitize_error(str(e))
             )

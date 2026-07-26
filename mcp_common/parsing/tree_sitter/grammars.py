@@ -47,7 +47,7 @@ def load_python_grammar() -> tree_sitter.Language | None:
     except ImportError as e:
         logger.warning(f"Failed to load Python grammar: {e}")
         return None
-    except Exception as e:
+    except (OSError, ValueError, TypeError, AttributeError, RuntimeError) as e:
         logger.error(f"Unexpected error loading Python grammar: {e}")
         return None
 
@@ -76,7 +76,7 @@ def load_go_grammar() -> tree_sitter.Language | None:
     except ImportError as e:
         logger.warning(f"Failed to load Go grammar: {e}")
         return None
-    except Exception as e:
+    except (OSError, ValueError, TypeError, AttributeError, RuntimeError) as e:
         logger.error(f"Unexpected error loading Go grammar: {e}")
         return None
 

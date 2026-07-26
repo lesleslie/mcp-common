@@ -252,9 +252,9 @@ class WebSocketClient:
                 try:
                     decoded = WebSocketProtocol.decode(message)
                     await self._handle_message(decoded)
-                except Exception as e:
+                except (ValueError, TypeError, KeyError, UnicodeDecodeError) as e:
                     logger.error(f"Error decoding message: {e}")
-        except Exception as e:
+        except (OSError, TimeoutError) as e:
             logger.error(f"Receive loop error: {e}")
         finally:
             self.is_connected = False
@@ -296,7 +296,7 @@ class WebSocketClient:
                 logger.info(f"Reconnected to {self.uri}")
                 return
 
-            except Exception as e:
+            except (OSError, TimeoutError, ConnectionError) as e:
                 logger.error(f"Reconnection attempt {attempt + 1} failed: {e}")
 
                 # Exponential backoff
@@ -336,7 +336,7 @@ class WebSocketClient:
                     await handler(data)
                 else:
                     handler(data)
-            except Exception as e:
+            except (ValueError, TypeError, KeyError, RuntimeError, OSError) as e:
                 logger.error(f"Error in event handler for {event_type}: {e}")
 
     async def send_request(

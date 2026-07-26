@@ -14,12 +14,12 @@ from .analyzer import (
 )
 
 __all__ = [
+    "ClassNode",
     "CodeGraphAnalyzer",
     "CodeNode",
-    "FunctionNode",
-    "ClassNode",
-    "ImportNode",
     "FileNode",
+    "FunctionNode",
+    "ImportNode",
 ]
 
 __version__ = "0.4.0"

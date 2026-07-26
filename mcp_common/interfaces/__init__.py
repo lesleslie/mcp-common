@@ -114,12 +114,12 @@ def ensure_dual_use(tool_class: type) -> type:
         )
 
     # Validate cli signature (basic check)
-    cli_method = getattr(tool_class, "cli")
+    cli_method = tool_class.cli
     if not callable(cli_method):
         raise TypeError(f"Tool class {tool_class.__name__}.cli must be callable")
 
     # Validate mcp signature (basic check)
-    mcp_method = getattr(tool_class, "mcp")
+    mcp_method = tool_class.mcp
     if not callable(mcp_method):
         raise TypeError(f"Tool class {tool_class.__name__}.mcp must be callable")
 

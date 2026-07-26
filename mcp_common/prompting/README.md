@@ -72,7 +72,9 @@ try:
     )
 
     # Select file
-    files = await adapter.select_file("Choose config file", allowed_types=["yaml", "json"])
+    files = await adapter.select_file(
+        "Choose config file", allowed_types=["yaml", "json"]
+    )
 finally:
     # Cleanup resources
     await adapter.shutdown()
@@ -91,6 +93,7 @@ adapter = PromptAdapter(backend="pyobjc")
 
 # Or with custom settings
 from mcp_common.prompting import PromptAdapterSettings
+
 settings = PromptAdapterSettings(backend="prompt-toolkit", timeout=30)
 adapter = PromptAdapter(settings=settings)
 
@@ -198,6 +201,7 @@ adapter = PromptAdapter()
 
 # With custom settings
 from mcp_common.prompting import PromptAdapterSettings
+
 settings = PromptAdapterSettings(backend="pyobjc", timeout=60)
 adapter = PromptAdapter(settings=settings)
 ```
@@ -541,6 +545,7 @@ class LibNotifyBackend(PromptBackend):
     @staticmethod
     def is_available_static() -> bool:
         import sys
+
         return sys.platform.startswith("linux")
 
     # ... implement methods

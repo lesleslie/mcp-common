@@ -255,7 +255,6 @@ class WebSocketServer(ABC):
             websocket: WebSocket connection object
             connection_id: Unique connection identifier
         """
-        pass
 
     @abstractmethod
     async def on_disconnect(self, websocket: Any, connection_id: str) -> None:
@@ -266,7 +265,6 @@ class WebSocketServer(ABC):
             websocket: WebSocket connection object
             connection_id: Unique connection identifier
         """
-        pass
 
     @abstractmethod
     async def on_message(self, websocket: Any, message: WebSocketMessage) -> None:
@@ -277,7 +275,6 @@ class WebSocketServer(ABC):
             websocket: WebSocket connection object
             message: Decoded message
         """
-        pass
 
     def authenticate_websocket(self, token: str) -> dict[str, Any] | None:
         """Authenticate WebSocket connection using JWT.
@@ -391,7 +388,7 @@ class WebSocketServer(ABC):
                             self.metrics.on_connection_error("auth_required")
                         return
 
-                except Exception as e:
+                except (OSError, ValueError, TypeError, KeyError, ConnectionError) as e:
                     logger.error(f"Authentication error: {e}")
                     await websocket.close(1011, "Authentication error")
                     if self.metrics:
@@ -424,7 +421,7 @@ class WebSocketServer(ABC):
                             self.metrics.observe_latency(
                                 str(decoded.type), time.time() - start_time
                             )
-                    except Exception as e:
+                    except (ValueError, TypeError, KeyError, UnicodeDecodeError) as e:
                         logger.error(f"Error decoding message: {e}")
                         error_msg = WebSocketProtocol.create_error(
                             error_code="DECODE_ERROR", error_message=str(e)
@@ -508,9 +505,11 @@ class WebSocketServer(ABC):
         if room_id in self.connection_rooms:
             self.connection_rooms[room_id].discard(connection_id)
 
-        if connection_id in self.room_connections:
-            if self.room_connections[connection_id] == room_id:
-                del self.room_connections[connection_id]
+        if (
+            connection_id in self.room_connections
+            and self.room_connections[connection_id] == room_id
+        ):
+            del self.room_connections[connection_id]
 
         logger.debug(f"Connection {connection_id} left room {room_id}")
 
@@ -543,7 +542,7 @@ class WebSocketServer(ABC):
                 try:
                     websocket = self.connections[connection_id]
                     await websocket.send(encoded)
-                except Exception as e:
+                except (OSError, TimeoutError, ConnectionError) as e:
                     logger.error(f"Error sending to {connection_id}: {e}")
 
         # Record broadcast metrics
@@ -574,7 +573,7 @@ class WebSocketServer(ABC):
             # Record sent message metric
             if self.metrics:
                 self.metrics.on_message_sent(str(message.type))
-        except Exception as e:
+        except (OSError, TimeoutError, ConnectionError) as e:
             logger.error(f"Error sending to {connection_id}: {e}")
 
             if self.metrics:
@@ -619,7 +618,7 @@ class WebSocketServer(ABC):
                     await handler(data)
                 else:
                     handler(data)
-            except Exception as e:
+            except (ValueError, TypeError, KeyError, RuntimeError, OSError) as e:
                 logger.error(f"Error in event handler for {event_type}: {e}")
 
 

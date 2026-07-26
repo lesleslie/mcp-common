@@ -31,6 +31,9 @@ from mcp_common.auth.permissions import (
 )
 
 __all__ = [
+    "JWT_ALGORITHM",
+    "KNOWN_SERVICES",
+    "ROLE_PERMISSIONS",
     "AudienceMismatchError",
     "AuditLogger",
     "AuditSink",
@@ -38,11 +41,8 @@ __all__ = [
     "AuthConfig",
     "AuthError",
     "InsufficientPermissionError",
-    "JWT_ALGORITHM",
-    "KNOWN_SERVICES",
     "Permission",
     "Role",
-    "ROLE_PERMISSIONS",
     "SecretNotConfiguredError",
     "ServiceIdentity",
     "TokenExpiredError",

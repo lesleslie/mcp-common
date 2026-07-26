@@ -34,22 +34,22 @@ from mcp_common.prompting.models import (
 )
 
 __all__ = [
+    "BackendUnavailableError",
+    "ButtonConfig",
+    "DialogResult",
+    "NotificationLevel",
     # Wrapper class (new)
     "PromptAdapter",
+    # Exceptions
+    "PromptAdapterError",
+    # Models (new naming)
+    "PromptAdapterSettings",
     # Abstract interface
     "PromptBackend",
+    # Models (backward compatibility)
+    "PromptConfig",
+    "PromptStyle",
     # Factory
     "create_prompt_adapter",
     "list_available_backends",
-    # Models (new naming)
-    "PromptAdapterSettings",
-    # Models (backward compatibility)
-    "PromptConfig",
-    "DialogResult",
-    "ButtonConfig",
-    "PromptStyle",
-    "NotificationLevel",
-    # Exceptions
-    "PromptAdapterError",
-    "BackendUnavailableError",
 ]
