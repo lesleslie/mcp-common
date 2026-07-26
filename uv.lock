@@ -2148,7 +2148,7 @@ wheels = [
 
 [[package]]
 name = "mcp-common"
-version = "0.17.6"
+version = "0.17.7"
 source = { editable = "." }
 dependencies = [
     { name = "cryptography" },
@@ -2190,7 +2190,7 @@ treesitter = [
 requires-dist = [
     { name = "cryptography", specifier = ">=48.0.0" },
     { name = "fastmcp", specifier = ">=3.4.0,<4" },
-    { name = "oneiric", specifier = ">=0.13.1" },
+    { name = "oneiric", specifier = ">=0.16.0" },
     { name = "psutil", specifier = ">=7.2.2" },
     { name = "pydantic", specifier = ">=2.13.4" },
     { name = "pydantic-settings", specifier = ">=2.14.1" },
@@ -2610,7 +2610,7 @@ wheels = [
 
 [[package]]
 name = "oneiric"
-version = "0.14.0"
+version = "0.16.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiobreaker" },
@@ -2632,9 +2632,9 @@ dependencies = [
     { name = "typer" },
     { name = "watchfiles" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3e/3b/8a6b6e013796f3deb9466e88e1d642a3888882c82f0a89472a197d095e81/oneiric-0.14.0.tar.gz", hash = "sha256:c1d4e57bd8201d948d2a9cc55910dd01f3913fa59cb820d6c2e50cc24cd804fa", size = 311048, upload-time = "2026-07-16T09:01:30.351Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/44/8d/d75d7ac56d66373bdc208312aee60dee2cd2b893cdbb35c9552c4f577fd2/oneiric-0.16.0.tar.gz", hash = "sha256:aa78c28a960bfbcc0c5ad71f824c384e9326dc383f6e165025380512c0a0585d", size = 312119, upload-time = "2026-07-25T09:23:26.936Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/13/1b/7bd629c080f5a0076e4bb65de684ed31e4c2a9d82c2af4dde1802fdf1433/oneiric-0.14.0-py3-none-any.whl", hash = "sha256:dc280f414eaadce1064b510c0f081bbb1f777884ba222ee8bbc73743bbf77498", size = 358332, upload-time = "2026-07-16T09:01:28.717Z" },
+    { url = "https://files.pythonhosted.org/packages/0e/a2/bc842aab7cf82449a02ecb2ab1ab91e81c04565a8ffe5bf938ea4ff1d0bc/oneiric-0.16.0-py3-none-any.whl", hash = "sha256:0404af5ab7b45d32c175349abd903d1325e080603766e4a952efaf5f23e12c73", size = 359345, upload-time = "2026-07-25T09:23:25.426Z" },
 ]
 
 [[package]]
