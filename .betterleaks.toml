@@ -7,16 +7,39 @@
 # See https://github.com/gitleaks/gitleaks/blob/master/config/reference.md
 title = "mcp-common betterleaks config"
 
-# Pre-existing build / cache / worktree directories that should never be
-# scanned: betterleaks recurses into them by default and emits a flood of
+# Pre-existing build / cache / worktree / venv directories that should never
+# be scanned: betterleaks recurses into them by default and emits a flood of
 # false positives (cache files re-emitting their own scan output, tarballs,
-# coverage HTML, etc.).
+# coverage HTML, third-party vendored code, etc.). The .venv/ entries are
+# critical — betterleaks 1.7.4 panics on malformed .gz files inside
+# joblib's vendored test data, and the panic leaves any pre-existing report
+# file to be misread as the current run's findings.
 [allowlist]
 paths = [
+  # Pre-existing exclusions
   '''^\.cache/''',
   '''^\.worktrees/''',
   '''^dist/''',
   '''^htmlcov/''',
   '''^\.coverage(?:\..*)?$''',
   '''\.egg-info/''',
+
+  # Virtual environments and vendored third-party code — must NOT be
+  # scanned for project secrets (none of it is "ours").
+  '''(?:^|/)\.venv/''',
+  '''(?:^|/)venv/''',
+  '''(?:^|/)virtualenv/''',
+  '''(?:^|/)\.tox/''',
+  '''(?:^|/)\.nox/''',
+  '''(?:^|/)site-packages/''',
+  '''(?:^|/)node_modules/''',
+
+  # Caches
+  '''(?:^|/)\.mypy_cache/''',
+  '''(?:^|/)\.ruff_cache/''',
+  '''(?:^|/)\.pytest_cache/''',
+  '''(?:^|/)__pycache__/''',
+
+  # VCS metadata (betterleaks scans past commits too)
+  '''(?:^|/)\.git/''',
 ]
