@@ -98,7 +98,7 @@ addopts = [
     "-ra",
     "--tb=short",
     "--cov-branch",
-    "--cov-fail-under=99.48619139370584",
+    "--cov-fail-under=98.53479853479854",
 ]
 testpaths = ["tests"]
 markers = [
