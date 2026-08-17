@@ -8,10 +8,12 @@ This guide explains how to integrate mcp-common into MCP servers using the enhan
 
 ## Overview
 
-mcp-common v0.4.0 provides two major enhancements for MCP servers:
+mcp-common v0.17.9 provides the following reusable components for MCP servers:
 
-1. **Server Module** (`mcp_common.server/`) - Reusable lifecycle components
-1. **Enhanced CLI Factory** - Single factory for all MCP servers (handler + server class patterns)
+1. **Server Module** (`mcp_common.server/`) - Reusable lifecycle components (added v0.4.0)
+1. **Enhanced CLI Factory** (`mcp_common.cli.MCPServerCLIFactory`) - Single factory for all MCP servers (handler + server class patterns; added v0.3.3)
+1. **Tool Profile System** (`mcp_common.profiles`) - Gated tool registration to reduce MCP context overhead (added v0.6.0)
+1. **Health Check Helpers** (`register_http_health_route`) - Production-ready health endpoints (added v0.17.9)
 
 ### Architecture Patterns
 
@@ -231,7 +233,7 @@ def main():
 
 **Reduction:** ~90 lines (~53% reduction)
 
-## New Features
+## Available Features
 
 ### 1. BaseOneiricServerMixin
 
