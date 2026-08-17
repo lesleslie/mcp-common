@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.10] - 2026-08-17
+
+### Added
+
+- mcp-common: Mirror wave-11 mermaid CI guard from crackerjack
+
+### Documentation
+
+- mcp-common: Archive PHASE1 summary + update SERVER_INTEGRATION for v0.17.9
+- mcp-common: Fix README version drift (0.6.0 -> 0.17.9)
+
 ## [0.17.9] - 2026-08-12
 
 ### Fixed

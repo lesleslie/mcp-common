@@ -110,9 +110,7 @@ DEFAULT_MERMAID_PREFIXES: tuple[str, ...] = (
 # imported and executed as code. We trust only the locally-vendored
 # `node_modules/jsdom/` installed in the mcp-common repo by `npm install`
 # (which pins the version in package.json). The path is `<repo>/node_modules/`.
-DEFAULT_JSDOM_LOCATIONS: tuple[str, ...] = (
-    "node_modules/jsdom/lib/api.js",
-)
+DEFAULT_JSDOM_LOCATIONS: tuple[str, ...] = ("node_modules/jsdom/lib/api.js",)
 
 
 def _locate_mermaid_core() -> Path | None:
@@ -201,9 +199,7 @@ def _locate_jsdom() -> Path | None:
 def _is_trusted_mermaid_path(path: Path) -> bool:
     """Allow-list check: `path` must live under a known-good mermaid prefix."""
     resolved = str(path.resolve())
-    return any(
-        resolved.startswith(prefix) for prefix in DEFAULT_MERMAID_PREFIXES
-    )
+    return any(resolved.startswith(prefix) for prefix in DEFAULT_MERMAID_PREFIXES)
 
 
 def validate_mermaid_blocks(
@@ -240,10 +236,7 @@ def validate_mermaid_blocks(
         )
 
     payload = json.dumps(
-        [
-            {"file": str(b.file), "line": b.line, "code": b.code}
-            for b in blocks
-        ]
+        [{"file": str(b.file), "line": b.line, "code": b.code} for b in blocks]
     )
 
     try:
@@ -261,8 +254,7 @@ def validate_mermaid_blocks(
         ) from e
     except subprocess.TimeoutExpired as e:
         raise RuntimeError(
-            f"validate-mermaid.mjs timed out after {timeout}s on {len(blocks)} "
-            f"blocks"
+            f"validate-mermaid.mjs timed out after {timeout}s on {len(blocks)} blocks"
         ) from e
 
     if completed.returncode != 0:
@@ -279,17 +271,15 @@ def validate_mermaid_blocks(
             f"stdout={completed.stdout[:200]!r}"
         ) from e
 
-    errors: list[MermaidValidationError] = []
-    for entry in results:
-        if entry.get("status") == "error":
-            errors.append(
-                MermaidValidationError(
-                    file=Path(entry["file"]),
-                    line=entry["line"],
-                    error=entry.get("error", "<unknown error>"),
-                )
-            )
-    return errors
+    return [
+        MermaidValidationError(
+            file=Path(entry["file"]),
+            line=entry["line"],
+            error=entry.get("error", "<unknown error>"),
+        )
+        for entry in results
+        if entry.get("status") == "error"
+    ]
 
 
 def find_broken_mermaid_blocks(
