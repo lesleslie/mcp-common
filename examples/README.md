@@ -175,17 +175,17 @@ python examples/cli_server.py start
 
 ```mermaid
 graph TD
-    A[Configuration Loading Order] --> B[settings/local.yaml<br/>(gitignored)]
-    A --> C[settings/{server-name}.yaml<br/>(in repo)]
-    A --> D[Environment Variables<br/>MCP_SERVER_*]
-    A --> E[Defaults in Code]
+    A["Configuration Loading Order"] --> B["settings/local.yaml<br/>(gitignored)"]
+    A --> C["settings/{server-name}.yaml<br/>(in repo)"]
+    A --> D["Environment Variables<br/>MCP_SERVER_*"]
+    A --> E["Defaults in Code"]
 
-    B --> F[Loaded Config Object]
+    B --> F["Loaded Config Object"]
     C --> F
     D --> F
     E --> F
 
-    F --> G[Priority: local.yaml > env vars > yaml > defaults]
+    F --> G["Priority: local.yaml > env vars > yaml > defaults"]
 
     style A fill:#e3f2fd
     style B fill:#e8f5e8
