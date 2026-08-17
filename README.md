@@ -5,7 +5,7 @@
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![Python: 3.13+](https://img.shields.io/badge/python-3.13%2B-green)](https://www.python.org/downloads/)
 
-**Version:** 0.6.0 (Oneiric-Native)
+**Version:** 0.17.9 (Oneiric-Native)
 **Status:** Production Ready
 
 ______________________________________________________________________
@@ -28,17 +28,17 @@ Crackerjack is the standard quality-control and CI/CD gate for changes to this l
 
 **🎯 What This Library Provides:**
 
-- **Tool Profile System** (v0.6.0+) - Gated tool registration to reduce MCP context overhead (391 tools across 5 servers)
-- **Description Trimming** (v0.6.0+) - Utility to trim tool docstrings to 200 chars for token efficiency
-- **Oneiric CLI Factory** (v0.3.3+) - Standardized server lifecycle with start/stop/restart/status/health commands
+- **Tool Profile System** - Gated tool registration to reduce MCP context overhead (~391 tools across the 5 Bodai ecosystem components)
+- **Description Trimming** - Utility to trim tool docstrings to 200 chars for token efficiency
+- **Oneiric CLI Factory** - Standardized server lifecycle with start/stop/restart/status/health commands
 - **HTTP Client Adapter** - Connection pooling with httpx for 11x performance
-- **Prompting/Notification Adapter** 🆕 - Unified cross-platform user interaction with automatic backend detection
+- **Prompting/Notification Adapter** - Unified cross-platform user interaction with automatic backend detection
 - **Security Utilities** - API key validation (with 90% faster caching) and input sanitization (2x faster)
 - **Rich Console UI** - Beautiful panels and notifications for server operations
 - **Settings Management** - YAML + environment variable configuration (Pydantic-based)
 - **Health Check System** - Production-ready health monitoring
 - **Type-Safe** - Full Pydantic validation and type hints
-- **Comprehensive Testing** - 615 tests with property-based and concurrency testing
+- **Comprehensive Testing** - ~1,687 tests with property-based, concurrency, and integration coverage
 
 **Design Principles:**
 
@@ -55,7 +55,7 @@ ______________________________________________________________________
 
 See [`examples/`](./examples/) for complete production-ready examples:
 
-### 1. CLI Server (Oneiric-Native) - NEW in v0.3.3
+### 1. CLI Server (Oneiric-Native)
 
 Demonstrates the **CLI factory** for standardized server lifecycle management:
 
@@ -228,7 +228,7 @@ graph TB
 
 Note: Rate limiting is not provided by this library. If you use FastMCP, its built-in `RateLimitingMiddleware` can be enabled; otherwise, use project-specific configuration.
 
-### 🎯 Oneiric CLI Factory (NEW in v0.3.3)
+### 🎯 Oneiric CLI Factory
 
 **Production-Ready Server Lifecycle Management:**
 
@@ -475,7 +475,7 @@ async def test_tool():
     assert result["success"]
 ```
 
-### 🔧 Tool Profile System (NEW in v0.6.0)
+### 🔧 Tool Profile System
 
 Reduce MCP context overhead by gating which tools are registered at startup. Each server reads a `{SERVER_NAME}_TOOL_PROFILE` environment variable (`minimal`, `standard`, or `full`) and only registers the corresponding tool groups.
 
@@ -570,7 +570,7 @@ ______________________________________________________________________
 
 ## Performance Benchmarks
 
-### ✨ Phase 4 Optimizations (v0.6.0)
+### ✨ Phase 4 Optimizations
 
 **Sanitization Early-Exit Optimization:**
 
@@ -615,17 +615,19 @@ Result: +4% overhead (negligible vs network I/O)
 
 **Test Suite Growth:**
 
-| Version | Tests | Coverage | Execution Time |
-|---------|-------|----------|----------------|
-| v0.5.2 | 564 | 94% | ~110s |
-| v0.6.0 | 615 | 99%+ | ~120s |
+| Version | Tests | Coverage |
+|---------|-------|----------|
+| v0.5.2 | 564 | 94% |
+| v0.6.0 | 615 | 99%+ |
+| v0.15.0 | ~1,400 | 95% |
+| v0.17.9 (current) | ~1,687 | 96% |
 
 **Testing Capabilities:**
 
-- ✅ 20 property-based tests (Hypothesis)
-- ✅ 10 concurrency tests (thread-safety)
-- ✅ 7 performance optimization tests
-- ✅ 100% backward compatibility maintained
+- ✅ Property-based tests (Hypothesis, 6 modules)
+- ✅ Concurrency + async safety tests
+- ✅ Performance benchmarks (`tests/performance/`)
+- ✅ Backward compatibility across the 0.13→0.17 series
 
 ______________________________________________________________________
 
@@ -754,10 +756,14 @@ ______________________________________________________________________
 
 **Recent Versions:**
 
+- **0.17.9** (current) - `register_http_health_route` helper, dependency-groups migration
+- **0.17.0** - Plan 7 Phase 1: FastMCP 3.4 foundation
+- **0.16.0** - AppleScript bridge + iTerm2 protocol spec, async multi-line escaping
+- **0.15.0** - LLM layer: per-tier retry loop, error sanitization, llama_server support, Multimodal TaskType
+- **0.14.0** - HailuoAdapter (MiniMax video generation), task_routing model resolution
+- **0.13.0** - Property-based tests expansion, Hypothesis edge cases
 - **0.6.0** - Tool Profile System, description trimming, MANDATORY_TOOLS
-- **0.3.6** - Oneiric-native (production ready)
-- **0.3.3** - Added Oneiric CLI Factory
-- **0.3.0** - Initial Oneiric patterns
+- **0.3.3** - Oneiric CLI Factory
 
 **Compatibility:**
 
