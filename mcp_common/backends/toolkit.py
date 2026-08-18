@@ -40,7 +40,7 @@ except ImportError:
     # Create stubs for type checking
     prompt = None  # type: ignore
     confirm = None  # type: ignore
-    Style = None  # type: ignore
+    Style = None
 
 
 class PromptToolkitBackend(PromptBackend):
@@ -235,7 +235,13 @@ class PromptToolkitBackend(PromptBackend):
                 display_text += f"\n(placeholder: {placeholder})"
 
             if secure:
-                # Secure password input
+                # Secure password input — Style is only None when prompt_toolkit
+                # is unavailable, but `if secure:` only runs when the import
+                # succeeded, so narrow the type for ty.
+                if Style is None:
+                    raise RuntimeError(
+                        "prompt_toolkit must be installed for secure prompts"
+                    )
                 result = prompt(
                     display_text,
                     default=default,
