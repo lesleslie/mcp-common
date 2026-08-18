@@ -3,8 +3,8 @@ revision = 3
 requires-python = ">=3.13"
 resolution-markers = [
     "python_full_version >= '3.15' and sys_platform == 'win32'",
-    "python_full_version == '3.14.*' and sys_platform == 'win32'",
     "python_full_version >= '3.15' and sys_platform != 'win32'",
+    "python_full_version == '3.14.*' and sys_platform == 'win32'",
     "python_full_version == '3.14.*' and sys_platform != 'win32'",
     "python_full_version < '3.14' and sys_platform == 'win32'",
     "python_full_version < '3.14' and sys_platform != 'win32'",
@@ -883,6 +883,7 @@ dependencies = [
     { name = "websockets" },
     { name = "zuban" },
 ]
+sdist = { url = "https://files.pythonhosted.org/packages/8f/81/e2f60e326c939929431d67bc3693aae432dbd33c6ff056241776c9454f99/crackerjack-0.73.5.tar.gz", hash = "sha256:2073a9e290693dad0524580c48f678d77d34fd9fd64ea4fa0db28fdbd322fb83", size = 4551814, upload-time = "2026-08-17T20:49:32.461Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e8/d9/00ad1179d0ea249d9a30572069d0cfe1f8e6211cc988593fa7177b0cb6bc/crackerjack-0.73.5-py3-none-any.whl", hash = "sha256:b6526503f32d680353bea70e4b560fb1bb9f4b947ba742566630a64e134114ff", size = 1356457, upload-time = "2026-08-17T20:49:30.014Z" },
 ]
@@ -2367,7 +2368,7 @@ wheels = [
 
 [[package]]
 name = "mcp-common"
-version = "0.17.9"
+version = "0.17.10"
 source = { editable = "." }
 dependencies = [
     { name = "cryptography" },

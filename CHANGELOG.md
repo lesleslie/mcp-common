@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.0] - 2026-08-18
+
+### Added
+
+- mcp-common: Add apply_tool_profile() helper
+
+### Fixed
+
+- mcp-common: Narrow Style type for ty (pre-publish dependency)
+- mcp-common: Split mandatory_tools into mandatory_groups + essential_tool_names
+
 ## [0.17.10] - 2026-08-17
 
 ### Added
