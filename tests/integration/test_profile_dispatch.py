@@ -97,7 +97,7 @@ async def test_full_registers_everything(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_mandatory_subsetting(monkeypatch):
-    """Repos without all 4 health tools can opt-out via mandatory_tools=set()."""
+    """Repos without all 4 health tools can opt-out via essential_tool_names=set()."""
     server, registrations, reg_map, register_all = make_server_with_groups(monkeypatch)
     monkeypatch.setenv("TEST_PROFILE", "minimal")
     await _apply_tool_profile(
@@ -106,7 +106,7 @@ async def test_mandatory_subsetting(monkeypatch):
         registrations={ToolProfile.MINIMAL: [], ToolProfile.STANDARD: [], ToolProfile.FULL: ALL_TOOLS},
         registration_map=reg_map,
         register_all_fn=register_all,
-        mandatory_tools=set(),
+        essential_tool_names=set(),
     )
     names = {t.name for t in await server.list_tools()}
     assert "get_liveness" not in names
@@ -181,7 +181,7 @@ async def test_callable_items_in_minimal(monkeypatch):
         },
         registration_map={},
         register_all_fn=lambda s: None,
-        mandatory_tools=set(),
+        essential_tool_names=set(),
     )
     names = {t.name for t in await server.list_tools()}
     assert "direct_tool" in names
@@ -234,7 +234,7 @@ async def test_full_with_explicit_group_list(monkeypatch):
         },
         registration_map={"group_z": register_group_z},
         register_all_fn=None,
-        mandatory_tools=set(),
+        essential_tool_names=set(),
     )
     names = {t.name for t in await server.list_tools()}
     assert "zebra_tool" in names
@@ -265,20 +265,20 @@ async def test_async_register_all_fn_via_async_helper(monkeypatch):
         },
         registration_map={},
         register_all_fn=sync_register_all,
-        mandatory_tools=set(),
+        essential_tool_names=set(),
     )
     names = {t.name for t in await server.list_tools()}
     assert "sync_added_tool" in names
 
 
 @pytest.mark.asyncio
-async def test_mandatory_tool_not_in_map_raises(monkeypatch):
-    """A mandatory tool missing from registration_map raises ValueError."""
+async def test_mandatory_group_not_in_map_raises(monkeypatch):
+    """A mandatory group missing from registration_map raises ValueError (W0.5 semantics)."""
     from mcp_common.tools.dispatch import _apply_tool_profile
 
     server = FastMCP("missing-mandatory-test")
     monkeypatch.setenv("TEST_PROFILE", "minimal")
-    with pytest.raises(ValueError, match="MANDATORY tool"):
+    with pytest.raises(ValueError, match="MANDATORY group"):
         await _apply_tool_profile(
             server,
             profile_env_var="TEST_PROFILE",
@@ -287,9 +287,117 @@ async def test_mandatory_tool_not_in_map_raises(monkeypatch):
                 ToolProfile.STANDARD: [],
                 ToolProfile.FULL: ALL_TOOLS,
             },
-            registration_map={"get_liveness": lambda s: None},  # only 1 of 4
+            registration_map={"group_z": lambda s: None},
             register_all_fn=lambda s: None,
+            mandatory_groups={"nonexistent_group"},
+            essential_tool_names=set(),
         )
+
+
+@pytest.mark.asyncio
+async def test_mandatory_groups_drives_registration(monkeypatch):
+    """mandatory_groups guarantees registration at every profile (W0.5 semantics)."""
+    from mcp_common.tools.dispatch import _apply_tool_profile
+
+    server = FastMCP("mandatory-groups-test")
+    monkeypatch.setenv("TEST_PROFILE", "minimal")
+
+    def register_group_x(s):
+        s.add_tool(Tool.from_function(fn=lambda: "x", name="x_tool", description="X"))
+
+    # MINIMAL registration list doesn't include group_x, but mandatory_groups
+    # should force-register it post-pass.
+    await _apply_tool_profile(
+        server,
+        profile_env_var="TEST_PROFILE",
+        registrations={
+            ToolProfile.MINIMAL: [],
+            ToolProfile.STANDARD: [],
+            ToolProfile.FULL: ALL_TOOLS,
+        },
+        registration_map={"group_x": register_group_x},
+        register_all_fn=lambda s: None,
+        mandatory_groups={"group_x"},
+        essential_tool_names=set(),
+    )
+    names = {t.name for t in await server.list_tools()}
+    assert "x_tool" in names, "mandatory_groups should force-register group_x"
+    assert "discover_tools" in names
+
+
+@pytest.mark.asyncio
+async def test_essential_tool_names_missing_raises(monkeypatch):
+    """essential_tool_names subset check raises ValueError when missing (W0.5)."""
+    from mcp_common.tools.dispatch import _apply_tool_profile
+
+    server = FastMCP("essential-missing-test")
+    monkeypatch.setenv("TEST_PROFILE", "minimal")
+
+    def register_group_health(s):
+        s.add_tool(
+            Tool.from_function(
+                fn=lambda: "ok", name="get_liveness", description="Liveness"
+            )
+        )
+
+    with pytest.raises(ValueError, match="ESSENTIAL tool names"):
+        await _apply_tool_profile(
+            server,
+            profile_env_var="TEST_PROFILE",
+            registrations={
+                ToolProfile.MINIMAL: ["group_health"],
+                ToolProfile.STANDARD: [],
+                ToolProfile.FULL: ALL_TOOLS,
+            },
+            registration_map={"group_health": register_group_health},
+            register_all_fn=lambda s: None,
+            mandatory_groups=set(),
+            essential_tool_names={"get_liveness", "get_readiness"},
+        )
+
+
+@pytest.mark.asyncio
+async def test_mandatory_tools_deprecated_alias(monkeypatch):
+    """mandatory_tools is a deprecated alias for mandatory_groups (W0.5 back-compat)."""
+    import warnings
+
+    from mcp_common.tools.dispatch import _apply_tool_profile
+
+    server = FastMCP("deprecated-alias-test")
+    monkeypatch.setenv("TEST_PROFILE", "minimal")
+
+    def register_group_z(s):
+        s.add_tool(
+            Tool.from_function(
+                fn=lambda: "z", name="zebra_tool", description="Zebra"
+            )
+        )
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        await _apply_tool_profile(
+            server,
+            profile_env_var="TEST_PROFILE",
+            registrations={
+                ToolProfile.MINIMAL: [],
+                ToolProfile.STANDARD: [],
+                ToolProfile.FULL: ALL_TOOLS,
+            },
+            registration_map={"group_z": register_group_z},
+            register_all_fn=lambda s: None,
+            mandatory_tools={"group_z"},  # DEPRECATED — should warn
+            essential_tool_names=set(),
+        )
+    # Verify DeprecationWarning was raised
+    deprecation_warnings = [
+        w for w in caught if issubclass(w.category, DeprecationWarning)
+    ]
+    assert len(deprecation_warnings) >= 1, "mandatory_tools should emit DeprecationWarning"
+    assert "mandatory_groups" in str(deprecation_warnings[0].message)
+
+    # And the alias still works (group_z got registered)
+    names = {t.name for t in await server.list_tools()}
+    assert "zebra_tool" in names, "mandatory_tools alias should still drive registration"
 
 
 @pytest.mark.asyncio
@@ -347,7 +455,7 @@ async def test_register_all_fn_with_async(monkeypatch):
         },
         registration_map={},
         register_all_fn=async_register_all,
-        mandatory_tools=set(),
+        essential_tool_names=set(),
     )
     names = {t.name for t in await server.list_tools()}
     assert "async_added_tool" in names
@@ -376,7 +484,7 @@ async def test_custom_discovery_fn(monkeypatch):
         register_all_fn=lambda s: None,
         discovery_fn=custom_disc,
         # Skip the default MANDATORY_TOOLS lookup
-        mandatory_tools=set(),
+        essential_tool_names=set(),
     )
     # Custom discover_tools registered (we don't call it here; the goal
     # is to exercise the custom discovery_fn code path in `_apply_tool_profile_async`).

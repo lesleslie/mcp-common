@@ -97,11 +97,20 @@ class ToolProfile(StrEnum):
         return cls.from_string(os.getenv(env_var), default)
 
 
-# Tools that MUST be registered in every profile.
-# These are required by infrastructure (K8s probes, load balancers, monitoring).
-MANDATORY_TOOLS: set[str] = {
-    "get_liveness",
-    "get_readiness",
-    "health_check",
-    "health_check_all",
-}
+# Registration_map keys guaranteed to be registered at every profile.
+# Empty default — repos opt-in via `mandatory_groups={...}` when they have
+# always-on groups (e.g. health/ecosystem). The helper's dispatch loop walks
+# this set in `_apply_tool_profile_async` and calls `registration_map[name]`.
+MANDATORY_GROUPS: set[str] = set()
+
+# Tool names that MUST be present in the registered tool set after dispatch.
+# Default is empty (repos opt-in via `essential_tool_names={...}`). Different
+# repos use different naming conventions for health tools (e.g. mahavishnu
+# uses `get_health`, not `health_check`), so the canonical default can't
+# assume a universal name. The helper's `_apply_tool_profile_async` performs
+# the subset check; pass a non-empty set to enable it.
+#
+# If you need a safety invariant on standard health tools, set:
+#   essential_tool_names = {"get_liveness", "get_readiness", "get_health"}
+# — but only IF your repo actually exposes those tool names.
+MANDATORY_TOOLS: set[str] = set()

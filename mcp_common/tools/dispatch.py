@@ -29,7 +29,7 @@ from fastmcp import FastMCP
 from fastmcp.tools import Tool
 from oneiric.core.logging import get_logger
 
-from mcp_common.tools.profiles import MANDATORY_TOOLS, ToolProfile
+from mcp_common.tools.profiles import MANDATORY_GROUPS, MANDATORY_TOOLS, ToolProfile
 
 logger = get_logger(__name__)
 
@@ -123,13 +123,20 @@ async def _apply_tool_profile_async(
     registrations: dict[ToolProfile, list[str | Callable] | type[ALL_TOOLS]],
     registration_map: dict[str, Callable[[FastMCP], Awaitable[None] | None]],
     register_all_fn: Callable[[FastMCP], Awaitable[None] | None] | None,
-    mandatory_tools: set[str],
+    mandatory_groups: set[str],
+    essential_tool_names: set[str],
     discovery_fn: Callable[[FastMCP, str | None], Awaitable[list[dict]]] | None,
     profile_env_var: str,
 ) -> None:
     """Async implementation of apply_tool_profile.
 
     Sync validation happens in apply_tool_profile() before this is called.
+
+    `mandatory_groups` is a set of registration_map keys; the helper runs each
+    group's registration fn post-pass (so always-on groups are guaranteed at
+    every profile). `essential_tool_names` is a subset check — it asserts that
+    these tool names are present after dispatch, but does NOT drive registration.
+    Set `essential_tool_names=set()` to opt out of the subset check.
     """
     # Step 1: Per-profile registration
     full_value = registrations.get(ToolProfile.FULL)
@@ -168,20 +175,34 @@ async def _apply_tool_profile_async(
                 f"registrations values must be str, Callable, or ALL_TOOLS; got {type(item)}"
             )
 
-    # Step 2: MANDATORY tools (last, idempotent — re-fetch after each call)
+    # Step 2a: MANDATORY groups (registration_map keys registered at every profile).
+    # Walked AFTER per-profile registration so always-on groups are guaranteed
+    # even if MINIMAL/STANDARD drops them. Per-group idempotency: refresh
+    # registered_names after each call so re-registration is safe.
     registered_names = {t.name for t in await server.list_tools()}
-    for name in mandatory_tools:
-        if name in registered_names:
-            logger.debug("MANDATORY tool %r already registered, skipping", name)
-            continue
-        fn = registration_map.get(name)
+    for group_name in mandatory_groups:
+        fn = registration_map.get(group_name)
         if fn is None:
             raise ValueError(
-                f"MANDATORY tool {name!r} not in registration_map. "
-                f"Add it or pass mandatory_tools=set() to skip."
+                f"MANDATORY group {group_name!r} not in registration_map. "
+                f"Add it or pass mandatory_groups=set() to skip."
             )
         await _maybe_await(fn(server))
-        registered_names = {t.name for t in await server.list_tools()}  # refresh
+        registered_names = {t.name for t in await server.list_tools()}
+
+    # Step 2b: ESSENTIAL tool names (subset check — NOT a dispatch driver).
+    # Asserts these tool names are present after Steps 1+2a. Repos opt-out
+    # via essential_tool_names=set(). Failures here mean a registration_map
+    # key was missing from the profile's registrations OR mandatory_groups.
+    if essential_tool_names:
+        registered_names = {t.name for t in await server.list_tools()}
+        missing = essential_tool_names - registered_names
+        if missing:
+            raise ValueError(
+                f"ESSENTIAL tool names {sorted(missing)!r} not registered after "
+                f"profile application. Verify the appropriate groups are in "
+                f"registrations or mandatory_groups."
+            )
 
     # Step 3: discover_tools() (idempotent via _local_provider.remove_tool)
     disc = discovery_fn or _default_discovery
@@ -221,7 +242,9 @@ def apply_tool_profile(
     registrations: dict[ToolProfile, list[str | Callable] | type[ALL_TOOLS]],
     registration_map: dict[str, Callable[[FastMCP], Awaitable[None] | None]],
     register_all_fn: Callable[[FastMCP], Awaitable[None] | None] | None = None,
-    mandatory_tools: set[str] = MANDATORY_TOOLS,
+    mandatory_groups: set[str] = MANDATORY_GROUPS,
+    essential_tool_names: set[str] = MANDATORY_TOOLS,
+    mandatory_tools: set[str] | None = None,
     discovery_fn: Callable[[FastMCP, str | None], Awaitable[list[dict]]] | None = None,
     yaml_loader: Callable[[], dict | None] | None = None,
 ) -> None:
@@ -235,7 +258,26 @@ def apply_tool_profile(
     Sync validation (InvalidProfileError, ValueError) raise immediately.
     Passing ``server=None`` skips the async registration phase; this is the
     convention used by unit tests that only exercise the resolver/validation.
+
+    `mandatory_tools` is a deprecated alias for `mandatory_groups` (the
+    pre-W0.5 code conflated the two concepts). Existing callers can pass
+    `mandatory_tools=...` and it will be treated as a set of registration_map
+    keys; new code should use `mandatory_groups` (dispatch driver) and
+    `essential_tool_names` (subset check) separately.
     """
+    # Deprecated alias handling
+    if mandatory_tools is not None:
+        import warnings
+
+        warnings.warn(
+            "mandatory_tools is deprecated; use mandatory_groups (for "
+            "registration_map keys) and essential_tool_names (for subset "
+            "checks) separately.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        mandatory_groups = mandatory_tools
+
     # Sync validation phase
     profile = _resolve_profile(profile_env_var, yaml_loader)
     full_value = registrations.get(ToolProfile.FULL)
@@ -264,7 +306,8 @@ def apply_tool_profile(
                 registrations=registrations,
                 registration_map=registration_map,
                 register_all_fn=register_all_fn,
-                mandatory_tools=mandatory_tools,
+                mandatory_groups=mandatory_groups,
+                essential_tool_names=essential_tool_names,
                 discovery_fn=discovery_fn,
                 profile_env_var=profile_env_var,
             )
@@ -283,7 +326,9 @@ async def _apply_tool_profile(
     registrations: dict[ToolProfile, list[str | Callable] | type[ALL_TOOLS]],
     registration_map: dict[str, Callable[[FastMCP], Awaitable[None] | None]],
     register_all_fn: Callable[[FastMCP], Awaitable[None] | None] | None = None,
-    mandatory_tools: set[str] = MANDATORY_TOOLS,
+    mandatory_groups: set[str] = MANDATORY_GROUPS,
+    essential_tool_names: set[str] = MANDATORY_TOOLS,
+    mandatory_tools: set[str] | None = None,
     discovery_fn: Callable[[FastMCP, str | None], Awaitable[list[dict]]] | None = None,
     yaml_loader: Callable[[], dict | None] | None = None,
 ) -> None:
@@ -292,7 +337,22 @@ async def _apply_tool_profile(
     Use this when calling from inside an existing event loop (e.g. async
     integration tests). The sync ``apply_tool_profile()`` wrapper raises
     in that case.
+
+    `mandatory_tools` is a deprecated alias for `mandatory_groups`. See
+    the sync `apply_tool_profile()` docstring for migration guidance.
     """
+    if mandatory_tools is not None:
+        import warnings
+
+        warnings.warn(
+            "mandatory_tools is deprecated; use mandatory_groups (for "
+            "registration_map keys) and essential_tool_names (for subset "
+            "checks) separately.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        mandatory_groups = mandatory_tools
+
     profile = _resolve_profile(profile_env_var, yaml_loader)
     full_value = registrations.get(ToolProfile.FULL)
     if full_value is ALL_TOOLS and register_all_fn is None:
@@ -308,7 +368,8 @@ async def _apply_tool_profile(
         registrations=registrations,
         registration_map=registration_map,
         register_all_fn=register_all_fn,
-        mandatory_tools=mandatory_tools,
+        mandatory_groups=mandatory_groups,
+        essential_tool_names=essential_tool_names,
         discovery_fn=discovery_fn,
         profile_env_var=profile_env_var,
     )
