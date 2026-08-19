@@ -216,7 +216,7 @@ class PromptToolkitBackend(PromptBackend):
 
             return result
 
-        except (OSError, EOFError, KeyboardInterrupt):
+        except Exception:  # noqa: BLE001 — prompt-toolkit surface is broad
             # On any exception, return safe default (False)
             return False
 
@@ -297,7 +297,7 @@ class PromptToolkitBackend(PromptBackend):
                 except (EOFError, KeyboardInterrupt):
                     return None
 
-        except (OSError, EOFError, KeyboardInterrupt):
+        except Exception:  # noqa: BLE001 — prompt-toolkit surface is broad
             # On error, return None
             return None
 
@@ -327,7 +327,7 @@ class PromptToolkitBackend(PromptBackend):
 
             return True
 
-        except (OSError, EOFError, KeyboardInterrupt):
+        except Exception:  # noqa: BLE001 — broad catch for print() failures
             # Fallback silently
             return False
 
@@ -374,7 +374,7 @@ class PromptToolkitBackend(PromptBackend):
 
             return paths
 
-        except (OSError, EOFError, KeyboardInterrupt):
+        except Exception:  # noqa: BLE001 — wrap any unexpected error
             raise DialogDisplayError(
                 backend="prompt-toolkit",
                 dialog_type="file selection",
@@ -405,7 +405,7 @@ class PromptToolkitBackend(PromptBackend):
 
             return path
 
-        except (OSError, EOFError, KeyboardInterrupt):
+        except Exception:  # noqa: BLE001 — wrap any unexpected error
             raise DialogDisplayError(
                 backend="prompt-toolkit",
                 dialog_type="directory selection",

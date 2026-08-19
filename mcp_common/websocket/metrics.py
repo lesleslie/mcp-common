@@ -317,7 +317,7 @@ class WebSocketMetrics:
             logger.info(f"Prometheus metrics server started on port {port}")
             logger.info(f"Metrics available at http://0.0.0.0:{port}/metrics")
             return True
-        except (OSError, ValueError) as e:
+        except (OSError, ValueError, RuntimeError) as e:
             logger.error(f"Failed to start metrics server: {e}")
             return False
 
@@ -352,5 +352,5 @@ def get_metrics_summary(server_name: str) -> dict[str, Any]:
             "metrics_count": len(_runtime_registry.getCollectorNames()),
         }
         return summary
-    except (OSError, ValueError, KeyError, AttributeError, TypeError) as e:
+    except (OSError, ValueError, KeyError, AttributeError, TypeError, RuntimeError) as e:
         return {"available": True, "error": str(e)}

@@ -156,12 +156,13 @@ class TestFromEnv:
 
 
 class TestMandatoryTools:
-    def test_contains_expected_tools(self) -> None:
-        expected = {"get_liveness", "get_readiness", "health_check", "health_check_all"}
-        assert MANDATORY_TOOLS == expected
+    def test_default_is_empty(self) -> None:
+        """Default MANDATORY_TOOLS is empty (repos opt-in via essential_tool_names)."""
+        assert MANDATORY_TOOLS == set()
 
     def test_is_a_set(self) -> None:
         assert isinstance(MANDATORY_TOOLS, set)
 
     def test_size(self) -> None:
-        assert len(MANDATORY_TOOLS) == 4
+        """Default size is 0; tools are added via essential_tool_names."""
+        assert len(MANDATORY_TOOLS) == 0

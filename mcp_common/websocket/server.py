@@ -388,7 +388,7 @@ class WebSocketServer(ABC):
                             self.metrics.on_connection_error("auth_required")
                         return
 
-                except (OSError, ValueError, TypeError, KeyError, ConnectionError) as e:
+                except (OSError, ValueError, TypeError, KeyError, ConnectionError, RuntimeError) as e:
                     logger.error(f"Authentication error: {e}")
                     await websocket.close(1011, "Authentication error")
                     if self.metrics:
@@ -421,7 +421,7 @@ class WebSocketServer(ABC):
                             self.metrics.observe_latency(
                                 str(decoded.type), time.time() - start_time
                             )
-                    except (ValueError, TypeError, KeyError, UnicodeDecodeError) as e:
+                    except (ValueError, TypeError, KeyError, UnicodeDecodeError, RuntimeError) as e:
                         logger.error(f"Error decoding message: {e}")
                         error_msg = WebSocketProtocol.create_error(
                             error_code="DECODE_ERROR", error_message=str(e)
@@ -542,7 +542,7 @@ class WebSocketServer(ABC):
                 try:
                     websocket = self.connections[connection_id]
                     await websocket.send(encoded)
-                except (OSError, TimeoutError, ConnectionError) as e:
+                except (OSError, TimeoutError, ConnectionError, RuntimeError) as e:
                     logger.error(f"Error sending to {connection_id}: {e}")
 
         # Record broadcast metrics
@@ -573,7 +573,7 @@ class WebSocketServer(ABC):
             # Record sent message metric
             if self.metrics:
                 self.metrics.on_message_sent(str(message.type))
-        except (OSError, TimeoutError, ConnectionError) as e:
+        except (OSError, TimeoutError, ConnectionError, RuntimeError) as e:
             logger.error(f"Error sending to {connection_id}: {e}")
 
             if self.metrics:

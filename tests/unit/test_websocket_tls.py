@@ -24,6 +24,12 @@ class _FakeTempFile:
     def close(self) -> None:
         self.closed = True
 
+    def __enter__(self) -> _FakeTempFile:
+        return self
+
+    def __exit__(self, *args: object) -> None:
+        self.close()
+
 
 class _FakeKey:
     def __init__(self, private_bytes_result: bytes = b"key-bytes") -> None:

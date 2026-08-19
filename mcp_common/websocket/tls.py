@@ -108,7 +108,7 @@ def generate_self_signed_cert(
 
             return cert_file_path, key_file_path
 
-        except (OSError, ValueError, TypeError) as e:
+        except (OSError, ValueError, TypeError, RuntimeError) as e:
             # Clean up on error
             Path(cert_file.name).unlink(missing_ok=True)
             Path(key_file.name).unlink(missing_ok=True)

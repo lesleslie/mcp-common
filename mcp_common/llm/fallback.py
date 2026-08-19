@@ -126,7 +126,7 @@ class FallbackChain:
                 except asyncio.CancelledError:
                     raise  # never swallow
 
-                except (ValueError, TimeoutError, OSError) as e:
+                except Exception as e:  # noqa: BLE001 — broad except is intentional
                     last_error = e
                     sanitized = _sanitize_error(str(e))
                     if attempt < self._max_attempts - 1:
