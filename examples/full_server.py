@@ -50,7 +50,6 @@ class MockTelemetryBackend:
 
     def trace(self, operation: str) -> None:
         """Trace an operation."""
-        pass
 
 
 def create_full_server() -> FullServer:

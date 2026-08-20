@@ -457,7 +457,7 @@ def _render_index(entries_by_store: dict[str, list[Entry]], generated_at: str) -
     sections.append("")
     sections.append("# Plan Index")
     sections.append("")
-    sections.append(f"**Date:** 2026-07-16")
+    sections.append("**Date:** 2026-07-16")
     sections.append(f"**Last regenerated:** {generated_at}")
     sections.append(
         "**Purpose:** Navigation map for finding and reviewing active "
@@ -560,7 +560,7 @@ def main(argv: list[str] | None = None) -> int:
         entries_by_store[store] = store_entries
         total_with_frontmatter += len(store_entries)
 
-    generated_at = datetime.date.today().isoformat()
+    generated_at = datetime.datetime.now(tz=datetime.UTC).date().isoformat()
     rendered = _render_index(entries_by_store, generated_at=generated_at)
 
     if args.dry_run:

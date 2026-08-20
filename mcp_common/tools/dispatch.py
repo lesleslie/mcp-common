@@ -116,6 +116,35 @@ async def _default_discovery(server: FastMCP, filter_query: str | None) -> list[
     return result
 
 
+async def _select_profile_groups(
+    server: FastMCP,
+    profile: ToolProfile,
+    registrations: dict[ToolProfile, list[str | Callable] | type[ALL_TOOLS]],
+    register_all_fn: Callable[[FastMCP], Awaitable[None] | None] | None,
+) -> list[str | Callable]:
+    """Resolve the list of (callable | group-name) registrations for the active profile.
+
+    FULL + ALL_TOOLS short-circuits to ``register_all_fn``; FULL with a list
+    returns that list; missing/empty registrations fall back to an empty list.
+    """
+    if profile is ToolProfile.MINIMAL:
+        return registrations.get(ToolProfile.MINIMAL, [])
+    if profile is ToolProfile.STANDARD:
+        return registrations.get(ToolProfile.STANDARD, [])
+    # ToolProfile.FULL
+    full_value = registrations.get(ToolProfile.FULL)
+    if full_value is ALL_TOOLS:
+        if register_all_fn is None:
+            raise ValueError(
+                "register_all_fn must be provided when registrations[FULL] is ALL_TOOLS"
+            )
+        await _maybe_await(register_all_fn(server))
+        return []
+    if isinstance(full_value, list):
+        return full_value
+    return []
+
+
 async def _apply_tool_profile_async(
     server: FastMCP,
     *,
@@ -139,25 +168,9 @@ async def _apply_tool_profile_async(
     Set `essential_tool_names=set()` to opt out of the subset check.
     """
     # Step 1: Per-profile registration
-    full_value = registrations.get(ToolProfile.FULL)
-    if profile is ToolProfile.MINIMAL:
-        groups: list[str | Callable] = registrations.get(  # ty: ignore[invalid-assignment]
-            ToolProfile.MINIMAL, []
-        )
-    elif profile is ToolProfile.STANDARD:
-        groups = registrations.get(ToolProfile.STANDARD, [])
-    else:  # FULL
-        if full_value is ALL_TOOLS:
-            if register_all_fn is None:
-                raise ValueError(
-                    "register_all_fn must be provided when registrations[FULL] is ALL_TOOLS"
-                )
-            await _maybe_await(register_all_fn(server))
-            groups = []
-        elif isinstance(full_value, list):
-            groups = full_value
-        else:
-            groups = []
+    groups: list[str | Callable] = await _select_profile_groups(
+        server, profile, registrations, register_all_fn
+    )
 
     for item in groups:  # ty: ignore[not-iterable]
         if callable(item):

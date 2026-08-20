@@ -8,7 +8,7 @@ Used by:
 Version: 0.4.0
 """
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel
 
@@ -17,7 +17,7 @@ from pydantic import BaseModel
 # =============================================================================
 
 
-class Priority(str, Enum):
+class Priority(StrEnum):
     """
     Message priority levels - SHARED ACROSS ECOSYSTEM
 
@@ -36,7 +36,7 @@ class Priority(str, Enum):
     URGENT = "urgent"
 
 
-class MessageType(str, Enum):
+class MessageType(StrEnum):
     """
     Message types - SHARED ACROSS ECOSYSTEM
 
@@ -60,7 +60,7 @@ class MessageType(str, Enum):
     UPDATE = "update"
 
 
-class MessageStatus(str, Enum):
+class MessageStatus(StrEnum):
     """
     Message status - SHARED ACROSS ECOSYSTEM
     """
@@ -217,8 +217,8 @@ class RepositoryMessage(BaseModel):
 # =============================================================================
 
 # Session Buddy Example
-from messaging.types import MessageStatus, MessageType, Priority, ProjectMessage
-
+# (ProjectMessage, MessageStatus, MessageType, Priority are already defined
+# above in this module — example usage accesses them directly.)
 project_message = ProjectMessage(
     id="msg-1234567890",
     from_project="session-buddy",
@@ -233,8 +233,8 @@ project_message = ProjectMessage(
 )
 
 # Mahavishnu Example
-from messaging.types import MessageStatus, MessageType, Priority, RepositoryMessage
-
+# (RepositoryMessage, MessageStatus, MessageType, Priority are already defined
+# above in this module — example usage accesses them directly.)
 repository_message = RepositoryMessage(
     id="msg-1234567891",
     from_repository="myapp-backend-api",

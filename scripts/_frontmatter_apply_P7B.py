@@ -82,7 +82,7 @@ def add_legacy_comment(text: str) -> str:
     lines = text.splitlines(keepends=True)
     for i, line in enumerate(lines):
         stripped = line.strip()
-        if stripped.startswith("**Status**") or stripped.startswith("**Status:"):
+        if stripped.startswith(("**Status**", "**Status:")):
             original = stripped.rstrip("\n")
             if "-- see YAML frontmatter" not in original:
                 lines[i] = original + "  <!-- legacy status — see YAML frontmatter -->\n"

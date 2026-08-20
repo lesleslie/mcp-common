@@ -86,6 +86,11 @@ fixable = [
 [tool.ruff.lint.mccabe]
 max-complexity = 15
 
+[tool.ruff.lint.per-file-ignores]
+# Demo/example code intentionally catches broad exceptions to be lenient
+# in user-facing demonstration flows.
+"examples/**/*.py" = ["BLE001"]
+
 [tool.pytest.ini_options]
 minversion = "8.0"
 addopts = [
