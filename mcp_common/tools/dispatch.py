@@ -125,12 +125,14 @@ async def _select_profile_groups(
     """Resolve the list of (callable | group-name) registrations for the active profile.
 
     FULL + ALL_TOOLS short-circuits to ``register_all_fn``; FULL with a list
-    returns that list; missing/empty registrations fall back to an empty list.
+    returns that list; missing or non-list registrations fall back to [].
     """
     if profile is ToolProfile.MINIMAL:
-        return registrations.get(ToolProfile.MINIMAL, [])
+        value = registrations.get(ToolProfile.MINIMAL)
+        return value if isinstance(value, list) else []
     if profile is ToolProfile.STANDARD:
-        return registrations.get(ToolProfile.STANDARD, [])
+        value = registrations.get(ToolProfile.STANDARD)
+        return value if isinstance(value, list) else []
     # ToolProfile.FULL
     full_value = registrations.get(ToolProfile.FULL)
     if full_value is ALL_TOOLS:
@@ -172,7 +174,7 @@ async def _apply_tool_profile_async(
         server, profile, registrations, register_all_fn
     )
 
-    for item in groups:  # ty: ignore[not-iterable]
+    for item in groups:
         if callable(item):
             await _maybe_await(item(server))  # ty: ignore[call-top-callable, invalid-argument-type]
         elif isinstance(item, str):
