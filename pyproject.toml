@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-common"
-version = "0.18.0"
+version = "0.19.0"
 description = "Oneiric-Native foundation library providing battle-tested patterns for MCP (Model Context Protocol) servers, with YAML configuration, Rich UI, and CLI lifecycle management"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -85,6 +85,11 @@ fixable = [
 
 [tool.ruff.lint.mccabe]
 max-complexity = 15
+
+[tool.ruff.lint.per-file-ignores]
+# Demo/example code intentionally catches broad exceptions to be lenient
+# in user-facing demonstration flows.
+"examples/**/*.py" = ["BLE001"]
 
 [tool.pytest.ini_options]
 minversion = "8.0"

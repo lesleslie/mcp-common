@@ -335,26 +335,19 @@ def _validate_role_status_pair(
     front: dict[str, Any], result: FileResult
 ) -> None:
     role = front.get("role")
-    if role == "superseded":
-        if "superseded_by" not in front:
-            result.add(
-                Issue(
-                    "ERROR",
-                    "superseded_by_required",
-                    "role: superseded requires a populated superseded_by field",
-                )
+    if role == "superseded" and (
+        "superseded_by" not in front or front.get("superseded_by") in (None, "", [])
+    ):
+        result.add(
+            Issue(
+                "ERROR",
+                "superseded_by_required",
+                "role: superseded requires a populated superseded_by field",
             )
-        elif front.get("superseded_by") in (None, "", []):
-            result.add(
-                Issue(
-                    "ERROR",
-                    "superseded_by_required",
-                    "role: superseded requires a populated superseded_by field",
-                )
-            )
+        )
 
 
-def validate_file(
+def validate_file(  # noqa: C901 - validator dispatches by file kind (plan/markdown frontmatter/role/blocks); each branch is a small inline call. Splitting would add a layer of indirection without removing the branches.
     path: Path,
     rel: str,
     *,
@@ -449,31 +442,29 @@ def validate_file(
             _validate_superseded_by(
                 front.get("superseded_by"), repo_root, known_files, result
             )
-        elif "superseded_by" in front and not validate_links:
-            if skip_link_note:
-                result.add(
-                    Issue(
-                        "NOTE",
-                        "link_validation_skipped",
-                        "superseded_by present; --validate-links disabled, skipping "
-                        "resolution check",
-                    )
+        elif "superseded_by" in front and not validate_links and skip_link_note:
+            result.add(
+                Issue(
+                    "NOTE",
+                    "link_validation_skipped",
+                    "superseded_by present; --validate-links disabled, skipping "
+                    "resolution check",
                 )
+            )
 
         if "blocks_on" in front and validate_links:
             _validate_blocks_on(
                 front.get("blocks_on"), repo_root, known_files, result
             )
-        elif "blocks_on" in front and not validate_links:
-            if skip_link_note:
-                result.add(
-                    Issue(
-                        "NOTE",
-                        "link_validation_skipped",
-                        "blocks_on present; --validate-links disabled, skipping "
-                        "resolution check",
-                    )
+        elif "blocks_on" in front and not validate_links and skip_link_note:
+            result.add(
+                Issue(
+                    "NOTE",
+                    "link_validation_skipped",
+                    "blocks_on present; --validate-links disabled, skipping "
+                    "resolution check",
                 )
+            )
 
     _validate_role_status_pair(front, result)
 
@@ -527,10 +518,7 @@ def discover_files(
     seen: set[Path] = set()
     out: list[tuple[Path, str]] = []
 
-    candidates: list[Path] = []
-    for store in stores:
-        candidates.append(store)
-    candidates.extend(extra_paths)
+    candidates: list[Path] = [*stores, *extra_paths]
 
     for root in candidates:
         if root.is_file():

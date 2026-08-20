@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import os
 import re
 import sys
 import tempfile
@@ -327,17 +328,12 @@ Last regenerated: {generated_at}.
 
 def _entry_link(rel: str, store: str) -> str:
     """POSIX link to the file from the index's home at docs/plans/.
-    Files outside docs/plans/ need an explicit relative prefix."""
-    if rel.startswith("docs/plans/"):
-        depth = 1  # file lives in same directory as the index
-    elif rel.startswith("docs/"):
-        depth = 2  # up one (docs/), then down into the actual path
-    elif rel.startswith(".claude/"):
-        depth = 2  # up one to repo root, then into .claude/
-    else:
-        depth = 2
-    prefix = "../" * (depth - 1)
-    return f"[`{rel}`]({prefix}{rel})"
+
+    Computed via ``os.path.relpath`` so paths under shared parents
+    (``docs/adr/``, ``docs/superpowers/``, ``.claude/``) collapse correctly.
+    """
+    rel_path = os.path.relpath(rel, "docs/plans")
+    return f"[`{rel}`]({rel_path})"
 
 
 def _render_store_table(store: str, entries: list[Entry]) -> str:
@@ -457,7 +453,7 @@ def _render_index(entries_by_store: dict[str, list[Entry]], generated_at: str) -
     sections.append("")
     sections.append("# Plan Index")
     sections.append("")
-    sections.append(f"**Date:** 2026-07-16")
+    sections.append("**Date:** 2026-07-16")
     sections.append(f"**Last regenerated:** {generated_at}")
     sections.append(
         "**Purpose:** Navigation map for finding and reviewing active "
@@ -560,7 +556,7 @@ def main(argv: list[str] | None = None) -> int:
         entries_by_store[store] = store_entries
         total_with_frontmatter += len(store_entries)
 
-    generated_at = datetime.date.today().isoformat()
+    generated_at = datetime.datetime.now(tz=datetime.UTC).date().isoformat()
     rendered = _render_index(entries_by_store, generated_at=generated_at)
 
     if args.dry_run:
