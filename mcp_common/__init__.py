@@ -36,6 +36,13 @@ from importlib.metadata import version as _pkg_version
 
 from oneiric.adapters.http import HTTPClientAdapter, HTTPClientSettings
 
+from mcp_common.baseline_tools import (
+    BASELINE_TOOL_NAMES,
+    LivenessContext,
+    get_liveness_context,
+    register_baseline_tools,
+    seed_liveness_context,
+)
 from mcp_common.cli import MCPServerCLIFactory, MCPServerSettings, RuntimeHealthSnapshot
 from mcp_common.config import MCPBaseSettings, ValidationMixin
 from mcp_common.exceptions import (
@@ -75,6 +82,7 @@ except PackageNotFoundError:  # pragma: no cover - dev/source-checkout path
     __version__ = "0.0.0+unknown"
 
 __all__: list[str] = [
+    "BASELINE_TOOL_NAMES",
     "MANDATORY_TOOLS",
     "APIKeyFormatError",
     "APIKeyLengthError",
@@ -92,6 +100,7 @@ __all__: list[str] = [
     "HealthCheckResult",
     "HealthChecker",
     "HealthStatus",
+    "LivenessContext",
     "MCPBaseSettings",
     "MCPServerCLIFactory",
     "MCPServerError",
@@ -109,7 +118,10 @@ __all__: list[str] = [
     "WaitResult",
     "__version__",
     "ensure_dual_use",
+    "get_liveness_context",
+    "register_baseline_tools",
     "register_health_tools",
+    "seed_liveness_context",
     "trim_description",
     "validate_input",
     "validate_output",
