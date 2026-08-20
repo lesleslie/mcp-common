@@ -43,6 +43,7 @@ from mcp_common.baseline_tools import (
     register_baseline_tools,
     seed_liveness_context,
 )
+from mcp_common.bootstrap import bootstrap_baseline_tools
 from mcp_common.cli import MCPServerCLIFactory, MCPServerSettings, RuntimeHealthSnapshot
 from mcp_common.config import MCPBaseSettings, ValidationMixin
 from mcp_common.exceptions import (
