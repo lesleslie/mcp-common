@@ -77,8 +77,8 @@ from fastmcp.tools import Tool
 from mcp_common.health import (
     DependencyConfig,
     DependencyWaiter,
-    HealthCheckResult,
     HealthChecker,
+    HealthCheckResult,
     HealthStatus,
 )
 
@@ -219,11 +219,11 @@ async def _baseline_discover_tools(
     """
     try:
         registered_names = {t.name for t in await server.list_tools()}
-    except (RuntimeError, AttributeError, ValueError, TypeError) as e:
+    except (RuntimeError, AttributeError, ValueError, TypeError):
         logger.exception("discover_tools: server.list_tools failed")
         registered_names = set()
 
-    all_known = set(known_tool_names) if known_tool_names else set(registered_names)
+    all_known = set(known_tool_names) if known_tool_names else registered_names.copy()
 
     if query:
         q = query.lower()
@@ -244,7 +244,7 @@ async def _baseline_discover_tools(
         "total_known": len(all_known),
         "hint": (
             "Pass a `query` substring to filter tool names. "
-            "Set `capability=\"ready\"` to include the routable-worker "
+            'Set `capability="ready"` to include the routable-worker '
             "snapshot (only meaningful when this server manages workers)."
         ),
     }
@@ -349,8 +349,7 @@ async def _baseline_health_check_all(
                 results[name] = t.cast(HealthCheckResult, result).to_dict()
 
     all_ok = all(
-        r.get("status")
-        in (HealthStatus.HEALTHY.value, HealthStatus.DEGRADED.value)
+        r.get("status") in (HealthStatus.HEALTHY.value, HealthStatus.DEGRADED.value)
         for r in results.values()
     )
 
@@ -361,9 +360,7 @@ async def _baseline_health_check_all(
         "services": results,
         "total_services": len(results),
         "healthy_services": sum(
-            1
-            for r in results.values()
-            if r.get("status") == HealthStatus.HEALTHY.value
+            1 for r in results.values() if r.get("status") == HealthStatus.HEALTHY.value
         ),
         "timestamp": datetime.now(UTC).isoformat(),
     }
@@ -374,7 +371,7 @@ async def _baseline_health_check_all(
 # ---------------------------------------------------------------------------
 
 
-def register_baseline_tools(  # noqa: C901 - intentional multi-tool wiring
+def register_baseline_tools(
     server: FastMCP,
     *,
     service_name: str | None = None,

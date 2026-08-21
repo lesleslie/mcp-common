@@ -12,7 +12,9 @@ Platform: Cross-platform (Linux, macOS, Windows)
 Dependencies: prompt-toolkit>=3.0 (optional)
 """
 
-from typing import TYPE_CHECKING
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 from mcp_common.prompting.base import PromptBackend
 from mcp_common.prompting.exceptions import (
@@ -38,9 +40,9 @@ except ImportError:
     PROMPT_TOOLKIT_AVAILABLE = False
 
     # Create stubs for type checking
-    prompt = None  # type: ignore
-    confirm = None  # type: ignore
-    Style = None
+    prompt: Any = None
+    confirm: Any = None
+    Style: Any = None
 
 
 class PromptToolkitBackend(PromptBackend):
@@ -338,7 +340,7 @@ class PromptToolkitBackend(PromptBackend):
         title: str,
         allowed_types: list[str] | None = None,
         multiple: bool = False,
-    ) -> "list[Path] | None":
+    ) -> list[Path] | None:
         """Prompt for file path (terminal input)."""
         try:
             type_text = ""
@@ -384,7 +386,7 @@ class PromptToolkitBackend(PromptBackend):
     async def select_directory(
         self,
         title: str,
-    ) -> "Path | None":
+    ) -> Path | None:
         """Prompt for directory path (terminal input)."""
         try:
             prompt_text = f"{title}\nEnter directory path (or 'cancel'):"
