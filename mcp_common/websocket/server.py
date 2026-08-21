@@ -388,7 +388,14 @@ class WebSocketServer(ABC):
                             self.metrics.on_connection_error("auth_required")
                         return
 
-                except (OSError, ValueError, TypeError, KeyError, ConnectionError, RuntimeError) as e:
+                except (
+                    OSError,
+                    ValueError,
+                    TypeError,
+                    KeyError,
+                    ConnectionError,
+                    RuntimeError,
+                ) as e:
                     logger.error(f"Authentication error: {e}")
                     await websocket.close(1011, "Authentication error")
                     if self.metrics:
@@ -421,7 +428,13 @@ class WebSocketServer(ABC):
                             self.metrics.observe_latency(
                                 str(decoded.type), time.time() - start_time
                             )
-                    except (ValueError, TypeError, KeyError, UnicodeDecodeError, RuntimeError) as e:
+                    except (
+                        ValueError,
+                        TypeError,
+                        KeyError,
+                        UnicodeDecodeError,
+                        RuntimeError,
+                    ) as e:
                         logger.error(f"Error decoding message: {e}")
                         error_msg = WebSocketProtocol.create_error(
                             error_code="DECODE_ERROR", error_message=str(e)

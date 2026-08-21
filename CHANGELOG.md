@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.1] - 2026-08-21
+
+### Added
+
+- mcp-common: Bootstrap_baseline_tools helper for one-line standardization
+- mcp-common: Register_baseline_tools + 4 canonical baseline tools
+
+### Fixed
+
+- mcp-common: Add bootstrap_baseline_tools to __all__
+- mcp-common: Resolve 28 pre-existing test failures
+- mcp-common: Resolve ty + refurb errors in backends/toolkit and baseline_tools
+
+### Testing
+
+- mcp-common: Assert_baseline_surface + 5-server regression test
+
 ## [0.19.0] - 2026-08-20
 
 ### Fixed

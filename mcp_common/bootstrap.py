@@ -66,4 +66,4 @@ def bootstrap_baseline_tools(server: Any) -> list[str]:
     return list(BASELINE_TOOL_NAMES)
 
 
-__all__ = ["bootstrap_baseline_tools", "BASELINE_TOOL_NAMES"]
+__all__ = ["BASELINE_TOOL_NAMES", "bootstrap_baseline_tools"]

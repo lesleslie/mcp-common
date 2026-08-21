@@ -352,5 +352,12 @@ def get_metrics_summary(server_name: str) -> dict[str, Any]:
             "metrics_count": len(_runtime_registry.getCollectorNames()),
         }
         return summary
-    except (OSError, ValueError, KeyError, AttributeError, TypeError, RuntimeError) as e:
+    except (
+        OSError,
+        ValueError,
+        KeyError,
+        AttributeError,
+        TypeError,
+        RuntimeError,
+    ) as e:
         return {"available": True, "error": str(e)}
