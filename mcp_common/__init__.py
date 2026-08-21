@@ -118,6 +118,7 @@ __all__: list[str] = [
     "ValidationMixin",
     "WaitResult",
     "__version__",
+    "bootstrap_baseline_tools",
     "ensure_dual_use",
     "get_liveness_context",
     "register_baseline_tools",
