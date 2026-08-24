@@ -83,7 +83,7 @@ class PromptAdapterSettings(BaseSettings):
     )
 
     @classmethod
-    def from_settings(cls) -> "PromptAdapterSettings":
+    def from_settings(cls) -> PromptAdapterSettings:
         """Load from Oneiric settings with environment overrides.
 
         Loads configuration from:

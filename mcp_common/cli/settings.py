@@ -87,7 +87,7 @@ class MCPServerSettings(BaseModel):
         server_name: str,
         config_path: Path | None = None,
         env_prefix: str = "MCP_SERVER",
-    ) -> "MCPServerSettings":
+    ) -> MCPServerSettings:
         """Load settings with layered configuration.
 
         Priority (highest to lowest):

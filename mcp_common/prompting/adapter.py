@@ -138,7 +138,7 @@ class PromptAdapter:
         title: str,
         allowed_types: list[str] | None = None,
         multiple: bool = False,
-    ) -> "list[Path] | None":
+    ) -> list[Path] | None:
         """Display file selection dialog."""
         return await self._backend.select_file(
             title=title,
@@ -146,7 +146,7 @@ class PromptAdapter:
             multiple=multiple,
         )
 
-    async def select_directory(self, title: str) -> "Path | None":
+    async def select_directory(self, title: str) -> Path | None:
         """Display directory selection dialog."""
         return await self._backend.select_directory(title=title)
 

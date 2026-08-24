@@ -92,7 +92,7 @@ class MCPServerCLIFactory:
         _description: str = "MCP Server",
         _use_subcommands: bool = True,
         use_mcp_subcommand: bool = False,
-    ) -> "MCPServerCLIFactory":
+    ) -> MCPServerCLIFactory:
         """Create CLI factory for server-class pattern.
 
         Bridges the gap between oneiric.core.cli.MCPServerCLIFactory
@@ -527,7 +527,7 @@ class MCPServerCLIFactory:
 
         try:
             pid = int(pid_path.read_text().strip())
-        except (ValueError, OSError):
+        except ValueError, OSError:
             if json_output:
                 typer.echo(
                     json.dumps(
@@ -742,7 +742,7 @@ class MCPServerCLIFactory:
 
         try:
             return int(pid_path.read_text().strip())
-        except (ValueError, OSError):
+        except ValueError, OSError:
             self._emit_corrupted_pid(json_output)
 
         msg = "Unreachable: PID read should exit or return"

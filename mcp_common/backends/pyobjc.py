@@ -419,7 +419,7 @@ class PyObjCPromptBackend(PromptBackend):
         title: str,
         allowed_types: list[str] | None = None,
         multiple: bool = False,
-    ) -> "list[Path] | None":
+    ) -> list[Path] | None:
         """Display file selection dialog."""
         try:
             result = await asyncio.get_event_loop().run_in_executor(
@@ -440,7 +440,7 @@ class PyObjCPromptBackend(PromptBackend):
         title: str,
         allowed_types: list[str] | None,
         multiple: bool,
-    ) -> "list[Path] | None":
+    ) -> list[Path] | None:
         """Synchronous file selection."""
         panel = AppKit.NSOpenPanel.openPanel()
         panel.setTitle_(title)
@@ -463,7 +463,7 @@ class PyObjCPromptBackend(PromptBackend):
     async def select_directory(
         self,
         title: str,
-    ) -> "Path | None":
+    ) -> Path | None:
         """Display directory selection dialog."""
         try:
             return await asyncio.get_event_loop().run_in_executor(
@@ -476,7 +476,7 @@ class PyObjCPromptBackend(PromptBackend):
                 backend="pyobjc", dialog_type="directory selection", reason=str(e)
             ) from e
 
-    def _select_directory_sync(self, title: str) -> "Path | None":
+    def _select_directory_sync(self, title: str) -> Path | None:
         """Synchronous directory selection."""
         panel = AppKit.NSOpenPanel.openPanel()
         panel.setTitle_(title)

@@ -150,7 +150,7 @@ class PromptBackend(ABC):
         title: str,
         allowed_types: list[str] | None = None,
         multiple: bool = False,
-    ) -> "list[Path] | None":
+    ) -> list[Path] | None:
         """Display file selection dialog.
 
         Args:
@@ -170,7 +170,7 @@ class PromptBackend(ABC):
     async def select_directory(
         self,
         title: str,
-    ) -> "Path | None":
+    ) -> Path | None:
         """Display directory selection dialog.
 
         Args:
