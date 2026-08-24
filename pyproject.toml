@@ -26,7 +26,7 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: BSD License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
     "Typing :: Typed",
@@ -60,7 +60,7 @@ packages = [
 ]
 
 [tool.ruff]
-target-version = "py313"
+target-version = "py314"
 line-length = 88
 exclude = [
     "tests/",
@@ -169,7 +169,7 @@ exclude = [
     "dist",
 ]
 typeCheckingMode = "strict"
-pythonVersion = "3.13"
+pythonVersion = "3.14"
 
 [tool.bandit]
 target = [
@@ -218,7 +218,7 @@ exclude-deps = [
 [tool.refurb]
 enable_all = false
 quiet = true
-python_version = "3.13"
+python_version = "3.14"
 
 [tool.complexipy]
 default_pattern = "**/*.py"
