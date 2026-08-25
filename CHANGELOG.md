@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.5] - 2026-08-25
+
+### Fixed
+
+- mcp-common: Re-apply except-tuple modernization in 14 sites. The 0.20.2
+  bump (commit f8776ad) shipped changelog credits for the 11-site fix
+  (d30baf6) + the dotted-name fix (c19c127) but did NOT include the actual
+  code changes, reintroducing the Python 2 `except X, Y:` syntax that
+  refurb flags on every crackerjack comprehensive run. Sites re-fixed
+  (same list as 0.20.3): `baseline_tools.py:222`,
+  `tools/mermaid_validator/renderer.py:87`, `backends/toolkit.py:175, 260,
+  299`, `cli/security.py:120, 161, 177`, `cli/health.py:172, 198`,
+  `cli/factory.py:530, 745`, `parsing/tree_sitter/core.py:265`,
+  `code_graph/analyzer.py:246`.
+
 ## [0.20.4] - 2026-08-24
 
 ### Added
@@ -81,6 +96,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   changelog entries), reintroducing the Python 2 `except X, Y:` syntax
   that refurb flags. Sites re-fixed: `baseline_tools.py:222`,
   `tools/mermaid_validator/renderer.py:87`, `backends/toolkit.py:175, 260, 299`, `cli/security.py:120, 161, 177`, `cli/health.py:172, 198`,
+  `tools/mermaid_validator/renderer.py:87`, `backends/toolkit.py:175,
+  260, 299`, `cli/security.py:120, 161, 177`, `cli/health.py:172, 198`,
   `cli/factory.py:530, 745`, `parsing/tree_sitter/core.py:265`,
   `code_graph/analyzer.py:246`.
 
