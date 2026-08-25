@@ -44,6 +44,7 @@ contribution workflow below.
 | `worktree-management` | Worktree MCP dispatcher, isolation, planning. |
 | `persistence` | State persistence across checkpoints, session restarts, and subagent dispatch windows (covers git stash/rebase cycles, auto-checkpoint hooks, durable storage paths). |
 | `lifecycle` | Wiring lifecycle for components, plans, and followups — drafted/active/partial/shipped/complete transitions, completion reports, plan-to-followup handoffs. |
+| `decision-index` | Canonical index page for the .claude/decisions/ corpus itself (the meta-document that enumerates sibling decisions). |
 | `plugin-standardization` | Claude Code plugin manifest, marketplace layout, slash command namespace, plugin validation scaffold (introduced for Bodai plugin rollout 2026-07-16). |
 
 ## Contribution Workflow
