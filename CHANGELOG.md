@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.1] - 2026-08-24
+
+### Fixed
+
+- mcp-common: Replace 11 `except X, Y:` Python 2 comma-syntax sites with
+  `except (X, Y):` tuple form. refurb flags these; the legacy 2-arg form
+  binds the second identifier to a variable name in pre-3.x, but the
+  multi-arg form silently works as a tuple on Python 3.14 (with
+  confusing reader semantics). Sites fixed: `baseline_tools.py:222`,
+  `tools/mermaid_validator/renderer.py:87`, `backends/toolkit.py:175,260,
+  299`, `cli/health.py:172,198`, `cli/factory.py:530,745`,
+  `parsing/tree_sitter/core.py:265`, `code_graph/analyzer.py:246`.
+
 ## [0.20.0] - 2026-08-24
 
 ### Internal
