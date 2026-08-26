@@ -5,6 +5,76 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.0] - 2026-08-25
+
+### Added
+
+- Drop fastmcp<4 upper bound — enable v2 SDK track
+- mcp-common: Add apply_tool_profile() helper
+- mcp-common: Bootstrap_baseline_tools helper for one-line standardization
+- mcp-common: Mirror wave-11 mermaid CI guard from crackerjack
+- mcp-common: Register_baseline_tools + 4 canonical baseline tools
+- mcp-common: Register_http_health_route helper
+
+### Fixed
+
+- mcp-common: Add bootstrap_baseline_tools to __all__
+- mcp-common: Extend except-tuple fix to dotted-name exception sites
+- mcp-common: Modernize Python 2 except comma syntax in 11 sites
+- mcp-common: Narrow Style type for ty (pre-publish dependency)
+- mcp-common: Re-apply except-tuple modernization in 14 sites
+- mcp-common: Resolve 19 pre-publish ruff errors + untrack .pyscn/
+- mcp-common: Resolve 28 pre-existing test failures
+- mcp-common: Resolve ty + lychee errors (dispatch.py + plan index regenerator)
+- mcp-common: Resolve ty + refurb errors in backends/toolkit and baseline_tools
+- mcp-common: Split mandatory_tools into mandatory_groups + essential_tool_names
+- ratchet: Lower mcp-common floor to current measured coverage
+- ratchet: Mirror mcp-common pyproject.toml to current coverage
+- schemas: Add decision-index to topic vocabulary v1
+
+### Documentation
+
+- mcp-common: Apply plan-lifecycle-unification playbook (P7.B)
+- mcp-common: Archive PHASE1 summary + update SERVER_INTEGRATION for v0.17.9
+- mcp-common: Fix README version drift (0.6.0 -> 0.17.9)
+
+### Testing
+
+- mcp-common: Assert_baseline_surface + 5-server regression test
+
+### Build
+
+- Exclude local venvs from hatchling sdist target
+
+### Internal
+
+- Bump oneiric dep to >=0.16.0
+- Bump requires-python to >=3.14
+- Bump version to 0.17.10
+- Bump version to 0.17.3
+- Bump version to 0.17.4
+- Bump version to 0.17.5
+- Bump version to 0.17.6
+- Bump version to 0.17.7
+- Bump version to 0.17.8
+- Bump version to 0.17.9
+- Bump version to 0.18.0
+- Bump version to 0.19.0
+- Bump version to 0.19.1
+- Bump version to 0.20.0
+- Bump version to 0.20.2
+- Bump version to 0.20.4
+- Bump version to 0.20.6
+- gitignore: Add *.backup.* catch-all pattern
+- gitignore: Untrack .lycheecache + add *.backup.json rule
+- mcp-common: Bump tool-config pins from 3.13 to 3.14
+- mcp-common: Migrate [project.optional-dependencies] → [dependency-groups]
+- mcp-common: Remove 3 point-in-time completion reports from archive
+- mcp-common: Remove LICENSE (consolidated to root-level LICENSE)
+- mcp-common: Sync uv.lock to pyproject.toml (0.17.6)
+- mcp-common: Uv sync --upgrade --all-groups
+- Normalize LICENSE attribution to Robert Leslie and Wedgwood Web Works
+
 ## [0.21.0] - 2026-08-25
 
 ### Changed
