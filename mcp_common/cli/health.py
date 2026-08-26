@@ -169,7 +169,7 @@ def is_snapshot_fresh(snapshot: RuntimeHealthSnapshot, ttl_seconds: float) -> bo
 
     try:
         updated_at = datetime.fromisoformat(snapshot.updated_at)
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return False
 
     age = datetime.now(UTC) - updated_at
@@ -195,7 +195,7 @@ def get_snapshot_age_seconds(snapshot: RuntimeHealthSnapshot) -> float | None:
 
     try:
         updated_at = datetime.fromisoformat(snapshot.updated_at)
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return None
 
     return (datetime.now(UTC) - updated_at).total_seconds()
