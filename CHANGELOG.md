@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- mcp-common: Re-apply Python 2 except-comma modernization
+- mcp-common: Re-apply Python 2 except-comma modernization
+- mcp-common: Re-apply Python 2 except-comma modernization for 0.22.3
+
+## [0.22.3] - 2026-08-25
+
+### Fixed
+
 - mcp-common: Re-apply Python 2 except-comma modernization in 14 sites.
   The 0.22.1 release included these fixes (commit 6ed8c9d), but the
   subsequent 0.22.2 version-bump commit (bd8de0f) accidentally reverted
@@ -34,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Drop fastmcp<4 upper bound — enable v2 SDK track
+- Drop fastmcp\<4 upper bound — enable v2 SDK track
 - mcp-common: Add apply_tool_profile() helper
 - mcp-common: Bootstrap_baseline_tools helper for one-line standardization
 - mcp-common: Mirror wave-11 mermaid CI guard from crackerjack
