@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.1] - 2026-08-25
+
+### Fixed
+
+- mcp-common: Modernize Python 2 except-comma syntax in 14 sites
+  (baseline_tools, backends/toolkit, cli/{health,security,factory},
+  code_graph/analyzer, parsing/tree_sitter/core, tools/mermaid_validator).
+  These were missed by the 0.20.6 and 0.20.4 except-tuple modernization
+  passes and would cause `refurb` (with `python_version = "3.14"`) and
+  Python 3.14's stricter grammar to flag errors in any consumer's
+  installed copy.
+
 ## [0.22.0] - 2026-08-25
 
 ### Added
