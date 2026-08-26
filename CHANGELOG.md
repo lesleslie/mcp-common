@@ -19,6 +19,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.22.2] - 2026-08-25
 
+### Fixed
+
+- mcp-common: Re-apply Python 2 except-comma modernization in 14 sites.
+  The 0.22.1 release included these fixes (commit 6ed8c9d), but the
+  initial 0.22.2 version-bump commit (bd8de0f) accidentally reverted
+  baseline_tools.py and the other 8 files via a cherry-pick conflict.
+  The published 0.22.2 wheel shipped without the paren fix and refurb
+  flagged `except X, Y:` syntax in any consumer's installed copy. The
+  fix is restored here; the version-bump step itself happens in the
+  crackerjack publish stage.
+
+## [0.22.1] - 2026-08-25
+
 ### Added
 
 - Drop fastmcp<4 upper bound — enable v2 SDK track
