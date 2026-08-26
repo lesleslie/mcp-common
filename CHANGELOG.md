@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.0] - 2026-08-25
+
+### Changed
+
+- mcp-common: Drop `fastmcp<4` upper bound to permit fastmcp 4.x and the
+  MCP SDK v2 line. The re-export surface in `mcp_common.fastmcp` (FastMCP,
+  Context, Middleware, MiddlewareContext, RateLimitingMiddleware) and the
+  `fastmcp.tools.Tool` API used by `baseline_tools` and `dispatch` are
+  source-compatible with fastmcp 4.0.0b3. Consumers on the v2 track
+  (crackerjack ≥0.55, future mcp SDK v2 releases) can now upgrade without
+  a mcp-common upper-bound conflict.
+
+### Notes
+
+- This is a minor bump because downstream resolvers may now pick fastmcp
+  4.x and the MCP SDK v2 line, which carries SDK-level breaking changes
+  independent of mcp-common itself. Test with `crackerjack run` before
+  shipping.
+
 ## [0.20.6] - 2026-08-25
 
 ### Added

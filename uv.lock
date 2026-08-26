@@ -720,7 +720,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.75.8"
+version = "0.75.9"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -786,9 +786,9 @@ dependencies = [
     { name = "websockets" },
     { name = "zuban" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6a/23/ea32cbc2d6c9202414ec28039dee6f4fd83a4c8f1f09568eb9af22e4869b/crackerjack-0.75.8.tar.gz", hash = "sha256:30ec7171343f60ebfb7cfd13e5ab478ceb1b9e73ab4317ccfcf3fe04a4839bfe", size = 4479527, upload-time = "2026-08-25T07:08:22.176Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a2/4e/932fec1e0c41f3586ee80c5cb6458f271356bc51fb8d6b114cdc7bfc5ec6/crackerjack-0.75.9.tar.gz", hash = "sha256:4e26e462caaa58b56fbb82e0c01674a1550005bd2381b0a68e96a5f43037600c", size = 4479502, upload-time = "2026-08-26T01:08:41.251Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/48/cf/6a068a7903227f30008c6646ab76c5476dfac3ec4e3ed595bddb846b32df/crackerjack-0.75.8-py3-none-any.whl", hash = "sha256:b355e1bef24761c504e6698928b4865730fc907beeba6d343c1509d4d3019f65", size = 1371537, upload-time = "2026-08-25T07:08:19.341Z" },
+    { url = "https://files.pythonhosted.org/packages/53/e4/0a91d74c78cc777c4c0d20ca1ac7d911f7061dc90c903c2220f9774ffabe/crackerjack-0.75.9-py3-none-any.whl", hash = "sha256:81b259d4e9f7662eacc095a800fb02838259df0cdf79541f2809773e50df6aff", size = 1371536, upload-time = "2026-08-26T01:08:37.244Z" },
 ]
 
 [[package]]
@@ -2140,7 +2140,7 @@ wheels = [
 
 [[package]]
 name = "mcp-common"
-version = "0.20.5"
+version = "0.21.0"
 source = { editable = "." }
 dependencies = [
     { name = "cryptography" },
@@ -2181,7 +2181,7 @@ treesitter = [
 [package.metadata]
 requires-dist = [
     { name = "cryptography", specifier = ">=48.0.0" },
-    { name = "fastmcp", specifier = ">=3.4.0,<4" },
+    { name = "fastmcp", specifier = ">=3.4.0" },
     { name = "oneiric", specifier = ">=0.16.0" },
     { name = "psutil", specifier = ">=7.2.2" },
     { name = "pydantic", specifier = ">=2.13.4" },
