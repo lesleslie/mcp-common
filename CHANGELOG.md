@@ -5,27 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.23.0] - 2026-08-29
+## [0.24.0] - 2026-08-29
 
 ### Added
 
-- mcp-common: Register version + doctor on MCPServerCLIFactory
-
-### Documentation
-
-- readme: Bump Python badge from 3.13+ to 3.14+
-
-## [0.22.5] - 2026-08-26
+- mcp-common: Add MCPServerCLIFactory.register_lifecycle_handlers (Plan Task 3.2.6)
 
 ### Fixed
 
-- mcp-common: Modernise `except ValueError, OSError:` to `except (ValueError, OSError):`
-  in `mcp_common/cli/factory.py` at lines 530 and 745 (Plan 2026-08-25 Task 0.5).
-  The legacy Python 2 comma-form was a SyntaxError under Python 3 and would have
-  silently broken `register_lifecycle_handlers` in Phase 4.2.
-- mcp-common: Add `tests/unit/test_factory_syntax.py` regression suite (7 tests)
-  that imports `mcp_common.cli.factory` and scans the source with `ast` to
-  prevent reintroduction of Python 2 except syntax.
+- mcp-common: Correct Python 2 'except' syntax in factory.py
+- mcp-common: Correct Python 2 except syntax in factory.py + add regression test
+
+### Internal
+
+- Bump version to 0.23.0
+
+## [0.23.1] - 2026-08-29
+
+### Added
+
+- **feat: add `version` and `doctor` commands to `MCPServerCLIFactory`.** Every Bodai MCP server built on this factory gains `version` and `doctor` at the root level (or under the `mcp` subcommand if `use_mcp_subcommand=True`) with no call-site changes. `version` reads from `importlib.metadata.version(server_name)`. `doctor` runs env-setup checks (settings loaded, cache_root writable) and emits JSON or text based on `--json`.
+
+### Notes
+
+- **0.23.0 was a broken release** — published earlier on 2026-08-29 but the bump commit inadvertently reverted the Task 7 factory additions by sweeping a stale working-tree `factory.py` into the version-bump commit. 0.23.1 restores those additions. Consumers on `mcp-common>=0.23` should pin `>=0.23.1` to skip the bad 0.23.0.
+
+## [Unreleased]
+
+### Added
+
+- **feat: add `version` and `doctor` commands to `MCPServerCLIFactory`.** Every Bodai MCP server built on this factory gains `version` and `doctor` at the root level (or under the `mcp` subcommand if `use_mcp_subcommand=True`) with no call-site changes. `version` reads from `importlib.metadata.version(server_name)`. `doctor` runs env-setup checks (settings loaded, cache_root writable) and emits JSON or text based on `--json`.
 
 ## [0.22.4] - 2026-08-26
 

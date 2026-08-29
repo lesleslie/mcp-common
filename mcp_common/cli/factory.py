@@ -316,6 +316,8 @@ class MCPServerCLIFactory:
             mcp_app.command("restart")(self._cmd_restart)
             mcp_app.command("status")(self._cmd_status)
             mcp_app.command("health")(self._cmd_health)
+            mcp_app.command("version")(self._cmd_version)
+            mcp_app.command("doctor")(self._cmd_doctor)
         else:
             # Register commands at root level (default behavior)
             app.command("start")(self._cmd_start)
@@ -323,44 +325,11 @@ class MCPServerCLIFactory:
             app.command("restart")(self._cmd_restart)
             app.command("status")(self._cmd_status)
             app.command("health")(self._cmd_health)
+            app.command("version")(self._cmd_version)
+            app.command("doctor")(self._cmd_doctor)
 
         self._app = app
         return app
-
-    def create_handlers(self) -> dict[str, Callable]:
-        """Return the five lifecycle handlers keyed by command name.
-
-        Useful for callers that want to mount the standard lifecycle
-        verbs on their own typer.Typer (e.g., a OneiricCLIBase subclass
-        that subclasses typer.Typer directly and wants start/stop/restart/
-        status/health alongside its other commands). Pair with
-        :meth:`register_lifecycle_handlers`.
-
-        Returns:
-            Mapping of command name (``start``, ``stop``, ``restart``,
-            ``status``, ``health``) to the underlying bound method.
-        """
-        return {
-            "start": self._cmd_start,
-            "stop": self._cmd_stop,
-            "restart": self._cmd_restart,
-            "status": self._cmd_status,
-            "health": self._cmd_health,
-        }
-
-    def register_lifecycle_handlers(self, app: typer.Typer) -> None:
-        """Mount the five lifecycle commands on an externally-provided app.
-
-        Use this when you've built your own typer.Typer (for example, a
-        OneiricCLIBase subclass) and want to compose the lifecycle verbs
-        into it without going through :meth:`create_app`.
-
-        Args:
-            app: The typer.Typer to receive the commands. Mutated in
-                place.
-        """
-        for name, handler in self.create_handlers().items():
-            app.command(name=name)(handler)
 
     def _handle_stale_pid(
         self, pid_path: Path, force: bool = False
@@ -433,6 +402,59 @@ class MCPServerCLIFactory:
         self._register_signal_handlers(json_output)
         self._execute_start_handler(json_output)
         sys.exit(ExitCode.SUCCESS)
+
+    def _cmd_version(self) -> None:
+        """Version command body — used by both root and mcp-subcommand registrations.
+
+        Note: import is local to the function body so monkeypatch.setattr on
+        ``importlib.metadata.version`` continues to work in tests.
+        """
+        from importlib.metadata import PackageNotFoundError
+        from importlib.metadata import version as metadata_version
+
+        try:
+            ver = metadata_version(self.server_name)
+        except PackageNotFoundError:
+            ver = "(not installed)"
+        typer.echo(f"{self.server_name}: {ver}")
+        raise typer.Exit(code=ExitCode.SUCCESS)
+
+    def _cmd_doctor(
+        self,
+        ctx: typer.Context,
+        json_output: bool = typer.Option(
+            False, "--json", help="Output JSON instead of text"
+        ),
+    ) -> None:
+        """Doctor command body — used by both root and mcp-subcommand registrations.
+
+        Note: ``json_output`` is a local Typer option (matching the pattern
+        used by ``_cmd_start``, ``_cmd_stop``, etc.), NOT read from ``ctx.obj``.
+        The factory does NOT register a global ``--json`` callback; only
+        ``OneiricCLIBase`` does. Reading from ``ctx.obj`` would silently
+        always return False here.
+        """
+        checks: dict[str, dict[str, str]] = {}
+        checks["settings"] = {
+            "status": "ok" if self.settings else "error",
+            "detail": f"server_name={self.server_name}",
+        }
+        try:
+            cache_root = self.settings.cache_root
+            if not cache_root.exists():
+                cache_root.mkdir(parents=True, exist_ok=True)
+            checks["cache_writable"] = {
+                "status": "ok",
+                "detail": str(cache_root),
+            }
+        except OSError as exc:
+            checks["cache_writable"] = {"status": "error", "detail": str(exc)}
+        if json_output:
+            typer.echo(json.dumps({"checks": checks}, indent=2, default=str))
+        else:
+            for name, info in checks.items():
+                typer.echo(f"{name}: {info['status']} - {info['detail']}")
+        raise typer.Exit(code=ExitCode.SUCCESS)
 
     def _validate_cache_and_check_process(self, force: bool, json_output: bool) -> None:
         """Validate cache ownership and check for existing process."""
@@ -562,7 +584,7 @@ class MCPServerCLIFactory:
 
         try:
             pid = int(pid_path.read_text().strip())
-        except (ValueError, OSError):
+        except ValueError, OSError:
             if json_output:
                 typer.echo(
                     json.dumps(
@@ -777,7 +799,7 @@ class MCPServerCLIFactory:
 
         try:
             return int(pid_path.read_text().strip())
-        except (ValueError, OSError):
+        except ValueError, OSError:
             self._emit_corrupted_pid(json_output)
 
         msg = "Unreachable: PID read should exit or return"
