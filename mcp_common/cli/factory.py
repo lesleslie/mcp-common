@@ -327,6 +327,41 @@ class MCPServerCLIFactory:
         self._app = app
         return app
 
+    def create_handlers(self) -> dict[str, Callable]:
+        """Return the five lifecycle handlers keyed by command name.
+
+        Useful for callers that want to mount the standard lifecycle
+        verbs on their own typer.Typer (e.g., a OneiricCLIBase subclass
+        that subclasses typer.Typer directly and wants start/stop/restart/
+        status/health alongside its other commands). Pair with
+        :meth:`register_lifecycle_handlers`.
+
+        Returns:
+            Mapping of command name (``start``, ``stop``, ``restart``,
+            ``status``, ``health``) to the underlying bound method.
+        """
+        return {
+            "start": self._cmd_start,
+            "stop": self._cmd_stop,
+            "restart": self._cmd_restart,
+            "status": self._cmd_status,
+            "health": self._cmd_health,
+        }
+
+    def register_lifecycle_handlers(self, app: typer.Typer) -> None:
+        """Mount the five lifecycle commands on an externally-provided app.
+
+        Use this when you've built your own typer.Typer (for example, a
+        OneiricCLIBase subclass) and want to compose the lifecycle verbs
+        into it without going through :meth:`create_app`.
+
+        Args:
+            app: The typer.Typer to receive the commands. Mutated in
+                place.
+        """
+        for name, handler in self.create_handlers().items():
+            app.command(name=name)(handler)
+
     def _handle_stale_pid(
         self, pid_path: Path, force: bool = False
     ) -> tuple[bool, str]:
