@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **feat: add `version` and `doctor` commands to `MCPServerCLIFactory`.** Every Bodai MCP server built on this factory gains `version` and `doctor` at the root level (or under the `mcp` subcommand if `use_mcp_subcommand=True`) with no call-site changes. `version` reads from `importlib.metadata.version(server_name)`. `doctor` runs env-setup checks (settings loaded, cache_root writable) and emits JSON or text based on `--json`.
+
 ## [0.22.4] - 2026-08-26
 
 ### Fixed
