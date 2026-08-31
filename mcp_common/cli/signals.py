@@ -5,8 +5,8 @@ for configuration reload.
 """
 
 import contextlib
+import os
 import signal
-import sys
 from collections.abc import Callable
 from typing import Any
 
@@ -56,6 +56,22 @@ class SignalHandler:
         Only calls on_shutdown once - subsequent signals are ignored to
         prevent double-shutdown issues.
 
+        Uses ``os._exit`` (not ``sys.exit``) to terminate the process
+        immediately after the shutdown callback returns. ``sys.exit``
+        raises ``SystemExit``, which propagates through the asyncio event
+        loop and interrupts ``finally`` blocks / context-manager ``__exit__``
+        methods that are themselves running as part of the shutdown chain
+        (e.g. FastMCP / uvicorn lifespan teardown). When that happens,
+        Python prints a "During handling of the above exception, another
+        exception occurred" chain and the second exception can leave the
+        process in an inconsistent state (open file descriptors, stale PID
+        file, partial health snapshot). ``os._exit`` is a C-level syscall
+        that skips Python's exception machinery entirely, terminating the
+        process cleanly without unwinding further Python frames. The
+        shutdown callback (``on_shutdown``) has already done all the
+        work that matters (PID file removal, health snapshot update); no
+        further Python cleanup is needed.
+
         Args:
             _signum: Signal number (SIGTERM or SIGINT, unused)
             _frame: Current stack frame (unused)
@@ -76,9 +92,9 @@ class SignalHandler:
             KeyError,
             IndexError,
         ):
-            sys.exit(1)
+            os._exit(1)
 
-        sys.exit(0)
+        os._exit(0)
 
     def _handle_reload(self, _signum: int, _frame: Any) -> None:
         """Handle SIGHUP for configuration reload.

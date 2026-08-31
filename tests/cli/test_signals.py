@@ -34,8 +34,21 @@ def test_register_sets_reload_handler(monkeypatch: pytest.MonkeyPatch) -> None:
     assert calls == [signal.SIGTERM, signal.SIGINT, signal.SIGHUP]
 
 
-def test_handle_shutdown_exits_after_callback() -> None:
+def test_handle_shutdown_exits_after_callback(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Successful shutdown callback triggers os._exit(0).
+
+    Uses os._exit (C-level syscall) instead of sys.exit (which raises
+    SystemExit) so that the signal handler does not interrupt the
+    asyncio event loop during uvicorn / FastMCP lifespan teardown.
+    """
     called: list[bool] = []
+    exit_codes: list[int] = []
+
+    def fake_exit(code: int) -> None:
+        exit_codes.append(code)
+        raise SystemExit(code)
+
+    monkeypatch.setattr("mcp_common.cli.signals.os._exit", fake_exit)
 
     def shutdown() -> None:
         called.append(True)
@@ -46,12 +59,25 @@ def test_handle_shutdown_exits_after_callback() -> None:
         handler._handle_shutdown(signal.SIGTERM, None)
 
     assert excinfo.value.code == 0
+    assert exit_codes == [0]
     assert called == [True]
 
+    # Second call must NOT re-run the shutdown callback or call _exit again.
     handler._handle_shutdown(signal.SIGTERM, None)
+    assert exit_codes == [0]
+    assert called == [True]
 
 
-def test_handle_shutdown_exits_on_error() -> None:
+def test_handle_shutdown_exits_on_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A shutdown-callback error triggers os._exit(1) without propagating."""
+    exit_codes: list[int] = []
+
+    def fake_exit(code: int) -> None:
+        exit_codes.append(code)
+        raise SystemExit(code)
+
+    monkeypatch.setattr("mcp_common.cli.signals.os._exit", fake_exit)
+
     def shutdown() -> None:
         msg = "boom"
         raise RuntimeError(msg)
@@ -62,6 +88,7 @@ def test_handle_shutdown_exits_on_error() -> None:
         handler._handle_shutdown(signal.SIGINT, None)
 
     assert excinfo.value.code == 1
+    assert exit_codes == [1]
 
 
 def test_handle_reload_suppresses_errors() -> None:
