@@ -33,9 +33,17 @@ from __future__ import annotations
 
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as _pkg_version
+from typing import Any
 
-from oneiric.adapters.http import HTTPClientAdapter, HTTPClientSettings
-
+# ``oneiric.adapters.http`` is loaded lazily (PEP 562 module ``__getattr__``
+# below). Importing it eagerly cost ~2 s of cold-start time because it
+# transitively pulled ``oneiric.runtime.dag`` + ``networkx``; the eager
+# ``HTTPClientAdapter``/``HTTPClientSettings`` re-exports here were a
+# one-line fix that was silently paying for 27 ms of networkx and any
+# downstream heavy modules (e.g. DuckDB native + worker threads when
+# the HTTP adapter path triggers a database adapter). The lazy proxy
+# preserves the public API (``from mcp_common import HTTPClientAdapter``)
+# without paying for it until something actually needs the adapter.
 from mcp_common.baseline_tools import (
     BASELINE_TOOL_NAMES,
     LivenessContext,
@@ -81,6 +89,31 @@ try:
     __version__ = _pkg_version("mcp-common")
 except PackageNotFoundError:  # pragma: no cover - dev/source-checkout path
     __version__ = "0.0.0+unknown"
+
+
+def __getattr__(name: str) -> Any:
+    """Lazy re-export of HTTP client adapter symbols (PEP 562).
+
+    Resolves ``HTTPClientAdapter`` / ``HTTPClientSettings`` from
+    ``oneiric.adapters.http`` on first attribute access and caches the
+    resolved value in module globals so subsequent internal references
+    find it without re-importing. Avoids the ~2 s cold-start cost of
+    pulling the http adapter chain (which transitively imports
+    ``oneiric.runtime.dag`` → ``networkx`` and any downstream heavy
+    modules such as DuckDB) just to re-export two classes that almost
+    no consumer of ``mcp_common`` actually uses.
+    """
+    if name in ("HTTPClientAdapter", "HTTPClientSettings"):
+        from oneiric.adapters.http import (
+            HTTPClientAdapter,
+            HTTPClientSettings,
+        )
+
+        globals()["HTTPClientAdapter"] = HTTPClientAdapter
+        globals()["HTTPClientSettings"] = HTTPClientSettings
+        return globals()[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__: list[str] = [
     "BASELINE_TOOL_NAMES",

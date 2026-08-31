@@ -139,37 +139,16 @@ class TestFactoryExceptSyntax:
             raise AssertionError(msg) from exc
 
 
-def test_factory_fix_anchors_530_and_745() -> None:
-    """Pin the specific lines that Task 0.5 modernised so future refactors
-    can't silently re-break the same logic elsewhere without an explicit
-    test update."""
-    factory_text = FACTORY_PATH.read_text(encoding="utf-8")
-    lines = factory_text.splitlines()
-
-    target_lines = {530, 745}
-    hits: dict[int, str] = {}
-    for lineno in target_lines:
-        if lineno > len(lines):
-            msg = (
-                f"factory.py has only {len(lines)} lines; expected a "
-                f"handler near line {lineno}"
-            )
-            raise AssertionError(msg)
-        stripped = lines[lineno - 1].strip()
-        if "except" not in stripped or "OSError" not in stripped:
-            msg = f"line {lineno} no longer catches OSError: {stripped!r}"
-            raise AssertionError(msg)
-        if "ValueError, OSError:" in stripped:
-            msg = (
-                f"line {lineno} reverted to Python 2 syntax: {stripped!r}"
-            )
-            raise AssertionError(msg)
-        if "(ValueError, OSError)" not in stripped:
-            msg = (
-                f"line {lineno} expected parenthesized tuple form, "
-                f"got: {stripped!r}"
-            )
-            raise AssertionError(msg)
-        hits[lineno] = stripped
-
-    assert hits.keys() == target_lines
+# Note: a previous ``test_factory_fix_anchors_530_and_745`` regression guard
+# pinned the specific lines modernised by Plan 2026-08-25 Task 0.5.  It has
+# been removed because:
+#
+# 1. The file grew past those line numbers; the pinned locations no longer
+#    contain ``except`` clauses at all (line 530 became a comment, line 745
+#    became a closing paren).
+# 2. New instances of the same Python 2 comma-form bug appeared at lines
+#    587 and 802, completely missing the pinned guard.
+# 3. The textual ``test_no_python2_comma_form_except`` and AST-based
+#    ``test_every_except_handler_uses_tuple_or_as`` tests above already
+#    cover the actual invariant ("no comma-form ``except`` anywhere in
+#    the file") with stronger guarantees and without line-number brittleness.

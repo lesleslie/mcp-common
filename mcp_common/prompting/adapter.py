@@ -4,6 +4,8 @@ This module provides a convenient wrapper class for users who prefer
 class-based instantiation over factory functions.
 """
 
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Literal, Self
 
 from mcp_common.prompting.factory import create_prompt_adapter
