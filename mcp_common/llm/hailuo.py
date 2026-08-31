@@ -8,15 +8,15 @@ import time
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    # ``httpx`` is provided by the optional ``llm`` extra and may be absent
+    # ``httpx2 as httpx`` is provided by the optional ``llm`` extra and may be absent
     # in some installs. Type checkers see the real module; runtime values
     # come from the try/except below.
-    import httpx
+    import httpx2 as httpx
 else:
     httpx: Any
 
     try:
-        import httpx  # type: ignore[import-not-found]
+        import httpx2 as httpx  # type: ignore[import-not-found]
     except ImportError:  # pragma: no cover - optional dependency
         httpx = None
 

@@ -403,7 +403,7 @@ class _HttpxFallback:
         timeout: int = 5,
     ) -> dict[str, t.Any]:
         """Execute HTTP request using httpx."""
-        import httpx
+        import httpx2 as httpx
 
         async with httpx.AsyncClient(timeout=timeout) as client:
             try:

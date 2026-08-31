@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 
 import pytest
-import httpx
+import httpx2 as httpx
 from oneiric.adapters.http import HTTPClientAdapter as OneiricHTTPClientAdapter
 from oneiric.adapters.http import HTTPClientSettings as OneiricHTTPClientSettings
 

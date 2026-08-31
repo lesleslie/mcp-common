@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import typing as t
 
-import httpx
+import httpx2 as httpx
 import pytest
 from fastmcp import FastMCP
 

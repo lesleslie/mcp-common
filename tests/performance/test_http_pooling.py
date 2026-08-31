@@ -7,7 +7,7 @@ NOTE: These tests require network access to httpbin.org. Skip with --skip-benchm
 """
 
 import pytest
-import httpx
+import httpx2 as httpx
 import asyncio
 from oneiric.adapters.http import HTTPClientAdapter, HTTPClientSettings
 

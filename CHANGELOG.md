@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- mcp-common: Use os._exit instead of sys.exit in signal handler
+- mcp-common: Use os.\_exit instead of sys.exit in signal handler
 
 ## [0.24.0] - 2026-08-29
 
