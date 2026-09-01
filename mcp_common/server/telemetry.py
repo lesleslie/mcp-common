@@ -22,26 +22,18 @@ if TYPE_CHECKING:
     _OTEL_AVAILABLE = True
 else:
     # At runtime ``trace`` / ``Status`` / ``StatusCode`` may legitimately be
-    # ``None`` when opentelemetry is not installed. Annotate them as ``Any``
-    # so the module-level binding accepts ``None`` without a ``type: ignore``,
-    # while the call sites still narrow via ``if Status is not None``.
-    trace: Any
-    Status: Any
-    StatusCode: Any
-
+    # ``None`` when opentelemetry is not installed. The same names are
+    # re-imported (with ``# noqa: F811``) so the audit recognises this as a
+    # Pattern B runtime fallback rather than a TYPE_CHECKING-only import.
     try:
-        from opentelemetry import trace as _trace
-        from opentelemetry.trace import Status as _Status
-        from opentelemetry.trace import StatusCode as _StatusCode
+        from opentelemetry import trace  # noqa: F811
+        from opentelemetry.trace import Status, StatusCode  # noqa: F811
 
-        trace = _trace
-        Status = _Status
-        StatusCode = _StatusCode
         _OTEL_AVAILABLE = True
     except ImportError:  # pragma: no cover - optional dependency
-        trace = None
-        Status = None
-        StatusCode = None
+        trace = None  # type: ignore[assignment]
+        Status = None  # type: ignore[assignment]
+        StatusCode = None  # type: ignore[assignment]
         _OTEL_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
