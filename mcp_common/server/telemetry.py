@@ -26,8 +26,8 @@ else:
     # re-imported (with ``# noqa: F811``) so the audit recognises this as a
     # Pattern B runtime fallback rather than a TYPE_CHECKING-only import.
     try:
-        from opentelemetry import trace  # noqa: F811
-        from opentelemetry.trace import Status, StatusCode  # noqa: F811
+        from opentelemetry import trace
+        from opentelemetry.trace import Status, StatusCode
 
         _OTEL_AVAILABLE = True
     except ImportError:  # pragma: no cover - optional dependency

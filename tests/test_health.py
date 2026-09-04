@@ -814,8 +814,8 @@ class TestHealthChecker:
 class TestHttpxFallback:
     """Test _HttpxFallback HTTP client.
 
-    Since _HttpxFallback.execute does `import httpx` at call time, we
-    temporarily swap sys.modules["httpx"] to inject our mock.  We do NOT
+    Since _HttpxFallback.execute does `import httpx2 as httpx` at call time, we
+    temporarily swap sys.modules["httpx2"] to inject our mock.  We do NOT
     reload the health module -- the import happens lazily inside execute().
     """
 
@@ -838,22 +838,22 @@ class TestHttpxFallback:
         mock_httpx.TimeoutException = type("TimeoutException", (Exception,), {})
 
         import sys
-        original = sys.modules.get("httpx")
-        # Remove cached import so that `import httpx` inside execute() picks up mock
+        original = sys.modules.get("httpx2")
+        # Remove cached import so that `import httpx2 as httpx` inside execute() picks up mock
         for key in list(sys.modules):
-            if key == "httpx" or key.startswith("httpx."):
+            if key == "httpx2" or key.startswith("httpx2."):
                 del sys.modules[key]
-        sys.modules["httpx"] = mock_httpx
+        sys.modules["httpx2"] = mock_httpx
         try:
             fallback = _HttpxFallback()
             result = await fallback.execute("http://localhost:8080/health", "GET", 5)
         finally:
             # Restore
             for key in list(sys.modules):
-                if key == "httpx" or key.startswith("httpx."):
+                if key == "httpx2" or key.startswith("httpx2."):
                     del sys.modules[key]
             if original is not None:
-                sys.modules["httpx"] = original
+                sys.modules["httpx2"] = original
 
         assert result["ok"] is True
         assert result["status_code"] == 200
@@ -874,20 +874,20 @@ class TestHttpxFallback:
         mock_httpx.TimeoutException = timeout_exc
 
         import sys
-        original = sys.modules.get("httpx")
+        original = sys.modules.get("httpx2")
         for key in list(sys.modules):
-            if key == "httpx" or key.startswith("httpx."):
+            if key == "httpx2" or key.startswith("httpx2."):
                 del sys.modules[key]
-        sys.modules["httpx"] = mock_httpx
+        sys.modules["httpx2"] = mock_httpx
         try:
             fallback = _HttpxFallback()
             result = await fallback.execute("http://localhost:8080/health", "GET", 5)
         finally:
             for key in list(sys.modules):
-                if key == "httpx" or key.startswith("httpx."):
+                if key == "httpx2" or key.startswith("httpx2."):
                     del sys.modules[key]
             if original is not None:
-                sys.modules["httpx"] = original
+                sys.modules["httpx2"] = original
 
         assert result["ok"] is False
         assert result["status_code"] is None
@@ -906,20 +906,20 @@ class TestHttpxFallback:
         mock_httpx.TimeoutException = type("TimeoutException", (Exception,), {})
 
         import sys
-        original = sys.modules.get("httpx")
+        original = sys.modules.get("httpx2")
         for key in list(sys.modules):
-            if key == "httpx" or key.startswith("httpx."):
+            if key == "httpx2" or key.startswith("httpx2."):
                 del sys.modules[key]
-        sys.modules["httpx"] = mock_httpx
+        sys.modules["httpx2"] = mock_httpx
         try:
             fallback = _HttpxFallback()
             result = await fallback.execute("http://localhost:8080/health", "GET", 5)
         finally:
             for key in list(sys.modules):
-                if key == "httpx" or key.startswith("httpx."):
+                if key == "httpx2" or key.startswith("httpx2."):
                     del sys.modules[key]
             if original is not None:
-                sys.modules["httpx"] = original
+                sys.modules["httpx2"] = original
 
         assert result["ok"] is False
         assert result["status_code"] is None
@@ -944,20 +944,20 @@ class TestHttpxFallback:
         mock_httpx.TimeoutException = type("TimeoutException", (Exception,), {})
 
         import sys
-        original = sys.modules.get("httpx")
+        original = sys.modules.get("httpx2")
         for key in list(sys.modules):
-            if key == "httpx" or key.startswith("httpx."):
+            if key == "httpx2" or key.startswith("httpx2."):
                 del sys.modules[key]
-        sys.modules["httpx"] = mock_httpx
+        sys.modules["httpx2"] = mock_httpx
         try:
             fallback = _HttpxFallback()
             result = await fallback.execute("http://localhost:8080/health", "GET", 5)
         finally:
             for key in list(sys.modules):
-                if key == "httpx" or key.startswith("httpx."):
+                if key == "httpx2" or key.startswith("httpx2."):
                     del sys.modules[key]
             if original is not None:
-                sys.modules["httpx"] = original
+                sys.modules["httpx2"] = original
 
         assert result["ok"] is True
         assert result["json"] is None
@@ -987,20 +987,20 @@ class TestHttpxFallback:
         mock_httpx.TimeoutException = type("TimeoutException", (Exception,), {})
 
         import sys
-        original = sys.modules.get("httpx")
+        original = sys.modules.get("httpx2")
         for key in list(sys.modules):
-            if key == "httpx" or key.startswith("httpx."):
+            if key == "httpx2" or key.startswith("httpx2."):
                 del sys.modules[key]
-        sys.modules["httpx"] = mock_httpx
+        sys.modules["httpx2"] = mock_httpx
         try:
             fallback = _HttpxFallback()
             await fallback.execute("http://localhost:8080/health", "GET", 15)
         finally:
             for key in list(sys.modules):
-                if key == "httpx" or key.startswith("httpx."):
+                if key == "httpx2" or key.startswith("httpx2."):
                     del sys.modules[key]
             if original is not None:
-                sys.modules["httpx"] = original
+                sys.modules["httpx2"] = original
 
         assert captured_kwargs["timeout"] == 15
 
