@@ -111,3 +111,14 @@ Coverage baseline adjustments require:
 1. A memo in `docs/audits/` documenting the rationale
 2. Update to both `.coverage-ratchet.json` and `pyproject.toml --cov-fail-under`
 3. Synchronized CLAUDE.md update (verified by `crackerjack check release-audit`)
+
+## Verification: killer demo (2026-09-05)
+
+The release-audit check (built in Task 5 of Phase 1, hooked into publish_manager.py in Task 6) was verified to catch the original mcp-common 0.24.0 broken release. By temporarily checking out `factory.py` and `CHANGELOG.md` from commit `3c90a53` (where `MCPServerCLIFactory.register_lifecycle_handlers` was silently removed despite CHANGELOG claiming it was added), the audit correctly produced:
+
+```
+[FAIL] CHANGELOG claims mcp_common.MCPServerCLIFactory.register_lifecycle_handlers was added but no definition found in source
+Result: FAIL (1 errors)
+```
+
+This demonstrates the check works as designed — would have caught the 0.24.0 broken release had it existed at the time.
