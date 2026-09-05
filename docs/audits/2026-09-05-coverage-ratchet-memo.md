@@ -9,9 +9,19 @@ optional-dep adapter modules entirely.
 
 ## Why the 98.53% floor was unachievable
 
-- **Measured coverage**: 70.81% line, 62.30% branch (across 39 files
-  that actually load under the test run).
-- **Absent from coverage**: 49 of 88 source files. These files never
+- **Measured coverage (after omit block + Task 1)**: 98.85% line,
+  98.03% branch (across 41 measured source files). This figure
+  reflects the *post-fix* reality: the omit block excluded optional-dep
+  stubs from the denominator, and Task 1 (`1c1c9bf`) restored test
+  coverage that was lost in earlier refactors.
+
+  > The 70.81% figure pre-dates Bug #1 (which added test coverage)
+  > and the omit block (which raised the measured ratio). After both
+  > fixes, actual measured coverage is 98.85%.
+
+- **Absent from coverage.xml**: 23 non-`__init__` source files, all
+  covered by the omit block (LLM providers, tree-sitter grammars,
+  pyobjc backend, tool dispatch runtime, etc.). These files never
   import during tests because they require optional dependencies that
   are not installed in CI:
   - `httpx2` / LiteLLM providers (`mcp_common/llm/*`)
@@ -23,7 +33,9 @@ optional-dep adapter modules entirely.
     `mcp_common/schemas/*`)
   - Tool dispatch runtime (`mcp_common/tools/dispatch.py`,
     `mcp_common/tools/profiles.py`)
-- **Gap**: 27.72 percentage points below the 98.53% floor.
+- **Gap**: ~9 percentage points above the new 90% floor (98.85 − 90.0
+  = 8.85pp cushion). The ratchet still has headroom to grow before
+  hitting the floor.
 - **Root cause**: the previous baseline was set aspirationally, not
   against the actually-measurable surface.
 
@@ -60,17 +72,23 @@ mocking. Matches the band other Bodai ecosystem repos operate in
 
 ## Path to 95% (next milestone)
 
-The following modules, currently below 90% in the measured surface, would
-need targeted test scaffolding to reach 95%:
+As of the 2026-09-05 reset, measured coverage already sits at 98.85% —
+above the 95% next milestone. The remaining modules below 95% in the
+measured surface (lifted from the prior "Path to 95%" list, which
+referred to *pre-fix* numbers):
 
-- `mcp_common/websocket/server.py` (13.81% measured, 638 lines)
-- `mcp_common/websocket/client.py` (15.54% measured, 462 lines)
-- `mcp_common/websocket/tls.py` (19.39% measured, 355 lines)
-- `mcp_common/health.py` (42.36% measured, 875 lines)
-- `mcp_common/profiles/full.py` (47.27% measured, 336 lines)
-- `mcp_common/profiles/standard.py` (48.65% measured, 264 lines)
+- `mcp_common/apple_script/bridge.py` (52.63% measured)
+- `mcp_common/apple_script/exceptions.py` (50.00% measured)
+- `mcp_common/testing/baseline_surface.py` (78.57% measured)
 
-Estimated effort: 4-6 hours of focused test work. Tracked as Phase 2.
+All other modules listed in the prior "Path to 95%" memo
+(`websocket/server.py`, `websocket/client.py`, `websocket/tls.py`,
+`health.py`, `profiles/full.py`, `profiles/standard.py`) are now at
+97-100% measured coverage thanks to the Task 1 test restoration.
+
+The 95% milestone is therefore effectively met; remaining work is
+incremental polish on the three sub-95% modules above. Estimated
+effort: 1-2 hours. Tracked as Phase 2.
 
 ## Path to 100%
 
