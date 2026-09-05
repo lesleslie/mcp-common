@@ -8,7 +8,7 @@ For a shorter, tool-neutral bootstrap document, start with `AGENTS.md`.
 
 **mcp-common** is a Oneiric-native foundation library for building production-grade MCP (Model Context Protocol) servers. It provides battle-tested patterns extracted from 9 production servers including crackerjack, session-buddy, and fastblocks.
 
-**Current Status:** v0.24.4 - **Oneiric-Native (Production Ready)**
+**Current Status:** v0.24.3 - **Oneiric-Native (Production Ready)**
 
 - ✅ Core package structure complete
 - ✅ MCPBaseSettings with YAML + environment variable support
@@ -492,7 +492,7 @@ uv run ruff format && uv run ruff check && uv run mypy mcp_common tests && uv ru
 
 ## Implemented Components
 
-Current components as of v0.24.4:
+Current components as of v0.24.3:
 
 - **CLI factory**: `MCPServerCLIFactory` with lifecycle management (`create_app`, `register_lifecycle_handlers`, `create_handlers`)
 - **Settings**: `MCPBaseSettings` with YAML + env var layered configuration
@@ -528,7 +528,7 @@ python weather_server.py
 
 ## Version and Release Information
 
-- **Current Version:** 0.24.4 (Oneiric-Native - production ready)
+- **Current Version:** 0.24.3 (Oneiric-Native - production ready)
 
 See CHANGELOG.md for the full version history.
 
