@@ -8,7 +8,7 @@ For a shorter, tool-neutral bootstrap document, start with `AGENTS.md`.
 
 **mcp-common** is a Oneiric-native foundation library for building production-grade MCP (Model Context Protocol) servers. It provides battle-tested patterns extracted from 9 production servers including crackerjack, session-buddy, and fastblocks.
 
-**Current Status:** v0.3.6 - **Oneiric-Native (Production Ready)**
+**Current Status:** v0.24.4 - **Oneiric-Native (Production Ready)**
 
 - ✅ Core package structure complete
 - ✅ MCPBaseSettings with YAML + environment variable support
@@ -18,7 +18,7 @@ For a shorter, tool-neutral bootstrap document, start with `AGENTS.md`.
 - ✅ Health check system (HTTP connectivity, component health)
 - ✅ Exception hierarchy (MCPServerError, validation errors)
 - ✅ ValidationMixin for Pydantic models
-- ✅ Comprehensive test suite with 90%+ coverage
+- ✅ Comprehensive test suite with **90% line, 80% branch** coverage (post optional-dep stub exclusion; see [coverage memo](docs/audits/2026-09-05-coverage-ratchet-memo.md))
 - ✅ Complete example server (`examples/weather_server.py`)
 - ✅ Oneiric CLI Factory with lifecycle management (NEW in v0.3.3)
 - ✅ CLI example server (`examples/cli_server.py`)
@@ -117,7 +117,7 @@ uv run pytest tests/test_performance_optimizations.py -v
 | Concurrency | 10 | Thread-safety and race condition tests |
 | Performance | 7 | Benchmark and optimization verification |
 | Unit/Integration | 578 | Traditional tests |
-| **Total** | **615** | 100% pass rate, 99%+ coverage |
+| **Total** | **2054** | 100% pass rate, 90%+ coverage |
 
 **Testing Best Practices:**
 
@@ -196,51 +196,37 @@ hatch run all            # All checks
 
 ## Package Structure
 
-```
-mcp_common/
-├── __init__.py              # Package registration, public API exports
-├── adapters/
-│   ├── __init__.py          # HTTPClientAdapter exports
-│   └── http/
-│       ├── __init__.py
-│       └── client.py        # ✅ HTTPClientAdapter (connection pooling)
-├── config/
-│   ├── __init__.py          # MCPBaseSettings, ValidationMixin exports
-│   ├── base.py              # ✅ MCPBaseSettings (YAML + env vars)
-│   └── validation_mixin.py  # ✅ ValidationMixin for Pydantic models
-├── middleware/               # [Removed] No centralized middleware in this lib
-├── security/
-│   ├── __init__.py          # Security utilities exports
-│   ├── api_keys.py          # ✅ APIKeyValidator (format validation)
-│   └── sanitization.py      # ✅ Sanitize user inputs, filter data
-├── ui/
-│   ├── __init__.py          # ServerPanels exports
-│   └── panels.py            # ✅ ServerPanels (Rich UI panels)
-├── exceptions.py            # ✅ Custom exception hierarchy
-├── health.py                # ✅ Health check models (HealthStatus, ComponentHealth)
-└── http_health.py           # ✅ HTTP health check functions
+Generated from `find mcp_common -maxdepth 2 -type d -o -name "*.py" | sort` on 2026-09-05:
 
-tests/
-├── conftest.py              # Shared pytest fixtures
-├── test_config.py           # MCPBaseSettings tests
-├── test_config_security.py  # Security integration tests
-├── test_config_validation_mixin.py  # ValidationMixin tests
-├── test_health.py           # Health check system tests
-├── test_http_client.py      # HTTPClientAdapter tests
-├── test_http_health.py      # HTTP health check tests
-├── test_security_api_keys.py  # API key validation tests
-├── test_security_sanitization.py  # Sanitization tests
-├── test_ui_panels.py        # ServerPanels tests
-├── test_version.py          # Version import tests
-└── performance/             # Performance benchmarks
-    └── test_http_pooling.py
+Key subpackages (full listing cross-referenced below):
 
-examples/
-├── README.md                # Example documentation
-├── settings/
-│   └── weather.yaml         # Example YAML configuration
-└── weather_server.py        # ✅ Complete working Weather MCP server
-```
+- `mcp_common/apple_script/` — AppleScript bridge + exceptions (macOS)
+- `mcp_common/auth/` — JWT auth (audit.py excluded from coverage)
+- `mcp_common/backends/` — pyobjc + toolkit backends (macOS)
+- `mcp_common/baseline_tools.py` — Baseline MCP tool surface (excluded from coverage)
+- `mcp_common/bootstrap.py` — Server bootstrap helpers
+- `mcp_common/cli/` — CLI factory + lifecycle handlers (incl. `register_lifecycle_handlers`)
+- `mcp_common/code_graph/` — Code graph analyzer
+- `mcp_common/config/` — Layered configuration (`MCPBaseSettings`, `ValidationMixin`)
+- `mcp_common/contracts.py` — Shared contracts (excluded from coverage)
+- `mcp_common/exceptions.py` — Exception hierarchy
+- `mcp_common/fastmcp/` — FastMCP runtime (excluded from coverage)
+- `mcp_common/health.py` — Health check models
+- `mcp_common/interfaces/` — Adapter interface protocols
+- `mcp_common/llm/` — LLM adapters (httpx2-based; excluded from coverage)
+- `mcp_common/parsing/tree_sitter/` — Tree-sitter parsers
+- `mcp_common/profiles/` — Tool profile gating (minimal / standard / full)
+- `mcp_common/prompting/` — Prompt adapters + factory + models
+- `mcp_common/schemas/` — Shared Pydantic schemas
+- `mcp_common/security/` — API key validation + sanitization
+- `mcp_common/server/` — Server base + runtime + telemetry + availability
+- `mcp_common/testing/` — Test baseline surface
+- `mcp_common/tools/` — MCP tools registry (dispatch.py, profiles.py excluded from coverage; mermaid_validator subtree for tree-sitter-backed validation)
+- `mcp_common/ui/` — Rich UI panels
+- `mcp_common/validation/` — Validators (excluded from coverage)
+- `mcp_common/websocket/` — WebSocket server + client + TLS + auth + metrics + protocol
+
+See `find mcp_common -maxdepth 2 -type d -o -name "*.py" | sort` for the full current listing.
 
 **Note:** This library uses standard Python logging - configure as needed for your server.
 
@@ -457,8 +443,8 @@ The test suite includes three advanced testing approaches:
 
 This project follows **strict quality standards** enforced by test suite and linting:
 
-- **Test Coverage:** 99%+ (up from 94% in v0.5.2)
-  - 615 total tests (up from 564 in v0.5.2)
+- **Test Coverage:** 90% line, 80% branch (up from unmeasurable in pre-omit era; ratchet floor matches other Bodai repos)
+  - 2054 total tests
   - Property-based testing with Hypothesis
   - Concurrency testing for thread-safety
   - Performance testing for optimization verification
@@ -499,75 +485,28 @@ uv run ruff format && uv run ruff check && uv run mypy mcp_common tests && uv ru
 1. **Not validating API keys** - Use `get_api_key()` or `get_api_key_secure()` for validation
 1. **Hardcoding paths** - Use Path expansion (`~` → home) via MCPBaseSettings
 1. **Creating new clients per request** - Use HTTPClientAdapter for connection pooling
-1. **Ignoring test coverage** - Must maintain 90%+ coverage (enforced by CI)
+1. **Ignoring test coverage** - Must maintain ≥90% line coverage (enforced by CI ratchet at `.coverage-ratchet.json`). Exceptions require an audit memo in `docs/audits/`.
 1. **Skipping type hints** - Strict MyPy requires full type coverage
 1. **Missing docstrings** - All public APIs need Google-style docstrings
 1. **Not using ServerPanels** - Use Rich UI for professional console output
 
-## Implemented Components (v0.3.6)
+## Implemented Components
 
-### ✅ Core Configuration (mcp_common/config/)
+Current components as of v0.24.4:
 
-- **MCPBaseSettings** - YAML + environment variable configuration
-  - Extends Pydantic `BaseModel`
-  - Automatic YAML loading from `settings/{name}.yaml` via `.load()`
-  - Environment variable overrides
-  - Path expansion (`~` → home directory)
-  - API key validation methods (`get_api_key()`, `get_api_key_secure()`, `get_masked_key()`)
-- **MCPServerSettings** - Extended settings with common MCP server fields
-- **ValidationMixin** - Reusable Pydantic validation logic
+- **CLI factory**: `MCPServerCLIFactory` with lifecycle management (`create_app`, `register_lifecycle_handlers`, `create_handlers`)
+- **Settings**: `MCPBaseSettings` with YAML + env var layered configuration
+- **HTTP client**: `HTTPClientAdapter` with connection pooling
+- **UI panels**: `ServerPanels` Rich UI
+- **Security**: API key validation, sanitization, prompt-injection guards
+- **Health**: HTTP connectivity + component health probes
+- **Exceptions**: `MCPServerError` hierarchy + validation errors
+- **Validation**: `ValidationMixin` for Pydantic models
+- **WebSocket**: Real-time server + client + TLS
+- **Profiles**: minimal / standard / full tool profiles
+- **Optional-dep adapters**: LLM, auth-audit, FastMCP, mermaid validator, tree-sitter, pyobjc (macOS)
 
-### ✅ HTTP Client Adapter (mcp_common/adapters/http/)
-
-- **HTTPClientAdapter** - Connection pooling with httpx
-  - 11x performance improvement vs per-request clients
-  - Automatic lifecycle management
-  - Configurable pool size, timeouts, retries
-  - Direct instantiation (no DI required)
-
-### ✅ Security Utilities (mcp_common/security/)
-
-- **APIKeyValidator** - Format validation for API keys
-  - Provider-specific patterns (OpenAI, Anthropic, Mailgun, etc.)
-  - Format validation with detailed error messages
-  - Key masking for safe logging
-- **Sanitization** - Input sanitization and data filtering
-  - HTML/SQL injection prevention
-  - Path traversal protection
-  - Data redaction for sensitive fields
-
-### ✅ Health Checks (mcp_common/health.py, mcp_common/http_health.py)
-
-- **HealthStatus** - Enum for component health states
-- **ComponentHealth** - Model for component health information
-- **HealthCheckResponse** - Comprehensive health check responses
-- **HTTP Health Functions** - Check HTTP connectivity and client health
-
-### ✅ Rich UI Panels (mcp_common/ui/panels.py)
-
-- **ServerPanels** - Professional console output with Rich
-  - `startup_success()` - Startup panel with features list
-  - `error()` - Error display with suggestions
-  - `status_table()` - Status tables with health indicators
-  - `notification()` - General notification panels
-
-### ✅ Exception Hierarchy (mcp_common/exceptions.py)
-
-- **MCPServerError** - Base exception for all MCP errors
-- **ServerConfigurationError** - Configuration validation errors
-- **ServerInitializationError** - Startup failures
-- **DependencyMissingError** - Missing required dependencies
-- **CredentialValidationError** - API key/credential errors
-- **APIKeyMissingError** - Missing API keys
-- **APIKeyFormatError** - Invalid API key format
-- **APIKeyLengthError** - API key length validation
-
-### 🚧 Rate Limiting
-
-- Not currently provided by this library
-- If using FastMCP, its built-in `RateLimitingMiddleware` can be enabled
-- For other frameworks, implement project-specific rate limiting
-- **Reference:** `crackerjack/mcp/rate_limiter.py` for token bucket implementation examples
+See CHANGELOG.md for the full version history.
 
 ## Working Example
 
@@ -589,21 +528,9 @@ python weather_server.py
 
 ## Version and Release Information
 
-- **Current Version:** 0.3.6 (Oneiric-Native - production ready)
-- **New in v0.3.6:**
-  - Oneiric-native implementation - pure Pydantic + Rich
-  - Direct library usage (no framework lock-in)
-  - Simplified adapter patterns
-  - Standard Python logging (no custom wrappers)
-- **New in v0.3.3:**
-  - Oneiric CLI Factory for server lifecycle management
-  - MCPServerSettings with YAML configuration
-  - RuntimeHealthSnapshot for health monitoring
-  - SignalHandler for graceful shutdown
-  - Security utilities (PID validation, cache ownership)
-  - Complete CLI example server
-  - Standard Python logging (not custom wrappers)
-  - Rate limiting not included (use FastMCP middleware or project-specific)
+- **Current Version:** 0.24.4 (Oneiric-Native - production ready)
+
+See CHANGELOG.md for the full version history.
 
 ## External Dependencies and Their Roles
 
@@ -695,7 +622,7 @@ python -m crackerjack -a patch
 1. **Security review**: Use security-auditor for final validation
 
 - **Use crackerjack-architect agent proactively** for all significant code changes
-- **Never reduce test coverage** - the ratchet system only allows improvements
+- **Never reduce test coverage** - the ratchet system only allows improvements, except via documented audit memo (see `docs/audits/2026-09-05-coverage-ratchet-memo.md` for the canonical example)
 - **Follow crackerjack patterns** - the tools will enforce quality automatically
 - **Leverage AI agent auto-fixing** - `python -m crackerjack --ai-agent -t` for autonomous quality fixes
 
