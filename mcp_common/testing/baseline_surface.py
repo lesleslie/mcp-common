@@ -25,7 +25,8 @@ Typical usage in a Bodai core repo test suite::
     @pytest.mark.requires_network
     async def test_session_buddy_baseline_surface() -> None:
         tools = await assert_baseline_surface("http://localhost:8678/mcp")
-        assert "ping" in set(tools)  # deprecated alias still present
+        if "ping" not in set(tools):
+            raise RuntimeError("ping alias missing from baseline tool surface")
 """
 
 from __future__ import annotations
