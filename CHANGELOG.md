@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.24.4] - 2026-09-05
+
+### Fixed
+
+- Restore `MCPServerCLIFactory.register_lifecycle_handlers` and
+  `MCPServerCLIFactory.create_handlers` accidentally removed in the
+  0.24.0 version bump. These are public API methods documented in
+  0.24.0 as added (Plan Task 3.2.6) and required for the planned
+  OneiricCLIBase composition flow.
+
 ## [0.24.3] - 2026-09-03
 
 ### Fixed
