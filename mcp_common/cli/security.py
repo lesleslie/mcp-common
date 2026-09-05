@@ -117,7 +117,7 @@ def is_process_alive(pid: int, server_name: str) -> bool:
         # Check for server signature in command line
         server_slug = server_name.replace("-", "_")
         result = server_slug in cmdline or server_name in cmdline
-    except psutil.NoSuchProcess, psutil.AccessDenied:
+    except (psutil.NoSuchProcess, psutil.AccessDenied):
         # Can't validate, assume dead
         result = False
 
@@ -158,7 +158,7 @@ def validate_pid_integrity(
                 False,
                 f"Process {pid} command line does not match server '{server_name}': {cmdline}",
             )
-    except psutil.AccessDenied, psutil.NoSuchProcess:
+    except (psutil.AccessDenied, psutil.NoSuchProcess):
         # Can't read cmdline, conservative: assume invalid
         return (False, f"Cannot validate process {pid} (access denied)")
 
@@ -174,7 +174,7 @@ def validate_pid_integrity(
                 False,
                 f"Process {pid} started after PID file created (possible impersonation)",
             )
-    except OSError, psutil.NoSuchProcess:
+    except (OSError, psutil.NoSuchProcess):
         # Can't validate timing, fail safe
         return (False, f"Cannot validate process {pid} timing")
 
