@@ -6,6 +6,7 @@ services can extend for real-time communication.
 
 from __future__ import annotations
 
+import inspect
 import logging
 import ssl
 import time
@@ -625,9 +626,7 @@ class WebSocketServer(ABC):
 
         for handler in self.event_handlers[event_type]:
             try:
-                import asyncio
-
-                if asyncio.iscoroutinefunction(handler):
+                if inspect.iscoroutinefunction(handler):
                     await handler(data)
                 else:
                     handler(data)

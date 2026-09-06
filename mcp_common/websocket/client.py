@@ -7,6 +7,7 @@ and TLS/WSS support for services connecting to ecosystem WebSocket servers.
 from __future__ import annotations
 
 import asyncio
+import inspect
 import logging
 import ssl
 import uuid
@@ -332,7 +333,7 @@ class WebSocketClient:
 
         for handler in self.event_handlers[event_type]:
             try:
-                if asyncio.iscoroutinefunction(handler):
+                if inspect.iscoroutinefunction(handler):
                     await handler(data)
                 else:
                     handler(data)
