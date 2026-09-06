@@ -172,7 +172,7 @@ class PromptToolkitBackend(PromptBackend):
                 # In tests, this will be mocked. In real usage, it waits for Enter.
                 try:
                     input("\nPress Enter to continue...")
-                except (EOFError, KeyboardInterrupt):
+                except EOFError, KeyboardInterrupt:
                     return DialogResult(
                         button_clicked="",
                         text_input="",
@@ -257,7 +257,7 @@ class PromptToolkitBackend(PromptBackend):
 
             return result
 
-        except (EOFError, KeyboardInterrupt):
+        except EOFError, KeyboardInterrupt:
             # User cancelled (Ctrl+D or Ctrl+C)
             return None
 
@@ -296,7 +296,7 @@ class PromptToolkitBackend(PromptBackend):
                         return selection
 
                     print(f"Invalid selection. Choose 1-{len(choices)}")
-                except (EOFError, KeyboardInterrupt):
+                except EOFError, KeyboardInterrupt:
                     return None
 
         except Exception:  # noqa: BLE001 — prompt-toolkit surface is broad

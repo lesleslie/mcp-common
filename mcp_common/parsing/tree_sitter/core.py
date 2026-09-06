@@ -262,7 +262,7 @@ class TreeSitterParser:
         if self._executor is None:
             try:
                 self._executor = ProcessPoolExecutor(max_workers=self._max_workers)
-            except (NotImplementedError, OSError, PermissionError):
+            except NotImplementedError, OSError, PermissionError:
                 # Some sandboxed or constrained environments cannot create process pools.
                 # Fall back to threads so parsing still works, albeit without process isolation.
                 self._executor = ThreadPoolExecutor(max_workers=self._max_workers)

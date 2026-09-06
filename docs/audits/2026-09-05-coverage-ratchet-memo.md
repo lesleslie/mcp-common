@@ -24,6 +24,7 @@ optional-dep adapter modules entirely.
   pyobjc backend, tool dispatch runtime, etc.). These files never
   import during tests because they require optional dependencies that
   are not installed in CI:
+
   - `httpx2` / LiteLLM providers (`mcp_common/llm/*`)
   - FastMCP runtime (`mcp_common/fastmcp/*`)
   - `prometheus_client` for metrics (`mcp_common/websocket/metrics.py`)
@@ -33,9 +34,11 @@ optional-dep adapter modules entirely.
     `mcp_common/schemas/*`)
   - Tool dispatch runtime (`mcp_common/tools/dispatch.py`,
     `mcp_common/tools/profiles.py`)
+
 - **Gap**: ~9 percentage points above the new 90% floor (98.85 − 90.0
   = 8.85pp cushion). The ratchet still has headroom to grow before
   hitting the floor.
+
 - **Root cause**: the previous baseline was set aspirationally, not
   against the actually-measurable surface.
 
@@ -93,9 +96,10 @@ effort: 1-2 hours. Tracked as Phase 2.
 ## Path to 100%
 
 Achieving 100% coverage requires either:
+
 1. **Mock all optional dependencies** — heavy ongoing maintenance burden
    as deps change; not recommended.
-2. **Remove the optional-dep adapter modules** — breaks any consumer
+1. **Remove the optional-dep adapter modules** — breaks any consumer
    who imports them. Explicit tradeoff.
 
 100% remains the documented target but is not on the near-term path.
@@ -108,9 +112,10 @@ assert the floor holds. Wire into pre-release checks (manual).
 ## Decision rule for future ratchet changes
 
 Coverage baseline adjustments require:
+
 1. A memo in `docs/audits/` documenting the rationale
-2. Update to both `.coverage-ratchet.json` and `pyproject.toml --cov-fail-under`
-3. Synchronized CLAUDE.md update (verified by `crackerjack check release-audit`)
+1. Update to both `.coverage-ratchet.json` and `pyproject.toml --cov-fail-under`
+1. Synchronized CLAUDE.md update (verified by `crackerjack check release-audit`)
 
 ## Verification: killer demo (2026-09-05)
 

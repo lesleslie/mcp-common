@@ -243,7 +243,7 @@ class CodeGraphAnalyzer:
         """Read file content, returning None if there's an error."""
         try:
             return file_path.read_text(encoding="utf-8")
-        except (OSError, UnicodeDecodeError):
+        except OSError, UnicodeDecodeError:
             return None
 
     async def _parse_ast(self, source: str, file_path: Path) -> ast.AST | None:

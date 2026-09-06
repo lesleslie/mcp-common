@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.24.4] - 2026-09-05
 
+### Changed
+
+- Parenthesize 3 dotted-name except tuples in cli/security.py
+
+### Fixed
+
+- mcp-common: Add mymodule/ symlink at fixtures root for release_audit
+- mcp-common: Add trailing newlines to release-audit fixtures
+- mcp-common: Replace production assert with explicit raise
+- mcp-common: Restore MCPServerCLIFactory.register_lifecycle_handlers
+- mcp-common: Unblock coverage gate (factory.py syntax + memo update)
+
+### Documentation
+
+- CLAUDE.md: Cross-reference MCP backend wiring discipline (Bodai-wide)
+- mcp-common: Record killer-demo verification of release-audit check
+- mcp-common: Refresh CLAUDE.md to match v0.24.4 reality
+- mcp-common: Remove duplicate [0.22.1] and [0.22.3] CHANGELOG entries
+- mcp-common: Sync CLAUDE.md version to current pyproject.toml
+
+### Testing
+
+- mcp-common: Add release-audit fixture suite for crackerjack check
+
+### Internal
+
+- mcp-common: Modernize Python 2 except-comma syntax (10 sites)
+- mcp-common: Reset coverage ratchet to 90% with audit memo
+
+## [0.24.4] - 2026-09-05
+
 ### Fixed
 
 - Restore `MCPServerCLIFactory.register_lifecycle_handlers` and
