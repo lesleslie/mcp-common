@@ -109,7 +109,7 @@ def validate_auth_config(auth_config: object) -> None:
             f"identity_providers keys: {sorted(identity_providers.keys())}"
         )
 
-    auth_secret = getattr(auth_config, "_secret", None)
+    auth_secret = getattr(auth_config, "resolved_secret", None)
     for name, spec in identity_providers.items():
         provider_type = getattr(spec, "type", "jwt")
         if provider_type == "jwt" and not auth_secret:

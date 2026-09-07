@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import pytest
 
+from mcp_common.auth.config import AuthConfig
 from mcp_common.auth.exceptions import AudienceMismatchError
 from mcp_common.auth.identity import (
     IdentityProviderSpec,
@@ -193,5 +194,22 @@ def test_validate_passes_for_correctly_configured_oauth():
             )
         },
         default_provider="anthropic",
+    )
+    validate_auth_config(cfg)  # no raise
+
+
+def test_validate_passes_for_real_auth_config_jwt():
+    """Regression: validate_auth_config reads ``resolved_secret`` on the real
+    AuthConfig (Pydantic v2), not a private ``_secret`` attribute. The earlier
+    bug returned ``None`` for the secret check, falsely rejecting a correctly
+    configured JWT deployment at startup.
+    """
+    cfg = AuthConfig(
+        service_name="mahavishnu",
+        secret="x" * 40,
+        enabled=True,
+        trusted_issuers=["mahavishnu"],
+        identity_providers={"jwt": IdentityProviderSpec(type="jwt")},
+        default_provider="jwt",
     )
     validate_auth_config(cfg)  # no raise
