@@ -11,7 +11,7 @@ import pytest
 
 from mcp_common.auth.config import AuthConfig
 from mcp_common.auth.context import _clear_principal, _current_principal
-from mcp_common.auth.exceptions import TokenInvalidError
+from mcp_common.auth.exceptions import TokenInvalidError, UnknownIssuerError
 from mcp_common.auth.middleware import BearerTokenMiddleware
 from mcp_common.auth.permissions import Permission
 from mcp_common.auth.principal import Principal
@@ -104,7 +104,11 @@ async def test_middleware_passes_through_when_no_authorization_header(patch_head
 
 @pytest.mark.asyncio
 async def test_middleware_extracts_bearer_token_and_verifies(patch_headers):
-    config = AuthConfig(enabled=True, service_name="test-service")
+    config = AuthConfig(
+        enabled=True,
+        service_name="test-service",
+        trusted_issuers=("test",),
+    )
     principal = Principal(
         issuer="test",
         subject="u",
@@ -128,7 +132,11 @@ async def test_middleware_extracts_bearer_token_and_verifies(patch_headers):
 
 @pytest.mark.asyncio
 async def test_middleware_clears_principal_after_call_next(patch_headers):
-    config = AuthConfig(enabled=True, service_name="test-service")
+    config = AuthConfig(
+        enabled=True,
+        service_name="test-service",
+        trusted_issuers=("test",),
+    )
     principal = Principal(
         issuer="test",
         subject="u",
@@ -201,7 +209,11 @@ async def test_middleware_bypasses_ping_keepalive(patch_headers):
 @pytest.mark.asyncio
 async def test_middleware_increments_verifications_counter_on_success(patch_headers):
     """B3 fix prep: verifications_total must increment on successful verify."""
-    config = AuthConfig(enabled=True, service_name="test-service")
+    config = AuthConfig(
+        enabled=True,
+        service_name="test-service",
+        trusted_issuers=("test",),
+    )
     principal = Principal(
         issuer="test",
         subject="u",
@@ -375,7 +387,11 @@ class _RecordingAuditLogger:
 async def test_middleware_calls_audit_logger_log_success_on_valid_token(patch_headers):
     """When wired with an audit logger that exposes log_success, the
     middleware invokes it with issuer / subject."""
-    config = AuthConfig(enabled=True, service_name="test-service")
+    config = AuthConfig(
+        enabled=True,
+        service_name="test-service",
+        trusted_issuers=("test-issuer",),
+    )
     principal = Principal(
         issuer="test-issuer",
         subject="test-subject",
@@ -460,7 +476,11 @@ class _MockFastMCPContext:
 async def test_middleware_seeds_principal_into_fmcp_context(patch_headers):
     """When the MiddlewareContext carries a fastmcp_context, the middleware
     also stashes Principal there for FastMCP-native consumers."""
-    config = AuthConfig(enabled=True, service_name="test-service")
+    config = AuthConfig(
+        enabled=True,
+        service_name="test-service",
+        trusted_issuers=("test",),
+    )
     principal = Principal(
         issuer="test",
         subject="u",
@@ -495,7 +515,11 @@ async def test_middleware_seeds_principal_into_fmcp_context(patch_headers):
 @pytest.mark.asyncio
 async def test_middleware_restores_prior_fmcp_state(patch_headers):
     """When fmcp_context has a prior principal, the middleware restores it."""
-    config = AuthConfig(enabled=True, service_name="test-service")
+    config = AuthConfig(
+        enabled=True,
+        service_name="test-service",
+        trusted_issuers=("incoming", "prior"),
+    )
     incoming_principal = Principal(
         issuer="incoming",
         subject="in",
@@ -533,7 +557,11 @@ async def test_middleware_restores_prior_fmcp_state(patch_headers):
 async def test_middleware_continues_when_fmcp_set_state_fails(patch_headers):
     """If fmcp_context.set_state raises, the middleware logs and continues
     via contextvars (the source of truth)."""
-    config = AuthConfig(enabled=True, service_name="test-service")
+    config = AuthConfig(
+        enabled=True,
+        service_name="test-service",
+        trusted_issuers=("test",),
+    )
     principal = Principal(
         issuer="test",
         subject="u",
@@ -596,3 +624,39 @@ def test_select_provider_raises_when_multiple_and_no_default():
     )
     with pytest.raises(RuntimeError, match="Multiple providers"):
         mw._select_provider("anything")
+
+
+@pytest.mark.asyncio
+async def test_middleware_rejects_principal_issuer_not_in_trusted_issuers(
+    patch_headers,
+):
+    """MINOR-2 carry-forward (Task 7): even when the provider accepts a token,
+    the middleware enforces ``auth_config.trusted_issuers`` as a
+    defense-in-depth check. If the principal's issuer is not in the
+    allow-list, the middleware raises UnknownIssuerError and never seeds
+    the Principal.
+    """
+    config = AuthConfig(
+        enabled=True,
+        service_name="test-service",
+        trusted_issuers=("legit-issuer",),
+    )
+    principal = Principal(
+        issuer="rogue-issuer",  # not in trusted_issuers
+        subject="u",
+        permissions=frozenset({Permission.READ}),
+        expires_at=datetime.now(UTC) + timedelta(hours=1),
+        raw_claims={},
+    )
+    provider = MockProvider(principal=principal)
+    mw = BearerTokenMiddleware(auth_config=config, providers={"mock": provider})
+
+    async def call_next(ctx):  # pragma: no cover - never reached
+        return "ok"
+
+    patch_headers({"authorization": "Bearer good.token"})
+    with pytest.raises(UnknownIssuerError, match="rogue-issuer"):
+        await mw.on_request(MockContext(), call_next)
+    # Errors counter incremented; verifications still zero.
+    assert mw.errors_total == 1
+    assert mw.verifications_total == 0

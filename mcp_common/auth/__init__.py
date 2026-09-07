@@ -14,8 +14,8 @@ from mcp_common.auth.core import (
 from mcp_common.auth.decorator import require_auth
 from mcp_common.auth.exceptions import (
     AudienceMismatchError,
-    AuthError,
     AuthenticationRequiredError,
+    AuthError,
     InsufficientPermissionError,
     SecretNotConfiguredError,
     TokenExpiredError,
@@ -23,10 +23,10 @@ from mcp_common.auth.exceptions import (
     UnknownIssuerError,
 )
 from mcp_common.auth.identity import (
-    KNOWN_SERVICES,
+    IdentityProviderSpec,
     ServiceIdentity,
+    validate_auth_config,
     verify_audience,
-    verify_issuer,
 )
 from mcp_common.auth.middleware import BearerTokenMiddleware
 from mcp_common.auth.permissions import (
@@ -39,7 +39,6 @@ from mcp_common.auth.provider import IdentityProvider, ProviderHealth, ProviderS
 
 __all__ = [
     "JWT_ALGORITHM",
-    "KNOWN_SERVICES",
     "ROLE_PERMISSIONS",
     "AudienceMismatchError",
     "AuditLogger",
@@ -50,6 +49,7 @@ __all__ = [
     "AuthenticationRequiredError",
     "BearerTokenMiddleware",
     "IdentityProvider",
+    "IdentityProviderSpec",
     "InsufficientPermissionError",
     "Permission",
     "Principal",
@@ -65,7 +65,7 @@ __all__ = [
     "create_service_token",
     "require_auth",
     "seed_principal",
+    "validate_auth_config",
     "verify_audience",
-    "verify_issuer",
     "verify_token",
 ]

@@ -45,15 +45,23 @@ def test_verify_rejects_wrong_audience():
         verify_token(token, secret=SECRET, expected_audience="akosha")
 
 
-def test_verify_rejects_unknown_issuer():
-    bad_token = pyjwt.encode(
-        {"sub": "x", "iss": "rogue-service", "aud": "dhara",
-         "exp": datetime.now(UTC) + timedelta(seconds=60), "iat": datetime.now(UTC),
-         "jti": "test-jti", "scopes": []},
-        SECRET, algorithm="HS256",
+def test_verify_rejects_unknown_issuer_via_provider():
+    """Task 7: the free ``verify_token`` no longer checks issuer (it just
+    decodes). The trusted-issuers allow-list check now lives in the
+    provider. Assert the provider raises on an untrusted issuer."""
+    provider = JWTIdentityProvider(
+        name="jwt",
+        secret=SECRET,
+        trusted_issuers=["mahavishnu"],
+    )
+    token = provider.issue_token(
+        issuer="rogue-service",
+        audience="dhara",
+        permissions=[Permission.READ],
+        subject="attacker",
     )
     with pytest.raises(UnknownIssuerError):
-        verify_token(bad_token, secret=SECRET, expected_audience="dhara")
+        _await_or_sync(provider.verify_token(token, expected_audience="dhara"))
 
 
 def test_verify_rejects_expired_token():

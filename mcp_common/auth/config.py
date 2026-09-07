@@ -2,8 +2,12 @@ from __future__ import annotations
 
 import logging
 import os
+from typing import TYPE_CHECKING
 
 from mcp_common.auth.exceptions import SecretNotConfiguredError
+
+if TYPE_CHECKING:
+    from mcp_common.auth.identity import IdentityProviderSpec
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +49,7 @@ class AuthConfig:
         enabled: bool | None = None,
         default_provider: str | None = None,
         trusted_issuers: tuple[str, ...] = (),
+        identity_providers: dict[str, IdentityProviderSpec] | None = None,
     ) -> None:
         self._service_name = service_name
         self._secret_env_var = secret_env_var
@@ -60,6 +65,12 @@ class AuthConfig:
             self._enabled = enabled
         self._default_provider = default_provider
         self._trusted_issuers: tuple[str, ...] = tuple(trusted_issuers)
+        # Task 7: optional identity_providers. When set, validate_auth_config
+        # (Task 7 startup helper) raises if any provider's spec is incomplete
+        # (e.g. an oauth provider missing client_id).
+        self._identity_providers: dict[str, IdentityProviderSpec] = (
+            dict(identity_providers) if identity_providers else {}
+        )
 
     def _load_secret(self) -> str | None:
         raw = os.environ.get(self._secret_env_var or "") or os.environ.get(
@@ -104,6 +115,16 @@ class AuthConfig:
     def trusted_issuers(self) -> tuple[str, ...]:
         """Allow-list of issuer identifiers; empty tuple means default-deny."""
         return self._trusted_issuers
+
+    @property
+    def identity_providers(self) -> dict[str, IdentityProviderSpec]:
+        """Mapping ``provider-name -> IdentityProviderSpec``.
+
+        Task 7: ``validate_auth_config`` walks this dict; sibling servers
+        pass the same dict to ``BearerTokenMiddleware(providers=...)``.
+        Empty dict + ``enabled=True`` fails startup validation.
+        """
+        return self._identity_providers
 
     @property
     def secret(self) -> str:

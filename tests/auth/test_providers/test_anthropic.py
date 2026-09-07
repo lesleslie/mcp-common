@@ -162,3 +162,41 @@ async def test_anthropic_provider_rejects_untrusted_issuer(respx_mock):
 
     with pytest.raises(UnknownIssuerError):
         await provider.verify_token(token, expected_audience=AUDIENCE)
+
+
+async def test_anthropic_unknown_issuer_rejected(provider, respx_mock):
+    """I-3 fix: Anthropic provider enforces trusted_issuers (B6 default-deny).
+
+    Even when the JWKS endpoint is reachable and the token would otherwise
+    parse, an ``iss`` outside the configured allow-list must be rejected.
+    We mock the JWKS-fetcher and ``jwt.decode`` so the rejection path is
+    exercised without needing a real RSA-signed token.
+    """
+    from unittest.mock import AsyncMock, patch
+
+    provider._trusted_issuers = ["https://api.anthropic.com"]  # not "evil-corp"
+
+    fake_payload = {
+        "iss": "evil-corp",
+        "sub": "x",
+        "exp": 9_999_999_999,
+        "iat": 1,
+        "aud": AUDIENCE,
+    }
+    # Bypass JWKS lookup entirely: any awaitable returning a sentinel key
+    # makes the provider move past the JWKS stage. ``jwt.decode`` is then
+    # mocked to return the untrusted-issuer payload — exactly the contract
+    # an attacker who somehow forged a key would see.
+    sentinel_key = object()
+    with (
+        patch.object(
+            provider._jwks_client,
+            "get_signing_key",
+            AsyncMock(return_value=sentinel_key),
+        ),
+        patch("jwt.decode", return_value=fake_payload),
+    ):
+        with pytest.raises(UnknownIssuerError):
+            await provider.verify_token(
+                "header.payload.sig", expected_audience=AUDIENCE
+            )

@@ -17,7 +17,6 @@ from mcp_common.auth.exceptions import (
     TokenInvalidError,
     UnknownIssuerError,
 )
-from mcp_common.auth.identity import verify_issuer
 from mcp_common.auth.permissions import Permission
 from mcp_common.auth.principal import Principal
 from mcp_common.auth.provider import IdentityProvider, ProviderHealth
@@ -102,8 +101,12 @@ def verify_token(
     except InvalidTokenError as exc:
         raise TokenInvalidError(str(exc)) from exc
 
+    # Task 7: the legacy ``verify_issuer()`` free function (which referenced
+    # the now-deleted KNOWN_SERVICES frozenset) was removed. The per-request
+    # trusted_issuers allow-list check now lives in JWTIdentityProvider.verify_token
+    # (default-deny B6). The free ``verify_token`` returns the decoded payload
+    # so callers that don't go through a provider can still introspect claims.
     issuer = raw.get("iss", "")
-    verify_issuer(issuer)
 
     scopes = raw.get("scopes", [])
     perms: frozenset[Permission] = frozenset()

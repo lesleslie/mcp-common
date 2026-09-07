@@ -64,7 +64,7 @@ from mcp_common.auth.context import (
     _current_principal,
     seed_principal,
 )
-from mcp_common.auth.exceptions import AuthError
+from mcp_common.auth.exceptions import AuthError, UnknownIssuerError
 from mcp_common.auth.provider import IdentityProvider
 
 # Module-attribute lookup at call time (not ``from X import Y`` at module
@@ -193,6 +193,7 @@ class BearerTokenMiddleware(Middleware):
                 )
             raise
         else:
+            self._enforce_trusted_issuers(principal.issuer)
             self._verifications_total += 1
             if self._audit_logger is not None and hasattr(
                 self._audit_logger, "log_success"
@@ -268,6 +269,33 @@ class BearerTokenMiddleware(Middleware):
             f"Multiple providers configured but no default_provider set; "
             f"cannot select one for token verification. Configured: "
             f"{list(self._providers.keys())}"
+        )
+
+    def _enforce_trusted_issuers(self, issuer: str) -> None:
+        """MINOR-2 carry-forward (Task 7): defense-in-depth per-request gate.
+
+        The provider may carry its own allow-list (set at construction), but
+        this service-level gate ensures ``AuthConfig.trusted_issuers`` is the
+        final authority. Without it, the Task 6 middleware would accept any
+        signature-valid token regardless of which issuers the operator
+        configured for THIS service.
+
+        B6 default-deny: the gate fires whenever auth is enabled.
+        ``validate_auth_config`` (Task 7.4 startup helper) ensures
+        ``trusted_issuers`` is non-empty when ``enabled=True``; a non-empty
+        issuer is therefore never in the empty set.
+
+        Extracted from ``on_request`` to keep that method's complexity below
+        the Ruff ``max-branches=15`` limit.
+        """
+        if not self._config.enabled:
+            return
+        if issuer in self._config.trusted_issuers:
+            return
+        self._errors_total += 1
+        raise UnknownIssuerError(
+            f"Issuer {issuer!r} not in auth_config.trusted_issuers: "
+            f"{list(self._config.trusted_issuers)}"
         )
 
     @property
