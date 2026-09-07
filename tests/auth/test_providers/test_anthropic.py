@@ -5,9 +5,15 @@ import base64
 import json
 
 import httpx
+import jwt
 import pytest
+from cryptography.hazmat.primitives.asymmetric import rsa
 
-from mcp_common.auth.exceptions import ProviderUnavailableError, TokenInvalidError
+from mcp_common.auth.exceptions import (
+    ProviderUnavailableError,
+    TokenInvalidError,
+    UnknownIssuerError,
+)
 from mcp_common.auth.providers.anthropic import AnthropicIdentityProvider
 
 
@@ -98,3 +104,61 @@ async def test_anthropic_provider_records_health_degraded_on_jwks_failure(
     h = await provider.health()
     assert h.state == "degraded"
     assert "503" in (h.last_error or "")
+
+
+def _rsa_keypair() -> tuple[rsa.RSAPrivateKey, rsa.RSAPublicKey]:
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    return private_key, private_key.public_key()
+
+
+def _public_jwk(public_key: rsa.RSAPublicKey, kid: str) -> dict:
+    jwk = json.loads(jwt.algorithms.RSAAlgorithm.to_jwk(public_key))
+    jwk["kid"] = kid
+    jwk["alg"] = "RS256"
+    jwk["use"] = "sig"
+    return jwk
+
+
+def _signed_jwt(private_key: rsa.RSAPrivateKey, *, kid: str, iss: str) -> str:
+    """Build a real RSA-signed JWT so ``jwt.decode`` accepts the signature."""
+    return jwt.encode(
+        {
+            "iss": iss,
+            "sub": "test-subject",
+            "aud": AUDIENCE,
+            "iat": 1,
+            "exp": 9_999_999_999,
+        },
+        private_key,
+        algorithm="RS256",
+        headers={"kid": kid},
+    )
+
+
+async def test_anthropic_provider_rejects_untrusted_issuer(respx_mock):
+    """B6 default-deny: valid signature + untrusted iss must raise UnknownIssuerError.
+
+    The signature MUST be valid so the failure is unambiguously about the
+    issuer — proving the trusted-issuers gate fires regardless of crypto.
+    """
+    private_key, public_key = _rsa_keypair()
+    respx_mock.get(JWKS_URL).mock(
+        return_value=httpx.Response(
+            200, json={"keys": [_public_jwk(public_key, "test-kid")]}
+        )
+    )
+
+    provider = AnthropicIdentityProvider(
+        name="anthropic",
+        client_id=CLIENT_ID,
+        client_secret=CLIENT_SECRET,
+        oauth_token_url=OAUTH_URL,
+        jwks_url=JWKS_URL,
+        audience=AUDIENCE,
+        trusted_issuers=["good-issuer"],
+    )
+
+    token = _signed_jwt(private_key, kid="test-kid", iss="evil-corp")
+
+    with pytest.raises(UnknownIssuerError):
+        await provider.verify_token(token, expected_audience=AUDIENCE)
