@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from mcp_common.auth.audit import AuditLogger, AuditSink, AuthAuditEvent
 from mcp_common.auth.config import AuthConfig
+from mcp_common.auth.context import (
+    seed_principal,
+)
 from mcp_common.auth.core import (
     JWT_ALGORITHM,
     TokenPayload,
@@ -12,6 +15,7 @@ from mcp_common.auth.decorator import require_auth
 from mcp_common.auth.exceptions import (
     AudienceMismatchError,
     AuthError,
+    AuthenticationRequiredError,
     InsufficientPermissionError,
     SecretNotConfiguredError,
     TokenExpiredError,
@@ -24,11 +28,14 @@ from mcp_common.auth.identity import (
     verify_audience,
     verify_issuer,
 )
+from mcp_common.auth.middleware import BearerTokenMiddleware
 from mcp_common.auth.permissions import (
     ROLE_PERMISSIONS,
     Permission,
     Role,
 )
+from mcp_common.auth.principal import Principal
+from mcp_common.auth.provider import IdentityProvider, ProviderHealth, ProviderState
 
 __all__ = [
     "JWT_ALGORITHM",
@@ -40,8 +47,14 @@ __all__ = [
     "AuthAuditEvent",
     "AuthConfig",
     "AuthError",
+    "AuthenticationRequiredError",
+    "BearerTokenMiddleware",
+    "IdentityProvider",
     "InsufficientPermissionError",
     "Permission",
+    "Principal",
+    "ProviderHealth",
+    "ProviderState",
     "Role",
     "SecretNotConfiguredError",
     "ServiceIdentity",
@@ -51,6 +64,7 @@ __all__ = [
     "UnknownIssuerError",
     "create_service_token",
     "require_auth",
+    "seed_principal",
     "verify_audience",
     "verify_issuer",
     "verify_token",

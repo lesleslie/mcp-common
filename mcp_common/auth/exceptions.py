@@ -40,3 +40,12 @@ class ProviderUnavailableError(AuthError):
     def __init__(self, message: str, *, provider: str | None = None) -> None:
         super().__init__(message)
         self.provider = provider
+
+
+class AuthenticationRequiredError(AuthError):
+    """Raised when a tool requires authentication but no Principal is in Context.
+
+    Maps to HTTP 401 (Unauthorized) in the error_handling middleware translation.
+    Use this when @require_auth(allow_anonymous=False) is invoked without a
+    Principal seeded by BearerTokenMiddleware (or by a test via seed_principal()).
+    """
