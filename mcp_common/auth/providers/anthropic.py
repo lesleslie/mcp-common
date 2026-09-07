@@ -85,7 +85,13 @@ class _JwksCache:
 
     async def _get_keys(self) -> dict[str, dict[str, Any]]:
         now = time.monotonic()
-        if self._keys and (now - self._fetched_at) < self._lifespan:
+        # Cache is valid when a fetch has happened (``_fetched_at > 0``) AND
+        # the elapsed time is within ``self._lifespan``. Checking only
+        # ``self._keys`` would re-fetch every call when the JWKS returns an
+        # empty ``keys`` list — defeating ``jwks_cache_seconds`` for the
+        # common case where the upstream JWKS rotates and the new set
+        # excludes our cached ``kid``.
+        if self._fetched_at > 0 and (now - self._fetched_at) < self._lifespan:
             return self._keys
 
         try:
@@ -109,6 +115,17 @@ class _JwksCache:
         self._keys = {k["kid"]: k for k in raw_keys if "kid" in k}
         self._fetched_at = now
         return self._keys
+
+    def reset_cache(self) -> None:
+        """Force the next ``get_signing_key`` call to refetch from the JWKS URL.
+
+        Public API for the upstream provider's ``force_refresh()`` and for
+        tests that need to simulate cache-TTL expiry without reaching into
+        private state. Mirrors the LOW-6 fix originally designed for
+        ``PyJWKClient.__init__`` reinit.
+        """
+        self._fetched_at = 0.0
+        self._keys = {}
 
 
 class AnthropicIdentityProvider:
@@ -156,6 +173,15 @@ class AnthropicIdentityProvider:
 
     async def __aenter__(self) -> AnthropicIdentityProvider:
         return self
+
+    def force_refresh(self) -> None:
+        """Reset the cached JWKS so the next ``verify_token`` refetches.
+
+        LOW-6 fix: this is the public API used by callers and tests that
+        need to simulate JWKS cache-TTL expiry without reaching into the
+        underlying cache's private state.
+        """
+        self._jwks_client.reset_cache()
 
     async def __aexit__(self, *exc_info: object) -> None:
         await self.aclose()
