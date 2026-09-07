@@ -1,9 +1,14 @@
 from datetime import UTC, datetime, timedelta
+from inspect import iscoroutine
 
 import jwt as pyjwt
 import pytest
 
-from mcp_common.auth.core import create_service_token, verify_token
+from mcp_common.auth.core import (
+    JWTIdentityProvider,
+    create_service_token,
+    verify_token,
+)
 from mcp_common.auth.exceptions import (
     TokenExpiredError,
     TokenInvalidError,
@@ -52,9 +57,10 @@ def test_verify_rejects_unknown_issuer():
 
 
 def test_verify_rejects_expired_token():
+    # Expired well outside the 30s clock-skew leeway (R2-7).
     expired = pyjwt.encode(
         {"sub": "mahavishnu", "iss": "mahavishnu", "aud": "akosha",
-         "exp": datetime.now(UTC) - timedelta(seconds=5), "iat": datetime.now(UTC),
+         "exp": datetime.now(UTC) - timedelta(seconds=120), "iat": datetime.now(UTC),
          "jti": "test-jti", "scopes": ["read"]},
         SECRET, algorithm="HS256",
     )
@@ -96,6 +102,11 @@ def test_verify_ignores_unknown_scope_values(monkeypatch):
         "jti": "test-jti",
         "scopes": ["read", "not-a-real-scope"],
     }
+    # B5 fix: verify_token now calls get_unverified_header() before decode()
+    # for the algorithm pre-check, so monkeypatch both.
+    monkeypatch.setattr(
+        auth_core.pyjwt, "get_unverified_header", lambda *args, **kwargs: {"alg": "HS256"}
+    )
     monkeypatch.setattr(auth_core.pyjwt, "decode", lambda *args, **kwargs: raw_payload)
 
     payload = auth_core.verify_token(
@@ -105,3 +116,62 @@ def test_verify_ignores_unknown_scope_values(monkeypatch):
     )
 
     assert payload.permissions == frozenset()
+
+
+# --- JWTIdentityProvider tests (Task 4) ---
+
+
+def _await_or_sync(value):
+    """If ``value`` is awaitable, run it on a fresh loop and return the result.
+
+    Tests use this so they can call ``verify_token`` / ``health`` whether the
+    implementation is sync or async.
+    """
+    import asyncio
+
+    if iscoroutine(value):
+        return asyncio.new_event_loop().run_until_complete(value)
+    return value
+
+
+def test_jwt_identity_provider_roundtrip():
+    provider = JWTIdentityProvider(
+        name="jwt",
+        secret=SECRET,
+        trusted_issuers=["mahavishnu"],
+    )
+    token = provider.issue_token(
+        issuer="mahavishnu",
+        audience="test-service",
+        permissions=[Permission.READ],
+        subject="test-subject",
+    )
+    principal = _await_or_sync(
+        provider.verify_token(token, expected_audience="test-service")
+    )
+    assert principal.issuer == "mahavishnu"
+    assert principal.subject == "test-subject"
+    assert Permission.READ in principal.permissions
+
+
+def test_jwt_identity_provider_rejects_wrong_audience():
+    provider = JWTIdentityProvider(
+        name="jwt",
+        secret=SECRET,
+        trusted_issuers=["mahavishnu"],
+    )
+    token = provider.issue_token(
+        issuer="mahavishnu",
+        audience="service-a",
+        permissions=[Permission.READ],
+        subject="test",
+    )
+    with pytest.raises(Exception):  # AudienceMismatchError
+        _await_or_sync(provider.verify_token(token, expected_audience="service-b"))
+
+
+def test_jwt_identity_provider_health_is_healthy():
+    provider = JWTIdentityProvider(name="jwt", secret=SECRET)
+    h = _await_or_sync(provider.health())
+    assert h.name == "jwt"
+    assert h.state == "healthy"
