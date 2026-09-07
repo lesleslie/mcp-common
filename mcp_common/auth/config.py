@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
 
 from mcp_common.auth.exceptions import SecretNotConfiguredError
 from mcp_common.auth.identity import IdentityProviderSpec
@@ -27,6 +27,27 @@ _PLACEHOLDER_SECRETS: frozenset[str] = frozenset(
 _MIN_SECRET_LENGTH = 32
 
 
+class IdentityProviderConfig(BaseModel):
+    """Configuration for a single identity provider (Task 8b).
+
+    M-2 fix: ``type`` is ``Literal["jwt", "oauth"]`` (not ``str``) so a typo
+    like ``"OAUTH"`` is rejected at config-parse time rather than failing
+    the first auth request.
+    """
+
+    name: str
+    type: Literal["jwt", "oauth"]
+    client_id: str | None = None
+    client_secret: SecretStr | None = None
+    oauth_token_url: str | None = None
+    jwks_url: str | None = None
+    audience: str | None = None
+    jwks_cache_seconds: int = 3600
+    timeout_seconds: float = 5.0
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
 class AuthConfig(BaseModel):
     """Authentication configuration for an MCP service.
 
@@ -34,6 +55,9 @@ class AuthConfig(BaseModel):
     Preserves env-var loading (``secret_env_var`` / ``BODAI_SHARED_SECRET``),
     placeholder rejection, and 32-char minimum length. The new ``secret``
     parameter accepts a direct value (alternative to env-var lookup).
+
+    Task 8b: Added ``trusted_issuers`` (now ``list[str]``), ``default_provider``,
+    and ``allow_anonymous_paths`` (defaults to ``["/health", "/readyz"]``).
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
@@ -43,8 +67,11 @@ class AuthConfig(BaseModel):
     resolved_secret: str | None = Field(default=None, alias="secret")
     enabled: bool | None = None
     default_provider: str | None = None
-    trusted_issuers: tuple[str, ...] = ()
+    trusted_issuers: list[str] = Field(default_factory=list)
     identity_providers: dict[str, IdentityProviderSpec] | None = None
+    allow_anonymous_paths: list[str] = Field(
+        default_factory=lambda: ["/health", "/readyz"]
+    )
 
     @model_validator(mode="before")
     @classmethod

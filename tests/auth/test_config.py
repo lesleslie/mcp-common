@@ -1,6 +1,6 @@
 import os
 import pytest
-from mcp_common.auth.config import AuthConfig
+from mcp_common.auth.config import AuthConfig, IdentityProviderConfig
 from mcp_common.auth.exceptions import SecretNotConfiguredError
 
 
@@ -69,3 +69,46 @@ def test_auth_config_rejects_placeholder_secrets():
     from pydantic import ValidationError
     with pytest.raises(ValidationError):
         AuthConfig(enabled=True, secret="changeme", service_name="test")
+
+
+# --- Task 8b: trusted_issuers, identity_providers, default_provider, allow_anonymous_paths ---
+
+
+def test_auth_config_has_trusted_issuers_field():
+    config = AuthConfig(
+        enabled=True,
+        secret="x" * 40,
+        service_name="test",
+        trusted_issuers=["mahavishnu", "session-buddy"],
+    )
+    assert config.trusted_issuers == ["mahavishnu", "session-buddy"]
+
+
+def test_auth_config_has_default_provider_field():
+    config = AuthConfig(
+        enabled=True,
+        secret="x" * 40,
+        service_name="test",
+        default_provider="jwt",
+    )
+    assert config.default_provider == "jwt"
+
+
+def test_auth_config_default_allow_anonymous_paths():
+    config = AuthConfig(enabled=True, secret="x" * 40, service_name="test")
+    assert "/health" in config.allow_anonymous_paths
+    assert "/readyz" in config.allow_anonymous_paths
+
+
+def test_identity_provider_config_basic():
+    p = IdentityProviderConfig(name="anthropic", type="oauth", client_id="abc")
+    assert p.name == "anthropic"
+    assert p.type == "oauth"
+    assert p.client_id == "abc"
+
+
+def test_identity_provider_config_type_is_literal():
+    """M-2 fix: type is Literal, not str (catches typos at config-parse time)."""
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        IdentityProviderConfig(name="bad", type="OAUTH")  # not in Literal["jwt", "oauth"]
