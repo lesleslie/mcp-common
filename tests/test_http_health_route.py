@@ -125,6 +125,170 @@ class TestRegisterHttpHealthRoute:
         assert "application/json" in content_type
 
 
+class TestRegisterHttpHealthRouteWithAuthHealth:
+    """Test that the helper accepts auth_health_provider and includes AuthHealth.
+
+    These tests cover Task 11 of the mcp-common auth-primitives plan:
+    - I-7 fix: /health stays 200-only; status field reports "ok" or "degraded"
+    - B3 fix:  is_degraded is recomputed per request via the callable
+    - R2-1 fix: parameter is a Callable, not a captured value
+    - R2-2 fix: include_diagnostics=False is the default (last_error redacted)
+    """
+
+    @pytest.mark.asyncio
+    async def test_auth_components_appear_when_provider_configured(self) -> None:
+        """AuthHealth component appears in components[] when callable provided."""
+        from datetime import UTC, datetime
+
+        from mcp_common.auth.health import AuthHealth
+        from mcp_common.auth.provider import ProviderHealth
+
+        mcp = FastMCP(name="auth-svc")
+        auth_health = AuthHealth(
+            providers={"jwt": ProviderHealth(name="jwt", state="healthy")},
+            verifications_total=5,
+            errors_total=0,
+            last_successful_verification_at=datetime.now(UTC),
+            last_updated_timestamp=datetime.now(UTC),
+            cycles_total=1,
+        )
+
+        register_http_health_route(
+            mcp,
+            service_name="auth-svc",
+            version="0.0.1",
+            auth_health_provider=lambda: auth_health,
+        )
+
+        response = await _get_health(mcp)
+        body = response.json()
+
+        assert response.status_code == 200
+        assert body["status"] == "ok"
+        names = [c["name"] for c in body["components"]]
+        assert "auth" in names
+
+    @pytest.mark.asyncio
+    async def test_degraded_provider_yields_status_degraded(self) -> None:
+        """B3 fix: a degraded provider surfaces status='degraded' in body."""
+        from datetime import UTC, datetime
+
+        from mcp_common.auth.health import AuthHealth
+        from mcp_common.auth.provider import ProviderHealth
+
+        mcp = FastMCP(name="auth-degraded")
+        auth_health = AuthHealth(
+            providers={
+                "jwt": ProviderHealth(name="jwt", state="degraded", last_error="boom"),
+            },
+            verifications_total=2,
+            errors_total=1,
+            last_successful_verification_at=None,
+            last_updated_timestamp=datetime.now(UTC),
+            cycles_total=1,
+        )
+
+        register_http_health_route(
+            mcp,
+            service_name="auth-degraded",
+            version="0.0.1",
+            auth_health_provider=lambda: auth_health,
+        )
+
+        response = await _get_health(mcp)
+        body = response.json()
+
+        # I-7 fix: still 200, but body says "degraded"
+        assert response.status_code == 200
+        assert body["status"] == "degraded"
+
+    @pytest.mark.asyncio
+    async def test_provider_called_per_request_not_captured(self) -> None:
+        """B3 fix: the callable is invoked on each request (state can flip)."""
+        from datetime import UTC, datetime
+
+        from mcp_common.auth.health import AuthHealth
+        from mcp_common.auth.provider import ProviderHealth
+
+        mcp = FastMCP(name="auth-flip")
+
+        ts = datetime.now(UTC)
+        healthy = AuthHealth(
+            providers={"jwt": ProviderHealth(name="jwt", state="healthy")},
+            verifications_total=1,
+            errors_total=0,
+            last_successful_verification_at=ts,
+            last_updated_timestamp=ts,
+            cycles_total=1,
+        )
+        degraded = AuthHealth(
+            providers={"jwt": ProviderHealth(name="jwt", state="degraded")},
+            verifications_total=1,
+            errors_total=1,
+            last_successful_verification_at=None,
+            last_updated_timestamp=ts,
+            cycles_total=1,
+        )
+
+        current = {"snapshot": healthy}
+
+        def provider() -> AuthHealth:
+            return current["snapshot"]
+
+        register_http_health_route(
+            mcp,
+            service_name="auth-flip",
+            version="0.0.1",
+            auth_health_provider=provider,
+        )
+
+        # Request 1: healthy
+        response = await _get_health(mcp)
+        assert response.json()["status"] == "ok"
+
+        # Mutate the live snapshot; request 2 must reflect the new state
+        current["snapshot"] = degraded
+        response = await _get_health(mcp)
+        assert response.json()["status"] == "degraded"
+
+    @pytest.mark.asyncio
+    async def test_last_error_redacted_by_default(self) -> None:
+        """R2-2 fix: include_diagnostics=False default redacts last_error."""
+        from datetime import UTC, datetime
+
+        from mcp_common.auth.health import AuthHealth
+        from mcp_common.auth.provider import ProviderHealth
+
+        mcp = FastMCP(name="auth-redact")
+        auth_health = AuthHealth(
+            providers={
+                "jwt": ProviderHealth(
+                    name="jwt", state="degraded", last_error="internal-uri-leak"
+                ),
+            },
+            verifications_total=1,
+            errors_total=1,
+            last_successful_verification_at=None,
+            last_updated_timestamp=datetime.now(UTC),
+            cycles_total=1,
+        )
+
+        register_http_health_route(
+            mcp,
+            service_name="auth-redact",
+            version="0.0.1",
+            auth_health_provider=lambda: auth_health,
+        )
+
+        response = await _get_health(mcp)
+        body = response.json()
+
+        # last_error must not leak into the anonymous /health response
+        auth_component = next(c for c in body["components"] if c["name"] == "auth")
+        jwt_provider = auth_component["providers"]["jwt"]
+        assert "last_error" not in jwt_provider
+
+
 class TestRegisterHttpHealthRouteCoexistence:
     """Test that the helper coexists with register_health_tools without conflict."""
 

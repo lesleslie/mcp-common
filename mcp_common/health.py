@@ -15,9 +15,12 @@ import asyncio
 import logging
 import time
 import typing as t
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
+
+from mcp_common.auth.health import AuthHealth
 
 logger = logging.getLogger(__name__)
 
@@ -813,6 +816,7 @@ def register_http_health_route(
     service_name: str,
     version: str,
     extra_components: list[dict[str, t.Any]] | None = None,
+    auth_health_provider: Callable[[], AuthHealth | None] | None = None,
 ) -> None:
     """Register an HTTP ``/health`` route on the FastMCP server.
 
@@ -825,7 +829,13 @@ def register_http_health_route(
 
     The handler always returns HTTP 200 with body shape::
 
-        {"status": "ok", "service": <service_name>, "version": <version>, "components": [...]}
+        {"status": "ok" | "degraded", "service": <service_name>, "version": <version>, "components": [...]}
+
+    The ``status`` field in the body reports the aggregated health; the HTTP
+    status code is unconditionally 200 to preserve the launchd probe contract
+    across 9 sibling servers. A degraded auth provider flips the body status
+    to ``"degraded"`` without changing the response code; the 503 semantic
+    is reserved for a future ``/readyz`` endpoint.
 
     Args:
         mcp: The FastMCP server instance to register the route on.
@@ -835,6 +845,12 @@ def register_http_health_route(
         extra_components: Optional list of component health dicts to merge
             into the response. Each dict is passed through verbatim
             (e.g. ``[{"name": "db", "status": "ok"}]``).
+        auth_health_provider: Optional callable invoked on every request
+            to fetch the current :class:`~mcp_common.auth.health.AuthHealth`
+            snapshot. The callable is re-invoked per request (not captured
+            at registration) so transient flips in provider state surface
+            in the very next probe. When the callable returns ``None`` or
+            is omitted, the auth component is omitted entirely.
 
     Example:
         >>> from fastmcp import FastMCP
@@ -847,13 +863,27 @@ def register_http_health_route(
     async def http_health(request: t.Any) -> t.Any:
         from starlette.responses import JSONResponse
 
+        # B3 fix: recompute auth health per request, not at registration.
+        components = list(extra_components or [])
+        auth_health = auth_health_provider() if auth_health_provider else None
+        is_degraded = (
+            auth_health.is_degraded() if auth_health is not None else False
+        )
+        if auth_health is not None:
+            # as_components() defaults to include_diagnostics=False; the
+            # anonymous /health response must not leak last_error strings.
+            components.extend(auth_health.as_components())
+
+        # I-7 fix: body status reports ok|degraded; HTTP code is always 200.
+        status = "degraded" if is_degraded else "ok"
         return JSONResponse(
             {
-                "status": "ok",
+                "status": status,
                 "service": service_name,
                 "version": version,
-                "components": extra_components or [],
-            }
+                "components": components,
+            },
+            status_code=200,
         )
 
 
