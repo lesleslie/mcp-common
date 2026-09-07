@@ -321,3 +321,37 @@ class TestMCPServerSettingsLayeredConfig:
             assert settings.cache_root == Path("/server/cache")
         finally:
             os.environ.pop("MCP_SERVER_LOG_LEVEL", None)
+
+
+def test_mcp_server_settings_has_auth_field():
+    """MCPServerSettings exposes an `auth: AuthConfig | None` field.
+
+    Task 9 of the mcp-common auth primitives plan wires AuthConfig into the
+    settings surface so YAML keys like `auth:` populate the Pydantic config.
+    Without the field, the constructor would reject the `auth=` kwarg and
+    Python servers could not opt into authentication via configuration.
+    """
+    settings = MCPServerSettings(
+        server_name="test",
+        auth={
+            "enabled": True,
+            "service_name": "test",
+            "trusted_issuers": ["mahavishnu"],
+            "default_provider": "jwt",
+        },
+    )
+
+    assert settings.auth is not None
+    assert settings.auth.service_name == "test"
+    assert settings.auth.trusted_issuers == ["mahavishnu"]
+    assert settings.auth.default_provider == "jwt"
+
+
+def test_mcp_server_settings_auth_defaults_to_none():
+    """MCPServerSettings without an `auth` block keeps auth disabled (None).
+
+    Backwards compatibility: servers that do not configure `auth:` should
+    continue to construct cleanly with auth=None (auth off by default).
+    """
+    settings = MCPServerSettings(server_name="test")
+    assert settings.auth is None

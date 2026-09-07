@@ -11,6 +11,8 @@ from typing import Any, Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
 
+from mcp_common.auth.config import AuthConfig
+
 
 class MCPServerSettings(BaseModel):
     """MCP Server configuration with layered loading.
@@ -52,6 +54,18 @@ class MCPServerSettings(BaseModel):
             "'auto_clean' removes the stale file and continues starting (default, "
             "matches operator expectation after a crash). 'refuse' preserves the "
             "legacy behavior of requiring --force to remove it."
+        ),
+    )
+
+    # Authentication configuration (Phase 1 of auth surface).
+    # The auth block is opt-in — existing MCPServerSettings without an `auth`
+    # block in YAML continues to work (auth is disabled by default per AuthConfig).
+    auth: AuthConfig | None = Field(
+        default=None,
+        description=(
+            "Optional AuthConfig. When set, the server enables Bodai auth "
+            "primitives (JWT/OAuth) using the configured trusted issuers and "
+            "identity providers. When None (default), auth is disabled."
         ),
     )
 
