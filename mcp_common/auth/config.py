@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import TYPE_CHECKING
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from mcp_common.auth.exceptions import SecretNotConfiguredError
-
-if TYPE_CHECKING:
-    from mcp_common.auth.identity import IdentityProviderSpec
+from mcp_common.auth.identity import IdentityProviderSpec
 
 logger = logging.getLogger(__name__)
 
@@ -27,110 +27,96 @@ _PLACEHOLDER_SECRETS: frozenset[str] = frozenset(
 _MIN_SECRET_LENGTH = 32
 
 
-class AuthConfig:
-    """Auth configuration for an MCP service.
+class AuthConfig(BaseModel):
+    """Authentication configuration for an MCP service.
 
-    Path B / compat (Task 6 — Task 8a has not landed yet):
-    - Existing callers: ``AuthConfig(service_name=..., secret_env_var=...)``.
-      ``enabled`` is derived from secret presence (current behavior).
-    - New callers: ``AuthConfig(enabled=True, service_name=..., default_provider=...)``.
-      Explicit ``enabled`` overrides the secret-derivation; ``default_provider``
-      and ``trusted_issuers`` are honored by ``BearerTokenMiddleware`` and
-      ``validate_auth_config()`` (Task 7) once it lands.
-
-    Both call shapes coexist; the existing constructor signature is preserved.
+    Task 8a: Converted from plain Python class to Pydantic v2 ``BaseModel``.
+    Preserves env-var loading (``secret_env_var`` / ``BODAI_SHARED_SECRET``),
+    placeholder rejection, and 32-char minimum length. The new ``secret``
+    parameter accepts a direct value (alternative to env-var lookup).
     """
 
-    def __init__(
-        self,
-        *,
-        service_name: str,
-        secret_env_var: str | None = None,
-        enabled: bool | None = None,
-        default_provider: str | None = None,
-        trusted_issuers: tuple[str, ...] = (),
-        identity_providers: dict[str, IdentityProviderSpec] | None = None,
-    ) -> None:
-        self._service_name = service_name
-        self._secret_env_var = secret_env_var
-        self._secret: str | None = (
-            self._load_secret() if secret_env_var is not None else None
-        )
-        # ``enabled`` defaults to ``True`` for new explicit-shape callers and to
-        # secret presence for legacy callers. When both ``secret_env_var`` and
-        # ``enabled`` are supplied, ``enabled`` wins (explicit override).
-        if enabled is None:
-            self._enabled = self._secret is not None
-        else:
-            self._enabled = enabled
-        self._default_provider = default_provider
-        self._trusted_issuers: tuple[str, ...] = tuple(trusted_issuers)
-        # Task 7: optional identity_providers. When set, validate_auth_config
-        # (Task 7 startup helper) raises if any provider's spec is incomplete
-        # (e.g. an oauth provider missing client_id).
-        self._identity_providers: dict[str, IdentityProviderSpec] = (
-            dict(identity_providers) if identity_providers else {}
-        )
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")
 
-    def _load_secret(self) -> str | None:
-        raw = os.environ.get(self._secret_env_var or "") or os.environ.get(
-            "BODAI_SHARED_SECRET"
-        )
-        if raw is None:
-            return None
-        if raw.lower() in _PLACEHOLDER_SECRETS:
-            raise ValueError(
-                f"Secret for {self._service_name!r} uses a known placeholder value {raw!r}. "
-                "Generate a real secret with: python -c 'import secrets; print(secrets.token_urlsafe(48))'"
-            )
-        if len(raw) < _MIN_SECRET_LENGTH:
-            raise ValueError(
-                f"Secret for {self._service_name!r} is too short ({len(raw)} chars). "
-                f"Minimum {_MIN_SECRET_LENGTH} characters required."
-            )
-        if raw == os.environ.get("BODAI_SHARED_SECRET"):
-            logger.warning(
-                "Service %r is using the shared dev secret (BODAI_SHARED_SECRET). "
-                "Set %s for production.",
-                self._service_name,
-                self._secret_env_var,
-            )
-        return raw
+    service_name: str
+    secret_env_var: str | None = None
+    resolved_secret: str | None = Field(default=None, alias="secret")
+    enabled: bool | None = None
+    default_provider: str | None = None
+    trusted_issuers: tuple[str, ...] = ()
+    identity_providers: dict[str, IdentityProviderSpec] | None = None
 
-    @property
-    def enabled(self) -> bool:
-        """Auth enforcement flag. False short-circuits middleware + decorator."""
-        return self._enabled
+    @model_validator(mode="before")
+    @classmethod
+    def _resolve_secret(cls, data: Any) -> Any:
+        """Resolve and validate the secret at init time.
 
-    @property
-    def service_name(self) -> str:
-        return self._service_name
+        Resolution order:
+        1. Explicit ``secret=`` parameter (direct value).
+        2. ``secret_env_var=`` + env lookup (with ``BODAI_SHARED_SECRET`` fallback).
+        3. ``{SERVICE_NAME}_SECRET`` env var + ``BODAI_SHARED_SECRET`` fallback.
 
-    @property
-    def default_provider(self) -> str | None:
-        """Preferred provider name for multi-provider deployments."""
-        return self._default_provider
-
-    @property
-    def trusted_issuers(self) -> tuple[str, ...]:
-        """Allow-list of issuer identifiers; empty tuple means default-deny."""
-        return self._trusted_issuers
-
-    @property
-    def identity_providers(self) -> dict[str, IdentityProviderSpec]:
-        """Mapping ``provider-name -> IdentityProviderSpec``.
-
-        Task 7: ``validate_auth_config`` walks this dict; sibling servers
-        pass the same dict to ``BearerTokenMiddleware(providers=...)``.
-        Empty dict + ``enabled=True`` fails startup validation.
+        On success, stores the resolved secret in ``resolved_secret`` and
+        derives ``enabled`` from secret presence when ``enabled`` was not
+        explicitly provided.
         """
-        return self._identity_providers
+        if not isinstance(data, dict):
+            return data
+
+        secret_env_var = data.get("secret_env_var")
+        explicit_secret = data.get("secret")
+        service_name = data.get("service_name", "")
+        resolved: str | None = None
+
+        if explicit_secret is not None:
+            resolved = str(explicit_secret)
+        elif secret_env_var is not None:
+            raw = os.environ.get(secret_env_var) or os.environ.get("BODAI_SHARED_SECRET")
+            if raw is not None:
+                if raw == os.environ.get("BODAI_SHARED_SECRET"):
+                    logger.warning(
+                        "Service %r is using the shared dev secret (BODAI_SHARED_SECRET). "
+                        "Set %s for production.",
+                        service_name,
+                        secret_env_var,
+                    )
+                resolved = raw
+        else:
+            raw = (
+                os.environ.get(f"{str(service_name).upper()}_SECRET")
+                or os.environ.get("BODAI_SHARED_SECRET")
+            )
+            if raw is not None:
+                if raw == os.environ.get("BODAI_SHARED_SECRET"):
+                    logger.warning(
+                        "Service %r is using the shared dev secret (BODAI_SHARED_SECRET).",
+                        service_name,
+                    )
+                resolved = raw
+
+        if resolved is not None:
+            if resolved.lower() in _PLACEHOLDER_SECRETS:
+                raise ValueError(
+                    f"Secret for {service_name!r} uses a known placeholder value {resolved!r}. "
+                    "Generate a real secret with: python -c 'import secrets; print(secrets.token_urlsafe(48))'"
+                )
+            if len(resolved) < _MIN_SECRET_LENGTH:
+                raise ValueError(
+                    f"Secret for {service_name!r} is too short ({len(resolved)} chars). "
+                    f"Minimum {_MIN_SECRET_LENGTH} characters required."
+                )
+            data["secret"] = resolved
+
+        if data.get("enabled") is None:
+            data["enabled"] = resolved is not None
+
+        return data
 
     @property
     def secret(self) -> str:
-        if self._secret is None:
+        if self.resolved_secret is None:
             raise SecretNotConfiguredError(
-                f"No secret configured for service {self._service_name!r}. "
-                f"Set {self._secret_env_var} or BODAI_SHARED_SECRET."
+                f"No secret configured for service {self.service_name!r}. "
+                f"Set {self.secret_env_var} or BODAI_SHARED_SECRET."
             )
-        return self._secret
+        return self.resolved_secret

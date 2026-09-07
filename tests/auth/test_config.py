@@ -45,3 +45,27 @@ def test_get_secret_raises_when_disabled(monkeypatch):
     cfg = AuthConfig(service_name="test-service", secret_env_var="TEST_SERVICE_SECRET")
     with pytest.raises(SecretNotConfiguredError):
         _ = cfg.secret
+
+
+def test_auth_config_is_pydantic_basemodel():
+    """B8 fix: AuthConfig is now a Pydantic BaseModel (was plain class)."""
+    config = AuthConfig(
+        enabled=True,
+        secret="x" * 40,
+        service_name="test",
+    )
+    assert hasattr(config, "model_dump")  # Pydantic v2 marker
+
+
+def test_auth_config_secret_min_length_validator():
+    """I-6 fix: preserve the existing 32-char minimum secret length check."""
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        AuthConfig(enabled=True, secret="short", service_name="test")
+
+
+def test_auth_config_rejects_placeholder_secrets():
+    """I-6 fix: preserve placeholder secret rejection."""
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        AuthConfig(enabled=True, secret="changeme", service_name="test")
