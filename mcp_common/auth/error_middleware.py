@@ -3,6 +3,7 @@
 I-R2-3 fix: ships the translation surface that B2 fix relied on. Sibling
 servers opt in via FastMCP(middleware=[AuthErrorTranslationMiddleware(), ...]).
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -15,7 +16,6 @@ from mcp_common.auth.exceptions import (
     TokenInvalidError,
     UnknownIssuerError,
 )
-
 
 # JSON-RPC error code for auth/server-defined errors per the MCP spec.
 _JSONRPC_AUTH_ERROR_CODE = -32001
@@ -35,9 +35,7 @@ class AuthErrorTranslationMiddleware(Middleware):
     FastMCP constructor for the B2 contract to hold end-to-end.
     """
 
-    async def on_request(
-        self, context: MiddlewareContext, call_next: Any
-    ) -> Any:
+    async def on_request(self, context: MiddlewareContext, call_next: Any) -> Any:
         try:
             return await call_next(context)
         except (

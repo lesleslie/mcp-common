@@ -4,6 +4,7 @@ Used by BearerTokenMiddleware to attach a Principal to a request, and by
 @require_auth to read it. Tests use seed_principal to inject without
 going through the middleware.
 """
+
 from __future__ import annotations
 
 from contextvars import ContextVar, Token

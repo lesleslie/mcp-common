@@ -38,6 +38,7 @@ Fixes baked in
   (a JWT ``sub`` claim containing ``\\r\\n`` could inject fake log lines)
   and over-long values (stack-trace fragments leaked via reason).
 """
+
 from __future__ import annotations
 
 import logging
@@ -149,13 +150,9 @@ def require_auth(
                         AuthAuditEvent(
                             timestamp=datetime.now(UTC),
                             service=service_name,
-                            caller_service=_sanitize_audit_value(
-                                principal.issuer
-                            )
+                            caller_service=_sanitize_audit_value(principal.issuer)
                             or "unknown",
-                            caller_id=_sanitize_audit_value(
-                                principal.subject
-                            )
+                            caller_id=_sanitize_audit_value(principal.subject)
                             or "unknown",
                             action=func_name,
                             permission=permission,
@@ -179,8 +176,7 @@ def require_auth(
                         service=service_name,
                         caller_service=_sanitize_audit_value(principal.issuer)
                         or "unknown",
-                        caller_id=_sanitize_audit_value(principal.subject)
-                        or "unknown",
+                        caller_id=_sanitize_audit_value(principal.subject) or "unknown",
                         action=func_name,
                         permission=permission,
                         result="allowed",

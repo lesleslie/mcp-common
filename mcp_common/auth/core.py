@@ -19,7 +19,7 @@ from mcp_common.auth.exceptions import (
 )
 from mcp_common.auth.permissions import Permission
 from mcp_common.auth.principal import Principal
-from mcp_common.auth.provider import IdentityProvider, ProviderHealth
+from mcp_common.auth.provider import ProviderHealth
 
 JWT_ALGORITHM = "HS256"
 DEFAULT_TOKEN_TTL_SECONDS = 3600

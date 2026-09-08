@@ -1,4 +1,5 @@
 """AuthHealth — wiring-discipline §3 four-signal feed observability for auth."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -36,7 +37,7 @@ class AuthHealth:
         verifications_total: int,
         errors_total: int,
         last_successful_verification_at: datetime | None,
-    ) -> "AuthHealth":
+    ) -> AuthHealth:
         """Construct from live providers; runs health() on each in parallel."""
         import asyncio
 
@@ -98,11 +99,7 @@ class AuthHealth:
                         # anonymous responses. Operators can call
                         # `as_components(include_diagnostics=True)` from
                         # an authenticated debug path.
-                        **(
-                            {"last_error": p.last_error}
-                            if include_diagnostics
-                            else {}
-                        ),
+                        **({"last_error": p.last_error} if include_diagnostics else {}),
                     }
                     for name, p in self.providers.items()
                 },

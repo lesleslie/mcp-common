@@ -1,4 +1,5 @@
 """Principal model — the authenticated identity attached to a request."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

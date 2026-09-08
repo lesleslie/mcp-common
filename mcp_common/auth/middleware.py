@@ -50,15 +50,16 @@ Fixes baked in (from the auth primitives plan review)
   (via ``seed_principal``) is the source of truth for ``@require_auth``;
   FastMCP's ``Context.set_state`` is for FastMCP-native consumers.
 """
+
 from __future__ import annotations
 
 import logging
-from typing import Any
+from contextlib import suppress
+from typing import Any, Protocol
 
 from fastmcp.server import dependencies as _fmcp_dependencies
 from fastmcp.server.middleware import Middleware, MiddlewareContext
 
-from mcp_common.auth.audit import AuditLogger
 from mcp_common.auth.config import AuthConfig
 from mcp_common.auth.context import (
     _current_principal,
@@ -91,17 +92,46 @@ logger = logging.getLogger(__name__)
 # NOTE: ``notifications/progress`` is intentionally absent. Per the MCP
 # spec, progress notifications are server→client and never reach
 # middleware as inbound messages; listing them here would be misleading.
-_AUTH_BYPASS_METHODS: frozenset[str] = frozenset({
-    "initialize",
-    "notifications/initialized",
-    "notifications/cancelled",
-    "ping",
-})
+_AUTH_BYPASS_METHODS: frozenset[str] = frozenset(
+    {
+        "initialize",
+        "notifications/initialized",
+        "notifications/cancelled",
+        "ping",
+    }
+)
 
 # Defense-in-depth cap on the Authorization header. Anything beyond this is
 # rejected before any cryptographic operation so a hostile client cannot
 # exhaust memory with a multi-MB token.
 _MAX_TOKEN_BYTES = 8192
+
+
+class _AuditReporter(Protocol):
+    """Duck-typed audit reporter used by the middleware.
+
+    The canonical ``mcp_common.auth.audit.AuditLogger`` does not expose
+    ``log_success`` / ``log_failure`` — its surface is ``register_sink`` /
+    ``emit``. Servers can therefore wire the middleware with any object
+    that follows this contract (the test suite uses ``_RecordingAuditLogger``)
+    without inheriting from the production logger.
+    """
+
+    def log_success(
+        self,
+        *,
+        source: str,
+        principal_issuer: str,
+        principal_subject: str,
+    ) -> None: ...
+
+    def log_failure(
+        self,
+        *,
+        source: str,
+        reason: str,
+        token_present: bool,
+    ) -> None: ...
 
 
 class BearerTokenMiddleware(Middleware):
@@ -134,7 +164,7 @@ class BearerTokenMiddleware(Middleware):
         *,
         auth_config: AuthConfig,
         providers: dict[str, IdentityProvider],
-        audit_logger: AuditLogger | None = None,
+        audit_logger: _AuditReporter | None = None,
     ) -> None:
         self._config = auth_config
         self._providers = providers
@@ -163,7 +193,7 @@ class BearerTokenMiddleware(Middleware):
         # FastMCP API change (or unusual embedding) cannot crash the
         # middleware with a programming-error leak.
         try:
-            headers = _fmcp_dependencies.get_http_headers() or {}
+            headers = _fmcp_dependencies.get_http_headers()
         except RuntimeError:
             # stdio / non-HTTP transport — Bearer auth is meaningless;
             # pass through and let per-tool allow_anonymous decide.
@@ -183,9 +213,7 @@ class BearerTokenMiddleware(Middleware):
         except AuthError as exc:
             # B4 fix: only catch AuthError. Programming errors propagate.
             self._errors_total += 1
-            if self._audit_logger is not None and hasattr(
-                self._audit_logger, "log_failure"
-            ):
+            if self._audit_logger is not None:
                 self._audit_logger.log_failure(
                     source="middleware",
                     reason=type(exc).__name__,
@@ -195,9 +223,7 @@ class BearerTokenMiddleware(Middleware):
         else:
             self._enforce_trusted_issuers(principal.issuer)
             self._verifications_total += 1
-            if self._audit_logger is not None and hasattr(
-                self._audit_logger, "log_success"
-            ):
+            if self._audit_logger is not None:
                 self._audit_logger.log_success(
                     source="middleware",
                     principal_issuer=principal.issuer,
@@ -220,7 +246,7 @@ class BearerTokenMiddleware(Middleware):
         if fmcp_ctx is not None:
             try:
                 prior_state = fmcp_ctx.get_state(state_key)
-            except (AttributeError, TypeError):
+            except AttributeError, TypeError:
                 prior_state = _SENTINEL
             try:
                 # Principal is a frozen dataclass with frozenset[Permission]
@@ -239,15 +265,11 @@ class BearerTokenMiddleware(Middleware):
             # / internal-hop call paths.
             token_handle.var.reset(token_handle)
             if fmcp_ctx is not None and prior_state is not _SENTINEL:
-                try:
+                with suppress(AttributeError, TypeError):
                     if prior_state is None:
                         fmcp_ctx.delete_state(state_key)
                     else:
-                        fmcp_ctx.set_state(
-                            state_key, prior_state, serializable=False
-                        )
-                except (AttributeError, TypeError):
-                    pass
+                        fmcp_ctx.set_state(state_key, prior_state, serializable=False)
 
     def _select_provider(self, token: str) -> IdentityProvider:
         """Pick provider by ``default_provider`` hint or single-provider fallback.
@@ -295,7 +317,7 @@ class BearerTokenMiddleware(Middleware):
         self._errors_total += 1
         raise UnknownIssuerError(
             f"Issuer {issuer!r} not in auth_config.trusted_issuers: "
-            f"{list(self._config.trusted_issuers)}"
+            f"{self._config.trusted_issuers.copy()}"
         )
 
     @property

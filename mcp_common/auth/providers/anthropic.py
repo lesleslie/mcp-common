@@ -11,14 +11,17 @@ makes it incompatible with the project's standard httpx mocking
 (respx). This keeps the provider testable through the same httpx boundary
 the rest of mcp-common uses.
 """
+
 from __future__ import annotations
 
 import time
+from contextlib import suppress
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Self
 
 import httpx
 import jwt
+from jwt.algorithms import RSAAlgorithm
 
 from mcp_common.auth.exceptions import (
     ProviderUnavailableError,
@@ -28,7 +31,6 @@ from mcp_common.auth.exceptions import (
 from mcp_common.auth.permissions import Permission
 from mcp_common.auth.principal import Principal
 from mcp_common.auth.provider import (
-    IdentityProvider,
     ProviderHealth,
     ProviderState,
 )
@@ -81,7 +83,7 @@ class _JwksCache:
         jwk = keys.get(kid)
         if jwk is None:
             raise jwt.InvalidTokenError(f"No JWK for kid={kid!r}")
-        return jwt.algorithms.RSAAlgorithm.from_jwk(jwk)
+        return RSAAlgorithm.from_jwk(jwk)
 
     async def _get_keys(self) -> dict[str, dict[str, Any]]:
         now = time.monotonic()
@@ -97,9 +99,7 @@ class _JwksCache:
         try:
             response = await self._client.get(self._jwks_url)
         except httpx.HTTPError as exc:
-            raise jwt.PyJWKClientError(
-                f"JWKS fetch failed: {exc}"
-            ) from exc
+            raise jwt.PyJWKClientError(f"JWKS fetch failed: {exc}") from exc
 
         if response.status_code >= 400:
             raise jwt.PyJWKClientError(
@@ -171,7 +171,7 @@ class AnthropicIdentityProvider:
     async def aclose(self) -> None:
         await self._jwks_client.aclose()
 
-    async def __aenter__(self) -> AnthropicIdentityProvider:
+    async def __aenter__(self) -> Self:
         return self
 
     def force_refresh(self) -> None:
@@ -267,10 +267,8 @@ class AnthropicIdentityProvider:
         if "admin" in scopes or "admin:mcp" in scopes:
             permissions.append(Permission.ADMIN)
         for p in payload.get("permissions", []):
-            try:
-                permissions.append(Permission(p))
-            except ValueError:
+            with suppress(ValueError):
                 # Unknown permission value — fail closed. (B7 fix: do NOT
                 # silently coerce to READ; let an empty result deny.)
-                pass
+                permissions.append(Permission(p))
         return permissions  # Default-deny: returns [] on empty scope

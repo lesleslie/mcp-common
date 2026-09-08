@@ -9,6 +9,7 @@ and :meth:`AnthropicIdentityProvider.verify_token` now enforce the
 per-server allow-list directly, with a defense-in-depth check in
 :meth:`BearerTokenMiddleware.on_request` against ``AuthConfig.trusted_issuers``.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -98,9 +99,7 @@ def validate_auth_config(auth_config: object) -> None:
         # from a dict, so this is the right gate. When the sibling server
         # didn't register any providers, fail at startup so the operator
         # doesn't end up with anonymous middleware.
-        raise ValueError(
-            "auth.enabled=True but no identity_providers configured."
-        )
+        raise ValueError("auth.enabled=True but no identity_providers configured.")
 
     default_provider = getattr(auth_config, "default_provider", None)
     if default_provider and default_provider not in identity_providers:
@@ -114,23 +113,24 @@ def validate_auth_config(auth_config: object) -> None:
         provider_type = getattr(spec, "type", "jwt")
         if provider_type == "jwt" and not auth_secret:
             raise ValueError(
-                f"identity_providers[{name!r}] is type=jwt but auth.secret "
-                f"is not set"
+                f"identity_providers[{name!r}] is type=jwt but auth.secret is not set"
             )
         # api-security R2-6: an OAuth provider needs every credential —
         # otherwise token-exchange fails on every request or, worse, a
         # default-deny OAuth endpoint accidentally accepts an empty token.
         if provider_type == "oauth":
-            missing: list[str] = []
-            for field_name in (
+            required_oauth_fields = (
                 "client_id",
                 "client_secret",
                 "oauth_token_url",
                 "jwks_url",
                 "audience",
-            ):
-                if not getattr(spec, field_name, None):
-                    missing.append(field_name)
+            )
+            missing: list[str] = [
+                field_name
+                for field_name in required_oauth_fields
+                if not getattr(spec, field_name, None)
+            ]
             if missing:
                 raise ValueError(
                     f"identity_providers[{name!r}] is type=oauth but is "

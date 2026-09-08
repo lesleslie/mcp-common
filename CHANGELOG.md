@@ -5,6 +5,76 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.25.1] - 2026-09-08
+
+### Added
+
+- Add AuthErrorTranslationMiddleware for JSON-RPC -32001 mapping
+- Add AuthHealth model with wiring-discipline §3 four-signal shape
+- Add BearerTokenMiddleware and rewrite @require_auth to read from Context
+- auth: Add AnthropicIdentityProvider (5a: JWKS verification only)
+- auth: Add context-var helpers for request-scoped Principal
+- auth: Add IdentityProviderConfig + allow_anonymous_paths field
+- auth: Add Principal model, IdentityProvider Protocol, ProviderHealth
+- auth: Add ProviderUnavailableError for IdP reachability failures
+- auth: JWKS TTL honors empty-keys responses + rotation tests
+- Include AuthHealth in /health envelope; keep 200-only with degraded in body
+- Integrate AuthConfig into MCPServerSettings
+- mcp-common: Add MCPServerCLIFactory.register_lifecycle_handlers (Plan Task 3.2.6)
+- mcp-common: Register version + doctor on MCPServerCLIFactory
+
+### Changed
+
+- auth: Extract JWTIdentityProvider from verify_token free function
+- auth: Remove KNOWN_SERVICES frozenset; default-deny trusted_issuers; startup check
+- Convert AuthConfig to Pydantic BaseModel (preserves env-var loading)
+- Parenthesize 3 dotted-name except tuples in cli/security.py
+
+### Fixed
+
+- identity: Validate_auth_config reads resolved_secret not _secret
+- mcp-common: Add mymodule/ symlink at fixtures root for release_audit
+- mcp-common: Add trailing newlines to release-audit fixtures
+- mcp-common: Correct Python 2 'except' syntax in factory.py
+- mcp-common: Correct Python 2 except syntax in factory.py + add regression test
+- mcp-common: Replace production assert with explicit raise
+- mcp-common: Restore MCPServerCLIFactory.register_lifecycle_handlers
+- mcp-common: Restore Python 3 except-tuple syntax in factory.py (regression from 0cf8c0d)
+- mcp-common: Unblock coverage gate (factory.py syntax + memo update)
+- mcp-common: Use os._exit instead of sys.exit in signal handler
+- Move TYPE_CHECKING-only imports to runtime scope
+- websocket: Replace asyncio.iscoroutinefunction with inspect.iscoroutinefunction
+
+### Documentation
+
+- Add internal design doc for mcp_common.auth package
+- CLAUDE.md: Cross-reference MCP backend wiring discipline (Bodai-wide)
+- mcp-common: Record killer-demo verification of release-audit check
+- mcp-common: Refresh CLAUDE.md to match v0.24.4 reality
+- mcp-common: Remove duplicate [0.22.1] and [0.22.3] CHANGELOG entries
+- mcp-common: Sync CLAUDE.md version to current pyproject.toml
+- readme: Bump Python badge from 3.13+ to 3.14+
+
+### Testing
+
+- auth: Add regression test for untrusted issuer (B6 default-deny)
+- mcp-common: Add release-audit fixture suite for crackerjack check
+
+### Internal
+
+- Bump version to 0.22.4
+- Bump version to 0.23.0
+- Bump version to 0.24.0
+- Bump version to 0.24.1
+- Bump version to 0.24.2
+- Bump version to 0.24.3
+- Bump version to 0.24.4
+- Bump version to 0.24.5
+- gitignore: Apply Bodai canonical snippet
+- mcp-common: Modernize Python 2 except-comma syntax (10 sites)
+- mcp-common: Reset coverage ratchet to 90% with audit memo
+- release: Bump mcp-common to 0.25.0
+
 ## [0.24.5] - 2026-09-06
 
 ### Fixed

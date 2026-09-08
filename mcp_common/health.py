@@ -866,9 +866,7 @@ def register_http_health_route(
         # B3 fix: recompute auth health per request, not at registration.
         components = list(extra_components or [])
         auth_health = auth_health_provider() if auth_health_provider else None
-        is_degraded = (
-            auth_health.is_degraded() if auth_health is not None else False
-        )
+        is_degraded = auth_health.is_degraded() if auth_health is not None else False
         if auth_health is not None:
             # as_components() defaults to include_diagnostics=False; the
             # anonymous /health response must not leak last_error strings.

@@ -98,7 +98,9 @@ class AuthConfig(BaseModel):
         if explicit_secret is not None:
             resolved = str(explicit_secret)
         elif secret_env_var is not None:
-            raw = os.environ.get(secret_env_var) or os.environ.get("BODAI_SHARED_SECRET")
+            raw = os.environ.get(secret_env_var) or os.environ.get(
+                "BODAI_SHARED_SECRET"
+            )
             if raw is not None:
                 if raw == os.environ.get("BODAI_SHARED_SECRET"):
                     logger.warning(
@@ -109,10 +111,9 @@ class AuthConfig(BaseModel):
                     )
                 resolved = raw
         else:
-            raw = (
-                os.environ.get(f"{str(service_name).upper()}_SECRET")
-                or os.environ.get("BODAI_SHARED_SECRET")
-            )
+            raw = os.environ.get(
+                f"{str(service_name).upper()}_SECRET"
+            ) or os.environ.get("BODAI_SHARED_SECRET")
             if raw is not None:
                 if raw == os.environ.get("BODAI_SHARED_SECRET"):
                     logger.warning(
