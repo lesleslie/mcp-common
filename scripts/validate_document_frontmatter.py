@@ -110,7 +110,7 @@ class FileResult:
 
 def load_seed_topics(repo_root: Path) -> set[str]:
     """Parse topic-vocabulary-v1.md and return the seed slug set."""
-    vocab_path = repo_root / "docs/schemas/topic-vocabulary-v1.md"
+    vocab_path = repo_root / "docs/archive/topic-vocabulary-v1.md"
     if not vocab_path.is_file():
         # Missing vocabulary file is not fatal — degrade to unknown-topic warnings.
         return set()
