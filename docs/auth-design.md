@@ -41,8 +41,9 @@ sibling server.
 ### Wiring BearerTokenMiddleware in a server's lifespan
 
 ```python
-from mcp_common.auth.config import AuthConfig, IdentityProviderConfig
+from mcp_common.auth.config import AuthConfig
 from mcp_common.auth.core import JWTIdentityProvider
+from mcp_common.auth.exceptions import SecretNotConfiguredError
 from mcp_common.auth.health import AuthHealth
 from mcp_common.auth.identity import validate_auth_config  # B6 fix: startup check
 from mcp_common.auth.middleware import BearerTokenMiddleware
@@ -53,27 +54,34 @@ def build_middleware(auth_config: AuthConfig) -> BearerTokenMiddleware:
     # B6 fix: fail-loud at startup if auth config is inconsistent
     validate_auth_config(auth_config)
 
-    if auth_config.secret is None:
-        # I-9 fix: guard before .get_secret_value()
+    # AuthConfig.secret is a property that raises SecretNotConfiguredError
+    # when resolved_secret is None. Capture the resolved value once so the
+    # providers below reuse it without re-triggering the property.
+    try:
+        secret = auth_config.secret
+    except SecretNotConfiguredError:
         raise RuntimeError(
             "auth.secret is required when auth.enabled=True"
         )
 
-    providers = {}
-    if auth_config.identity_providers.get("jwt"):
+    # identity_providers may be None; default-deny is enforced by the
+    # providers themselves via auth_config.trusted_issuers.
+    providers: dict[str, object] = {}
+    identity_providers = auth_config.identity_providers or {}
+    if "jwt" in identity_providers:
         providers["jwt"] = JWTIdentityProvider(
             name="jwt",
-            secret=auth_config.secret.get_secret_value(),
+            secret=secret,
             trusted_issuers=auth_config.trusted_issuers,
         )
-    if anthropic_cfg := auth_config.identity_providers.get("anthropic"):
+    if anthropic_cfg := identity_providers.get("anthropic"):
         if anthropic_cfg.client_secret is None:
             raise RuntimeError(
-                f"identity_providers['anthropic'].client_secret is required"
+                "identity_providers['anthropic'].client_secret is required"
             )
         providers["anthropic"] = AnthropicIdentityProvider(
             client_id=anthropic_cfg.client_id,
-            client_secret=anthropic_cfg.client_secret.get_secret_value(),
+            client_secret=anthropic_cfg.client_secret,
             oauth_token_url=anthropic_cfg.oauth_token_url,
             jwks_url=anthropic_cfg.jwks_url,
             audience=anthropic_cfg.audience or auth_config.service_name,
