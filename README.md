@@ -5,7 +5,7 @@
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![Python: 3.14+](https://img.shields.io/badge/python-3.14%2B-green)](https://www.python.org/downloads/)
 
-**Version:** 0.17.9 (Oneiric-Native)
+**Version:** 0.25.1 (Oneiric-Native)
 **Status:** Production Ready
 
 ______________________________________________________________________
@@ -620,7 +620,8 @@ Result: +4% overhead (negligible vs network I/O)
 | v0.5.2 | 564 | 94% |
 | v0.6.0 | 615 | 99%+ |
 | v0.15.0 | ~1,400 | 95% |
-| v0.17.9 (current) | ~1,687 | 96% |
+| v0.17.9 | ~1,687 | 96% |
+| v0.25.1 (current) | 2,133 | ≥90% (gate) |
 
 **Testing Capabilities:**
 
@@ -716,9 +717,9 @@ ______________________________________________________________________
 ### Setup
 
 ```bash
-git clone https://github.com/lesaker/mcp-common.git
+git clone https://github.com/lesleslie/mcp-common.git
 cd mcp-common
-pip install -e ".[dev]"
+uv sync --group dev
 ```
 
 ### Running Tests
@@ -756,7 +757,7 @@ ______________________________________________________________________
 
 **Recent Versions:**
 
-- **0.17.9** (current) - `register_http_health_route` helper, dependency-groups migration
+- **0.25.1** (current) - `register_http_health_route` helper, dependency-groups migration
 - **0.17.0** - Plan 7 Phase 1: FastMCP 3.4 foundation
 - **0.16.0** - AppleScript bridge + iTerm2 protocol spec, async multi-line escaping
 - **0.15.0** - LLM layer: per-tier retry loop, error sanitization, llama_server support, Multimodal TaskType
@@ -767,7 +768,7 @@ ______________________________________________________________________
 
 **Compatibility:**
 
-- Requires Python 3.13+
+- Requires Python 3.14+
 - Optional: compatible with FastMCP 2.0+
 - Uses Pydantic 2.12+, Rich 14.2+
 
@@ -807,7 +808,7 @@ ______________________________________________________________________
 
 ## Acknowledgments
 
-Built with patterns extracted from 9 production MCP servers:
+Built with patterns extracted from 8 production MCP servers:
 
 **Primary Pattern Sources:**
 

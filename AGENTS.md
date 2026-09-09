@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-The production code lives under `mcp_common/` with subpackages for `adapters`, `config`, `security`, `ui`, and `cli`. Shared type hints ship via `py.typed`. Tests sit in `tests/`, mixing unit coverage (`test_http_client.py`, `test_config_*`) with scenario suites such as `tests/performance/`. Example servers for manual validation are under `examples/`, while architecture notes and implementation guides live in `docs/`. Build artifacts (`dist/`, `htmlcov/`) should stay out of PRs.
+The production code lives under `mcp_common/`. Major subpackages: `auth`, `cli`, `config`, `fastmcp`, `profiles`, `prompts`, `schemas`, `security`, `server`, `testing`, `tools`, `ui`, `validation`, `websocket`. Additional modules: `health.py`, `interfaces/`, `llm/`, `parsing/`, `prompting/`, `code_graph/`, `apple_script/`, `backends/`, plus top-level helpers `contracts.py`, `exceptions.py`, `baseline_tools.py`, `bootstrap.py`. Shared type hints ship via `py.typed`. **Note:** there is no `mcp_common/adapters/` package — `HTTPClientAdapter` and `HTTPClientSettings` are lazy PEP 562 proxies to `oneiric.adapters.http` declared in `mcp_common/__init__.py`. Tests sit in `tests/`, mixing unit coverage (`test_http_client.py`, `test_config_*`) with scenario suites such as `tests/performance/`. Example servers for manual validation are under `examples/`, while architecture notes and implementation guides live in `docs/`. Build artifacts (`dist/`, `htmlcov/`) should stay out of PRs.
 
 ## Build, Test, and Development Commands
 

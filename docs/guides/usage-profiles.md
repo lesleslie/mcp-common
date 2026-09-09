@@ -316,6 +316,15 @@ workers: 4
 - Use **Standard** for most production servers
 - Use **Full** for high-traffic or multi-user scenarios
 
+## Tool Registration: Mandatory vs Profile Tools
+
+Tools are registered in two layers:
+
+- **Mandatory tools** (`MANDATORY_TOOLS` / `MANDATORY_GROUPS`): **opt-in**. Both default to empty sets in `mcp_common.tools.profiles` (see `mcp_common/tools/profiles.py`). Repos that want certain tools always registered regardless of profile must explicitly set `mandatory_groups={...}` (or include tool names in `MANDATORY_TOOLS`) when constructing the profile.
+- **Profile tools**: gated by the profile (`MinimalServer`, `StandardServer`, `FullServer`). Selecting a profile determines which profile-specific tools get registered.
+
+**Practical implication:** selecting `StandardServer()` does **not** auto-register any cross-profile tools — only the profile's own tools. If a tool must be present across all profiles, register it via `mandatory_groups=` rather than relying on profile selection.
+
 ## Best Practices
 
 ### 1. Start Simple

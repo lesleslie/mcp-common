@@ -6,9 +6,9 @@ For a shorter, tool-neutral bootstrap document, start with `AGENTS.md`.
 
 ## Project Overview
 
-**mcp-common** is a Oneiric-native foundation library for building production-grade MCP (Model Context Protocol) servers. It provides battle-tested patterns extracted from 9 production servers including crackerjack, session-buddy, and fastblocks.
+**mcp-common** is a Oneiric-native foundation library for building production-grade MCP (Model Context Protocol) servers. It provides battle-tested patterns extracted from 8 production servers including crackerjack, session-buddy, and fastblocks.
 
-**Current Status:** v0.24.3 - **Oneiric-Native (Production Ready)**
+**Current Status:** v0.25.1 - **Oneiric-Native (Production Ready)**
 
 - ✅ Core package structure complete
 - ✅ MCPBaseSettings with YAML + environment variable support
@@ -454,7 +454,7 @@ This project follows **strict quality standards** enforced by test suite and lin
   - Type stubs (`.pyi`) for external dependencies if needed
 - **Code Style:** Ruff with comprehensive rule set (136 enabled rules - see pyproject.toml)
   - Line length: 100 characters
-  - Python 3.13+ target
+  - Python 3.14+ target
   - Google-style docstrings
 - **Security:** Bandit security scanning (no security issues tolerated)
 - **Documentation:**
@@ -492,7 +492,7 @@ uv run ruff format && uv run ruff check && uv run mypy mcp_common tests && uv ru
 
 ## Implemented Components
 
-Current components as of v0.24.3:
+Current components as of v0.25.1:
 
 - **CLI factory**: `MCPServerCLIFactory` with lifecycle management (`create_app`, `register_lifecycle_handlers`, `create_handlers`)
 - **Settings**: `MCPBaseSettings` with YAML + env var layered configuration
@@ -528,7 +528,7 @@ python weather_server.py
 
 ## Version and Release Information
 
-- **Current Version:** 0.24.3 (Oneiric-Native - production ready)
+- **Current Version:** 0.25.1 (Oneiric-Native - production ready)
 
 See CHANGELOG.md for the full version history.
 
@@ -606,7 +606,7 @@ This project follows crackerjack's clean code philosophy:
 
 - **Security patterns**: No hardcoded paths, proper temp file handling
 
-- **Python 3.13+ modern patterns**: Use `|` unions, pathlib over os.path
+- **Python 3.14+ modern patterns**: Use `|` unions, pathlib over os.path
 
 ```bash
 python -m crackerjack

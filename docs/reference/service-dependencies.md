@@ -25,12 +25,17 @@ These dependencies are **automatically installed** with `pip install mcp-common`
 
 | Package | Version | Purpose | Why This Library |
 |---------|---------|---------|------------------|
-| **oneiric** | >=0.3.6 | Configuration & HTTP client | Oneiric patterns for YAML + env var config, connection pooling |
-| **pydantic** | >=2.12.5 | Data validation | Type-safe settings with validation |
+| **oneiric** | >=0.16.0 | Configuration & HTTP client | Oneiric patterns for YAML + env var config, connection pooling |
+| **pydantic** | >=2.13.4 | Data validation | Type-safe settings with validation |
+| **pydantic-settings** | >=2.14.1 | Settings management | Pydantic-based settings with env var loading |
 | **pyyaml** | >=6.0.3 | YAML parsing | Configuration file loading |
-| **rich** | >=14.2.0 | Terminal UI | Beautiful console output |
-| **typer** | >=0.21.0 | CLI framework | Server lifecycle management |
-| **psutil** | >=7.2.1 | System utilities | Process monitoring for PID management |
+| **rich** | >=15.0.0 | Terminal UI | Beautiful console output |
+| **typer** | >=0.26.7 | CLI framework | Server lifecycle management |
+| **psutil** | >=7.2.2 | System utilities | Process monitoring for PID management |
+| **PyJWT** | >=2.8.0 | JWT auth | JWT token verification (auth subsystem) |
+| **cryptography** | >=48.0.0 | Crypto primitives | Required by JWT signing/verification |
+| **websockets** | >=16.0 | WebSocket client/server | Real-time server + client + TLS |
+| **fastmcp** | >=3.4.0 | MCP server framework | FastMCP tool/middleware integration |
 
 ### Dependency Explanations
 
@@ -45,7 +50,7 @@ These dependencies are **automatically installed** with `pip install mcp-common`
 - `HTTPClientSettings` - Configuration for HTTP adapter
 - Layered configuration loading (defaults → YAML → env vars)
 
-**Why it's extracted**: Shared across 9 production MCP servers for consistent patterns.
+**Why it's extracted**: Shared across 8 production MCP servers for consistent patterns.
 
 **Usage in mcp-common**:
 
@@ -157,51 +162,79 @@ def is_process_running(pid: int) -> bool:
 
 ## Optional Dependencies
 
-### Development Dependencies
+### Development Dependency Group
 
-Install with `pip install mcp-common[dev]`:
+Install with `uv sync --group dev` (PEP 735 dependency groups; the legacy
+`pip install mcp-common[dev]` extras were removed when the project migrated
+to PEP 735 in v0.25.0):
 
-| Package | Purpose |
-|---------|---------|
-| **crackerjack** | Quality control and CI/CD automation |
-| **pytest-benchmark** | Performance benchmarking |
-| **uv-bump** | Version bumping automation |
+| Package | Version | Purpose |
+|---------|---------|---------|
+| **crackerjack** | >=0.65.3 | Quality control and CI/CD automation |
+| **pytest-benchmark** | >=5.2.3 | Performance benchmarking |
+| **respx** | >=0.23.1 | HTTP mocking for tests |
+| **uv-bump** | >=0.5.0 | Version bumping automation |
 
-### Optional Runtime Dependencies
+### Optional Dependency Groups (PEP 735)
 
-These are **NOT installed** with mcp-common but can be used by your server:
+These are **NOT installed** with `mcp-common` by default. Install per-group
+with `uv sync --group <name>`:
 
-| Package | Purpose | Installation |
-|---------|---------|--------------|
-| **fastmcp** | MCP server framework | `pip install fastmcp` |
-| **httpx** | Async HTTP client (included via oneiric) | Automatic |
-| **pyjwt** | JWT authentication | `pip install pyjwt` |
-| **opentelemetry** | Distributed tracing | `pip install opentelemetry-api` |
+| Group | Purpose | Notable packages |
+|-------|---------|------------------|
+| **treesitter** | Tree-sitter parsing (used by session-buddy, mahavishnu, etc.) | `tree-sitter>=0.25.2`, `tree-sitter-python>=0.25.0`, `tree-sitter-go>=0.25.0` |
+| **llm** | OpenAI-compatible LLM provider | `openai>=2.41.0` |
+| **macos-prompts** | macOS native prompts via pyobjc | `pyobjc-core>=12.2` |
+| **terminal-prompts** | Terminal prompting backends | (see `pyproject.toml [dependency-groups]`) |
+
+**Migration note**: prior versions exposed `[treesitter,llm]` extras. Those
+extras were removed in v0.25.0; downstream repos must now include the
+`tree-sitter` and `openai` deps directly in their own `dependency-groups`.
+
+### Optional Runtime Dependencies (transitive / not in pyproject)
+
+| Package | Source | Notes |
+|---------|--------|-------|
+| **httpx** | Transitive via `oneiric` | Async HTTP client; pulled in by `oneiric.adapters.http` |
+
+There is **no** optional `opentelemetry` distribution in this package —
+mcp-common does not emit OpenTelemetry traces directly. Consumers wanting
+tracing should add `opentelemetry-api` to their own dependencies.
 
 ## Dependency Tree
 
 ```
-mcp-common (0.7.0)
-├── oneiric (>=0.3.6)
-│   ├── pydantic (>=2.12.5)
+mcp-common (0.25.1)
+├── oneiric (>=0.16.0)
+│   ├── pydantic (>=2.13.4)
+│   ├── pydantic-settings (>=2.14.1)
 │   ├── pyyaml (>=6.0.3)
-│   ├── httpx (>=0.27.0)
-│   └── rich (>=14.2.0)
-├── pydantic (>=2.12.5)
+│   ├── httpx (transitive)
+│   └── rich (>=15.0.0)
+├── pydantic (>=2.13.4)
+├── pydantic-settings (>=2.14.1)
 ├── pyyaml (>=6.0.3)
-├── rich (>=14.2.0)
-├── typer (>=0.21.0)
-│   └── rich (>=14.2.0) [already listed]
-└── psutil (>=7.2.1)
+├── rich (>=15.0.0)
+├── typer (>=0.26.7)
+│   └── rich (>=15.0.0) [already listed]
+├── psutil (>=7.2.2)
+├── PyJWT (>=2.8.0)
+│   └── cryptography (>=48.0.0)
+├── cryptography (>=48.0.0) [already listed]
+├── websockets (>=16.0)
+└── fastmcp (>=3.4.0)
 ```
 
-**Note**: `httpx` is included transitively via `oneiric` for HTTP client functionality.
+**Note**: `httpx` is included transitively via `oneiric` for HTTP client
+functionality. Optional PEP 735 groups (`treesitter`, `llm`, `macos-prompts`,
+`terminal-prompts`) are not part of the runtime tree — install with
+`uv sync --group <name>`.
 
 ## Version Compatibility
 
 ### Python Version
 
-**Required**: Python >=3.13
+**Required**: Python >=3.14
 
 **Why**: mcp-common uses modern Python features:
 
@@ -214,13 +247,31 @@ mcp-common (0.7.0)
 mcp-common uses **compatible release clauses** (`~=`) for stable dependencies:
 
 ```toml
+[project]
 dependencies = [
-    "oneiric>=0.3.6",      # Minimum version, allows updates
-    "pydantic>=2.12.5",    # Stable API, allows patch/minor updates
-    "rich>=14.2.0",        # Stable API
-    "typer>=0.21.0",       # Stable API
-    "psutil>=7.2.1",       # Stable API
+    "oneiric>=0.16.0",
+    "pydantic>=2.13.4",
+    "pydantic-settings>=2.14.1",
+    "psutil>=7.2.2",
+    "pyyaml>=6.0.3",
+    "rich>=15.0.0",
+    "typer>=0.26.7",
+    "PyJWT>=2.8.0",
+    "cryptography>=48.0.0",
+    "websockets>=16.0",
+    "fastmcp>=3.4.0",
 ]
+
+[dependency-groups]
+dev = [
+    "crackerjack>=0.65.3",
+    "pytest-benchmark>=5.2.3",
+    "respx>=0.23.1",
+    "uv-bump>=0.5.0",
+]
+treesitter = ["tree-sitter>=0.25.2", "tree-sitter-python>=0.25.0", "tree-sitter-go>=0.25.0"]
+llm = ["openai>=2.41.0"]
+macos-prompts = ["pyobjc-core>=12.2"]
 ```
 
 **Why not `~=` (compatible release)**:
@@ -239,7 +290,7 @@ mcp-common is the **foundation library** for the Mahavishnu ecosystem. These pro
 |---------|------|-------|
 | **Mahavishnu** | Orchestrator | Configuration management, CLI lifecycle, Rich UI |
 | **Session-Buddy** | Session Manager | Settings, HTTP client, server panels |
-| **Dhruva** | Adapter Curator | Configuration patterns, CLI factory |
+| **Dhara** | Curator (State) | Configuration patterns, CLI factory |
 | **Akosha** | Pattern Recognition | Settings management, HTTP pooling |
 | **Crackerjack** | Quality Inspector | Server lifecycle, health checks |
 
@@ -279,7 +330,7 @@ bandit -r mcp_common/
 safety check
 ```
 
-**Current Status**: ✅ Zero critical vulnerabilities (as of v0.7.0)
+**Current Status**: ✅ Zero critical vulnerabilities (as of v0.25.1)
 
 ### Dependency Updates
 
@@ -326,8 +377,8 @@ HTTP client adapter (via oneiric) provides:
 # Install mcp-common with runtime dependencies
 pip install mcp-common
 
-# Install with development dependencies
-pip install mcp-common[dev]
+# Install with development dependencies (PEP 735 group)
+uv sync --group dev
 
 # Install from git
 pip install git+https://github.com/lesleslie/mcp-common.git
@@ -337,26 +388,26 @@ pip install git+https://github.com/lesleslie/mcp-common.git
 
 ```bash
 # Using pip (recommended)
-pip install mcp-common>=0.7.0
+pip install mcp-common>=0.25.0
 
 # Using uv (faster)
-uv add mcp-common>=0.7.0
+uv add mcp-common>=0.25.0
 
 # Using poetry
-poetry add mcp-common>=0.7.0
+poetry add mcp-common>=0.25.0
 ```
 
 ### Version Pinning
 
 ```bash
 # Pin to specific version
-pip install mcp-common==0.7.0
+pip install mcp-common==0.25.1
 
 # Pin to minor version (allows patches)
-pip install mcp-common~=0.7.0
+pip install mcp-common~=0.25.0
 
 # Minimum version (allows updates)
-pip install "mcp-common>=0.7.0"
+pip install "mcp-common>=0.25.0"
 ```
 
 ## Troubleshooting
@@ -420,10 +471,10 @@ When contributing to mcp-common:
 
 mcp-common provides a **minimal, production-ready foundation** for MCP servers with:
 
-- **6 core dependencies** (oneiric, pydantic, pyyaml, rich, typer, psutil)
+- **11 core dependencies** (oneiric, pydantic, pydantic-settings, pyyaml, rich, typer, psutil, PyJWT, cryptography, websockets, fastmcp)
 - **~28MB memory overhead** (minimal impact)
 - **~100ms startup time** (fast initialization)
-- **Zero security vulnerabilities** (as of v0.7.0)
-- **9 ecosystem projects** using mcp-common in production
+- **Zero security vulnerabilities** (as of v0.25.1)
+- **10 ecosystem projects** using mcp-common in production
 
 **Ready to build?** See [QUICKSTART.md](../../QUICKSTART.md) for 5-minute getting started guide!
