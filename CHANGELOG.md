@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+*No unreleased changes yet. When adding entries below, place them above this line and below the [latest release].*
+
 ## [0.25.1] - 2026-09-08
 
 ### Added
@@ -113,16 +117,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - mcp-common: Modernize Python 2 except-comma syntax (10 sites)
 - mcp-common: Reset coverage ratchet to 90% with audit memo
 
-## [0.24.4] - 2026-09-05
-
-### Fixed
-
-- Restore `MCPServerCLIFactory.register_lifecycle_handlers` and
-  `MCPServerCLIFactory.create_handlers` accidentally removed in the
-  0.24.0 version bump. These are public API methods documented in
-  0.24.0 as added (Plan Task 3.2.6) and required for the planned
-  OneiricCLIBase composition flow.
-
 ## [0.24.3] - 2026-09-03
 
 ### Fixed
@@ -160,11 +154,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **0.23.0 was a broken release** — published earlier on 2026-08-29 but the bump commit inadvertently reverted the Task 7 factory additions by sweeping a stale working-tree `factory.py` into the version-bump commit. 0.23.1 restores those additions. Consumers on `mcp-common>=0.23` should pin `>=0.23.1` to skip the bad 0.23.0.
 
-## [Unreleased]
+## [0.23.0] - 2026-08-29
 
-### Added
+### YANKED
 
-- **feat: add `version` and `doctor` commands to `MCPServerCLIFactory`.** Every Bodai MCP server built on this factory gains `version` and `doctor` at the root level (or under the `mcp` subcommand if `use_mcp_subcommand=True`) with no call-site changes. `version` reads from `importlib.metadata.version(server_name)`. `doctor` runs env-setup checks (settings loaded, cache_root writable) and emits JSON or text based on `--json`.
+- Broken release — the version-bump commit inadvertently reverted the Task 7 factory additions by sweeping a stale working-tree `factory.py` into the bump. Do not install; use `>=0.23.1` instead.
 
 ## [0.22.4] - 2026-08-26
 

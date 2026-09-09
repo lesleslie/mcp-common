@@ -8,12 +8,12 @@ This guide explains how to integrate mcp-common into MCP servers using the enhan
 
 ## Overview
 
-mcp-common v0.17.9 provides the following reusable components for MCP servers:
+mcp-common v0.25.1 provides the following reusable components for MCP servers:
 
 1. **Server Module** (`mcp_common.server/`) - Reusable lifecycle components (added v0.4.0)
 1. **Enhanced CLI Factory** (`mcp_common.cli.MCPServerCLIFactory`) - Single factory for all MCP servers (handler + server class patterns; added v0.3.3)
 1. **Tool Profile System** (`mcp_common.profiles`) - Gated tool registration to reduce MCP context overhead (added v0.6.0)
-1. **Health Check Helpers** (`register_http_health_route`) - Production-ready health endpoints (added v0.17.9)
+1. **Health Check Helpers** (`register_http_health_route`) - Production-ready health endpoints with AuthHealth wiring (added v0.17.9; AuthHealth wiring added v0.25.0)
 
 ### Architecture Patterns
 
@@ -372,6 +372,48 @@ factory = MCPServerCLIFactory.create_server_cli(
 - ✅ Graceful shutdown with cleanup
 - ✅ Health probe support
 - ✅ Same factory for all MCP servers
+
+### 5. AuthHealth Integration
+
+`mcp_common.health.register_http_health_route` accepts an `auth_health_provider: Callable[[], AuthHealth | None]` so the `/health` envelope surfaces the four-signal auth observability required by the Bodai wiring-discipline §3 contract. `AuthHealth` lives at `mcp_common/auth/health.py` and exposes the dataclass fields `providers: dict[str, ProviderHealth]`, `verifications_total: int`, `errors_total: int`, `last_successful_verification_at: datetime | None`, `last_updated_timestamp: datetime`, `cycles_total: int`. The async classmethod `AuthHealth.from_providers(...)` constructs a snapshot by running `health()` on each `IdentityProvider` in parallel.
+
+**Wiring:**
+
+```python
+from datetime import UTC, datetime
+from mcp_common.auth.health import AuthHealth
+from mcp_common.auth.provider import IdentityProvider
+from mcp_common.health import register_http_health_route
+
+
+# Counters maintained by your auth middleware / decorator.
+verifications_total: int = 0
+errors_total: int = 0
+last_success_at: datetime | None = None
+
+
+async def build_auth_health() -> AuthHealth | None:
+    """Return the current AuthHealth snapshot, or None if auth disabled."""
+    if not auth_providers:
+        return None
+    return await AuthHealth.from_providers(
+        providers=auth_providers,
+        verifications_total=verifications_total,
+        errors_total=errors_total,
+        last_successful_verification_at=last_success_at,
+    )
+
+
+mcp = FastMCP("MyServer")
+register_http_health_route(
+    mcp,
+    service_name="my-server",
+    version="0.25.1",
+    auth_health_provider=build_auth_health,
+)
+```
+
+The `/health` endpoint then emits the four signals (`feed.entities_count`, `feed.last_updated_timestamp`, `feed.errors_total`, `feed.cycles_total`) plus the auth snapshot alongside component health. The endpoint stays 200-only (the envelope carries `degraded` in the body, per `docs/audits/2026-09-05-coverage-ratchet-memo.md` and the wiring-discipline contract).
 
 ## Server Requirements
 
