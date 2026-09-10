@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.25.2] - 2026-09-10
+
+### Fixed
+
+- docs: Correct IdentityProviderConfig→IdentityProviderSpec and property-raises pattern in auth-design.md
+
+### Documentation
+
+- Archive misfiled/migrated docs; update PLAN_INDEX and validator paths
+- CHANGELOG structural fixes, RULES.md coverage gate, AuthHealth via from_providers
+- V0.25.1 doc sweep — version stamps, dep table regen, subpackage list, install commands, server counts
+
 ## [Unreleased]
 
 *No unreleased changes yet. When adding entries below, place them above this line and below the [latest release].*
@@ -36,7 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- identity: Validate_auth_config reads resolved_secret not _secret
+- identity: Validate_auth_config reads resolved_secret not \_secret
 - mcp-common: Add mymodule/ symlink at fixtures root for release_audit
 - mcp-common: Add trailing newlines to release-audit fixtures
 - mcp-common: Correct Python 2 'except' syntax in factory.py
@@ -45,7 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - mcp-common: Restore MCPServerCLIFactory.register_lifecycle_handlers
 - mcp-common: Restore Python 3 except-tuple syntax in factory.py (regression from 0cf8c0d)
 - mcp-common: Unblock coverage gate (factory.py syntax + memo update)
-- mcp-common: Use os._exit instead of sys.exit in signal handler
+- mcp-common: Use os.\_exit instead of sys.exit in signal handler
 - Move TYPE_CHECKING-only imports to runtime scope
 - websocket: Replace asyncio.iscoroutinefunction with inspect.iscoroutinefunction
 

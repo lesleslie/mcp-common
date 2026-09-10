@@ -6,6 +6,7 @@ the total line coverage is at or above `.coverage-ratchet.json`'s
 
 Usage: python scripts/verify_coverage_baseline.py
 """
+
 from __future__ import annotations
 
 import json
@@ -24,16 +25,27 @@ def main() -> int:
 
     subprocess.run(
         [
-            sys.executable, "-m", "coverage", "run",
-            "-m", "pytest", "tests/", "-q", "--no-header",
+            sys.executable,
+            "-m",
+            "coverage",
+            "run",
+            "-m",
+            "pytest",
+            "tests/",
+            "-q",
+            "--no-header",
         ],
         cwd=repo_root,
         check=False,
     )
     subprocess.run(
         [
-            sys.executable, "-m", "coverage", "json",
-            "-o", str(coverage_json),
+            sys.executable,
+            "-m",
+            "coverage",
+            "json",
+            "-o",
+            str(coverage_json),
         ],
         cwd=repo_root,
         check=False,

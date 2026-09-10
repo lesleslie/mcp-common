@@ -26,7 +26,10 @@ from fastmcp import FastMCP
 # repo root without an editable install (matches the test-suite path).
 sys.path.insert(0, ".")
 
-from mcp_common.baseline_tools import register_baseline_tools, seed_liveness_context  # noqa: E402
+from mcp_common.baseline_tools import (
+    register_baseline_tools,
+    seed_liveness_context,
+)
 
 
 def _print_envelope(label: str, payload: dict[str, Any]) -> None:
@@ -49,7 +52,9 @@ async def _invoke(server: FastMCP, name: str, **kwargs: Any) -> dict[str, Any]:
         payload = dict(result.structured_content)
     else:
         # Fallback: parse the TextContent JSON.
-        text_blocks = [c.text for c in result.content if getattr(c, "type", None) == "text"]
+        text_blocks = [
+            c.text for c in result.content if getattr(c, "type", None) == "text"
+        ]
         joined = "\n".join(text_blocks)
         try:
             loaded = json.loads(joined)

@@ -31,49 +31,38 @@ FM_TEMPLATE = (
 # (status, role, topic) per file. See playbook Section 3 for the matrix.
 ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
     # docs/ loose files: migration summaries and historical completion reports.
-    "docs/MCP_SERVER_MIGRATION_SUMMARY.md":
-        ("complete", "historical", "mcp-design"),
-    "docs/MIGRATION_COMPLETE_SUMMARY.md":
-        ("complete", "historical", "mcp-design"),
-    "docs/ONEIRIC_CLI_AUDIT_RESPONSE.md":
-        ("complete", "historical", "oneiric-config"),
-    "docs/ONEIRIC_CLI_FACTORY_IMPLEMENTATION.md":
-        ("complete", "historical", "oneiric-config"),
-    "docs/ONEIRIC_CLI_FACTORY_PLAN.md":
-        ("complete", "historical", "oneiric-config"),
-    "docs/ONEIRIC_CLI_FACTORY_SPEC_REVIEW.md":
-        ("complete", "historical", "oneiric-config"),
-    "docs/PHASE1_COMPLETE_SUMMARY.md":
-        ("complete", "historical", "mcp-design"),
-    "docs/README.md":
-        ("active", "canonical", "lifecycle"),
-    "docs/SECURITY_IMPLEMENTATION.md":
-        ("active", "canonical", "auth"),
-    "docs/SERVER_INTEGRATION.md":
-        ("active", "canonical", "mcp-design"),
-    "docs/iterm2-applescript-protocol.md":
-        ("active", "canonical", "mcp-design"),
+    "docs/MCP_SERVER_MIGRATION_SUMMARY.md": ("complete", "historical", "mcp-design"),
+    "docs/MIGRATION_COMPLETE_SUMMARY.md": ("complete", "historical", "mcp-design"),
+    "docs/ONEIRIC_CLI_AUDIT_RESPONSE.md": ("complete", "historical", "oneiric-config"),
+    "docs/ONEIRIC_CLI_FACTORY_IMPLEMENTATION.md": (
+        "complete",
+        "historical",
+        "oneiric-config",
+    ),
+    "docs/ONEIRIC_CLI_FACTORY_PLAN.md": ("complete", "historical", "oneiric-config"),
+    "docs/ONEIRIC_CLI_FACTORY_SPEC_REVIEW.md": (
+        "complete",
+        "historical",
+        "oneiric-config",
+    ),
+    "docs/PHASE1_COMPLETE_SUMMARY.md": ("complete", "historical", "mcp-design"),
+    "docs/README.md": ("active", "canonical", "lifecycle"),
+    "docs/SECURITY_IMPLEMENTATION.md": ("active", "canonical", "auth"),
+    "docs/SERVER_INTEGRATION.md": ("active", "canonical", "mcp-design"),
+    "docs/iterm2-applescript-protocol.md": ("active", "canonical", "mcp-design"),
     # docs/guides/ — user-facing guides, canonical.
-    "docs/guides/server-development.md":
-        ("active", "canonical", "mcp-design"),
-    "docs/guides/usage-profiles.md":
-        ("active", "canonical", "lifecycle"),
+    "docs/guides/server-development.md": ("active", "canonical", "mcp-design"),
+    "docs/guides/usage-profiles.md": ("active", "canonical", "lifecycle"),
     # docs/reference/ — living reference docs.
-    "docs/reference/COVERAGE_POLICY.md":
-        ("active", "canonical", "lifecycle"),
-    "docs/reference/service-dependencies.md":
-        ("active", "canonical", "lifecycle"),
+    "docs/reference/COVERAGE_POLICY.md": ("active", "canonical", "lifecycle"),
+    "docs/reference/service-dependencies.md": ("active", "canonical", "lifecycle"),
     # docs/schemas/ — source of truth, always active canonical lifecycle.
-    "docs/schemas/document-frontmatter-v1.md":
-        ("active", "canonical", "lifecycle"),
-    "docs/schemas/topic-vocabulary-v1.md":
-        ("active", "canonical", "lifecycle"),
+    "docs/schemas/document-frontmatter-v1.md": ("active", "canonical", "lifecycle"),
+    "docs/schemas/topic-vocabulary-v1.md": ("active", "canonical", "lifecycle"),
     # mcp/contracts/ — shared contract spec.
-    "mcp/contracts/code_graph_tools.md":
-        ("active", "canonical", "mcp-design"),
+    "mcp/contracts/code_graph_tools.md": ("active", "canonical", "mcp-design"),
     # examples/README.md — examples directory entry.
-    "examples/README.md":
-        ("active", "canonical", "lifecycle"),
+    "examples/README.md": ("active", "canonical", "lifecycle"),
 }
 
 
@@ -85,7 +74,9 @@ def add_legacy_comment(text: str) -> str:
         if stripped.startswith(("**Status**", "**Status:")):
             original = stripped.rstrip("\n")
             if "-- see YAML frontmatter" not in original:
-                lines[i] = original + "  <!-- legacy status — see YAML frontmatter -->\n"
+                lines[i] = (
+                    original + "  <!-- legacy status — see YAML frontmatter -->\n"
+                )
             break
     return "".join(lines)
 
@@ -102,9 +93,7 @@ def main() -> None:
         if original.lstrip().startswith("---\n"):
             print(f"SKIP (already has frontmatter): {rel_path}")
             continue
-        frontmatter = FM_TEMPLATE.format(
-            status=status, role=role, topic=topic
-        )
+        frontmatter = FM_TEMPLATE.format(status=status, role=role, topic=topic)
         body_with_comment = add_legacy_comment(original)
         new_content = frontmatter + body_with_comment
         path.write_text(new_content, encoding="utf-8")

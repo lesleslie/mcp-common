@@ -32,6 +32,7 @@ Exit codes:
     0 = success (file written or --dry-run)
     2 = bad CLI args or missing dependency
 """
+
 from __future__ import annotations
 
 import argparse
@@ -106,13 +107,13 @@ _FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*(?:\n|$)", re.DOTALL)
 class Entry:
     """One row in the registry — a file with parsed frontmatter."""
 
-    rel: str           # repo-relative POSIX path
-    store: str         # e.g. "docs/adr/"
-    date: str          # ISO-8601 (YYYY-MM-DD), or "" if missing
-    status: str        # lifecycle value, or "unknown" if missing
-    role: str          # role value, or "unknown" if missing
-    topic: str         # topic slug, or "—" if missing
-    title: str         # one-line title derived from first H1 / filename
+    rel: str  # repo-relative POSIX path
+    store: str  # e.g. "docs/adr/"
+    date: str  # ISO-8601 (YYYY-MM-DD), or "" if missing
+    status: str  # lifecycle value, or "unknown" if missing
+    role: str  # role value, or "unknown" if missing
+    topic: str  # topic slug, or "—" if missing
+    title: str  # one-line title derived from first H1 / filename
 
 
 # ---------------------------------------------------------------------------
@@ -341,12 +342,8 @@ def _render_store_table(store: str, entries: list[Entry]) -> str:
     rows: list[str] = []
     rows.append(f"### {label}")
     rows.append("")
-    rows.append(
-        "| Path | Date | Status | Role | Topic | Title |"
-    )
-    rows.append(
-        "|---|---|---|---|---|---|"
-    )
+    rows.append("| Path | Date | Status | Role | Topic | Title |")
+    rows.append("|---|---|---|---|---|---|")
     if not entries:
         rows.append("| _no entries with valid frontmatter_ | | | | | |")
         rows.append("")
@@ -396,8 +393,10 @@ def _render_distribution(entries: list[Entry]) -> str:
     rows: list[str] = []
     rows.append("## Lifecycle × Role Distribution")
     rows.append("")
-    rows.append("Counts of entries per (lifecycle, role) cell across all six stores. "
-                 "Useful as a sanity check that the registry above is internally consistent.")
+    rows.append(
+        "Counts of entries per (lifecycle, role) cell across all six stores. "
+        "Useful as a sanity check that the registry above is internally consistent."
+    )
     rows.append("")
     # Build a header: blank corner + each lifecycle.
     header = "| Role \\\\ Lifecycle | " + " | ".join(LIFECYCLE_VALUES) + " | Total |"
@@ -585,13 +584,13 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.json_summary:
         import json
+
         summary = {
             "generated_at": generated_at,
             "discovered": total_discovered,
             "with_frontmatter": total_with_frontmatter,
             "per_store": {
-                store: len(entries_by_store.get(store, []))
-                for store in DEFAULT_STORES
+                store: len(entries_by_store.get(store, [])) for store in DEFAULT_STORES
             },
         }
         sys.stderr.write(json.dumps(summary, indent=2) + "\n")
