@@ -211,7 +211,7 @@ Key subpackages (full listing cross-referenced below):
 - `mcp_common/contracts.py` — Shared contracts (excluded from coverage)
 - `mcp_common/exceptions.py` — Exception hierarchy
 - `mcp_common/fastmcp/` — FastMCP runtime (excluded from coverage)
-- `mcp_common/health.py` — Health check models
+- `mcp_common/health/` — Health check models + per-feed aggregator
 - `mcp_common/interfaces/` — Adapter interface protocols
 - `mcp_common/llm/` — LLM adapters (httpx2-based; excluded from coverage)
 - `mcp_common/parsing/tree_sitter/` — Tree-sitter parsers

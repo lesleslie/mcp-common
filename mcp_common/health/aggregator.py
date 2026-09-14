@@ -61,12 +61,12 @@ def aggregate_feed_states(
         checks[feed_name] = {
             "status": status,
             "healthy": healthy,
-            "reason_codes": list(codes),
+            "reason_codes": codes.copy(),
         }
 
         if status > worst_status:
             worst_status = status
-            worst_reasons = list(codes)
+            worst_reasons = codes.copy()
         elif status == worst_status and codes:
             # Tie at worst: include each unique code once (preserve order).
             for code in codes:

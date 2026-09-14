@@ -224,9 +224,7 @@ class CommonMCPClient:
         try:
             return await session.call_tool(name, arguments)
         except httpx.ReadTimeout as exc:
-            logger.warning(
-                "MCP tool call %r timed out after %s seconds", name, timeout
-            )
+            logger.warning("MCP tool call %r timed out after %s seconds", name, timeout)
             raise MCPClientTimeoutError(
                 f"MCP tool call {name!r} timed out after {timeout} seconds"
             ) from exc
