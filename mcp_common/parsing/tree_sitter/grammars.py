@@ -30,8 +30,16 @@ def load_python_grammar() -> tree_sitter.Language | None:
     try:
         # Use the language() function from tree_sitter_python
         from tree_sitter import Language
-        from tree_sitter_python import language as python_language
+        # ``tree_sitter_python`` ships in the ``treesitter`` PEP 735 group;
+        # the runtime ``ImportError`` below returns None cleanly. The
+        # ``# type: ignore[import-not-found]`` directive covers Mypy/Pyright
+        # in clean venvs where the optional dep is not installed.
+        from tree_sitter_python import language as python_language  # type: ignore[import-not-found]  # ty: ignore[unresolved-import]
 
+        # ``Language`` accepts a ``PyCapsule`` (the current API). Earlier
+        # tree-sitter versions accepted ``Language(int)`` but that overload is
+        # now ``@deprecated`` in the stubs; ``python_language()`` returns a
+        # ``PyCapsule`` so we always hit the non-deprecated overload.
         language = Language(python_language())
         LanguageRegistry.set_grammar(SupportedLanguage.PYTHON, language)
 
