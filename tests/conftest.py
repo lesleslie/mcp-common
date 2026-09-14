@@ -56,3 +56,17 @@ def reset_di_container() -> t.Iterator[None]:
     # Note: depends.reset() doesn't exist, so we manually clear if needed
     # For now, just yield - Oneiric handles isolation via module registration
     return
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """Register custom pytest markers used across the suite.
+
+    ``req`` ties a test back to one or more requirement IDs in
+    ``docs/plans/*.md`` (e.g. ``REQ-001`` from the mcp-transport
+    unification plan). The marker is purely metadata; the
+    requirements-audit script consumes it.
+    """
+    config.addinivalue_line(
+        "markers",
+        "req(requirement_ids): trace this test to one or more requirement IDs",
+    )
