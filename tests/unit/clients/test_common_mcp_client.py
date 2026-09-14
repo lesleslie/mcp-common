@@ -462,3 +462,108 @@ def test_ssrf_guard_rejects_file_scheme() -> None:
     # Sanity: http and https still work.
     CommonMCPClient(base_url="http://localhost:8680/mcp")
     CommonMCPClient(base_url="https://example.com/mcp")
+
+
+# ---------------------------------------------------------------------------
+# Lifecycle hardening (Phase 3 follow-up)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.req(["REQ-001"])
+@pytest.mark.asyncio
+async def test_aclose_tolerates_cross_task_runtime_error() -> None:
+    """``aclose()`` swallows the anyio TaskGroup cross-task RuntimeError.
+
+    When ``streamable_http_client`` is entered in one asyncio task and
+    its ``__aexit__`` runs in another (e.g., during ``asyncio.gather``
+    cleanup), the underlying anyio ``TaskGroup`` raises
+    ``RuntimeError: Attempted to exit cancel scope in a different
+    task than it was entered in``. ``aclose()`` must catch that
+    specific error so that::
+
+    1. Concurrent test teardowns (Phase 3 REQ-009 path) don't crash.
+    2. In-flight ``call_tool()`` results, already awaited before the
+       gather cancellation, remain valid; the ``isError=False``
+       envelope is the source of truth, not teardown state.
+
+    Other RuntimeErrors must still propagate (the ``except`` clause
+    filters by message body, not by class).
+    """
+    client = CommonMCPClient(base_url="http://localhost:8680/mcp")
+
+    # Simulate that _ensure_session was called in a different task.
+    # The transport context's __aexit__ raises the anyio task-affinity
+    # error; the session's __aexit__ succeeds normally.
+    fake_session_close = AsyncMock(return_value=None)
+    fake_session = MagicMock(name="ClientSession-after-setup")
+    fake_session.__aexit__ = fake_session_close
+
+    fake_transport_close = AsyncMock(
+        side_effect=RuntimeError(
+            "Attempted to exit cancel scope in a different task "
+            "than it was entered in"
+        )
+    )
+    fake_transport = MagicMock(name="transport-context")
+    fake_transport.__aexit__ = fake_transport_close
+
+    client._session = fake_session  # type: ignore[assignment]
+    client._transport_context = fake_transport  # type: ignore[assignment]
+
+    # Must not raise.
+    await client.aclose()
+
+    fake_session_close.assert_awaited_once()
+    fake_transport_close.assert_awaited_once()
+    # Both refs are nulled out so a second aclose() is a no-op.
+    assert client._session is None
+    assert client._transport_context is None
+
+
+@pytest.mark.req(["REQ-001"])
+@pytest.mark.asyncio
+async def test_aclose_propagates_other_runtime_errors() -> None:
+    """``aclose()`` re-raises RuntimeErrors that aren't task-affinity.
+
+    The filter is by message content (``"different task"``); other
+    RuntimeErrors from the transport must propagate so genuine bugs
+    aren't silenced by the cross-task tolerance.
+    """
+    client = CommonMCPClient(base_url="http://localhost:8680/mcp")
+    fake_transport = MagicMock(name="transport-context")
+    fake_transport.__aexit__ = AsyncMock(
+        side_effect=RuntimeError("genuinely unexpected boom")
+    )
+    client._transport_context = fake_transport  # type: ignore[assignment]
+
+    with pytest.raises(RuntimeError, match="genuinely unexpected boom"):
+        await client.aclose()
+
+
+@pytest.mark.req(["REQ-001"])
+@pytest.mark.asyncio
+async def test_async_context_manager_lifecycle() -> None:
+    """``async with CommonMCPClient(...) as c:`` opens and closes in
+    the same task — guarantees anyio TaskGroup cleanup succeeds.
+
+    Use this pattern when the entry and teardown points share a task
+    (most production code). The legacy ``__init__`` + ``aclose``
+    pattern remains supported and now tolerates cross-task as a
+    safety net.
+    """
+    session = _make_mock_session()
+    fake_rs, fake_ws = MagicMock(), MagicMock()
+    fake_transport = _make_mock_transport_factory(fake_rs, fake_ws)
+
+    with (
+        patch("mcp.client.streamable_http.streamable_http_client", fake_transport),
+        patch("mcp.client.session.ClientSession", return_value=session),
+    ):
+        async with CommonMCPClient(base_url="http://localhost:8680/mcp") as client:
+            # Same task: __aenter__ opened the transport here.
+            result = await client.call_tool("foo", {})
+            assert isinstance(result, dict)
+            assert result["isError"] is False
+
+        # __aexit__ ran in the same task — transport teardown succeeded.
+        session.__aexit__.assert_awaited_once()

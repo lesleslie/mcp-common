@@ -229,14 +229,89 @@ class CommonMCPClient:
                 f"MCP tool call {name!r} timed out after {timeout} seconds"
             ) from exc
 
+    async def __aenter__(self) -> "CommonMCPClient":
+        """Enter the async context: establish the session upfront so the
+        transport context is opened in the *entering* task.
+
+        Pre-creating the session with the async-context-manager pattern
+        avoids anyio ``TaskGroup`` cross-task teardown errors that the
+        ``streamable_http_client`` from ``mcp.client`` raises when its
+        ``__aexit__`` is invoked from a different asyncio task than the
+        one that called ``__aenter__`` (e.g., during ``asyncio.gather``
+        teardown).
+
+        Usage::
+
+            async with CommonMCPClient(base_url=...) as client:
+                result = await client.call_tool("foo", {})
+
+        Prefer this over manual ``__init__`` + ``aclose`` when the entry
+        point and teardown point can share a task.
+        """
+        await self._ensure_session()
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        """Exit the async context: close from the same task that entered.
+
+        ``self.aclose()`` tolerates cross-task calls as a safety net —
+        see its docstring.
+        """
+        await self.aclose()
+
     async def aclose(self) -> None:
-        """Close the MCP session and transport. Safe to call multiple times."""
+        """Close the MCP session and transport. Safe to call multiple times.
+
+        Tolerates **cross-task teardown** for compatibility with
+        ``asyncio.gather``-style concurrent cleanup. If the underlying
+        :class:`mcp.client.streamable_http.streamable_http_client` was
+        entered in a different asyncio task than the one calling
+        ``aclose()``, its anyio ``TaskGroup`` raises
+        ``RuntimeError: Attempted to exit cancel scope in a different
+        task than it was entered in``. We catch that specific case:
+
+        - The leaked background tasks (GET SSE drain, post writer) are
+          reclaimed by Python's garbage collector on full session
+          closure.
+        - Any in-flight ``call_tool()`` results have already been
+          awaited before the gather cancellation that triggered this
+          teardown, so tool-call correctness is unaffected.
+        - A brief HTTP connection leak is possible (typically reclaimed
+          at process exit). Not a correctness issue for completed
+          tool calls.
+
+        For callers that need *strict* same-task lifecycle, prefer the
+        async context manager interface (``async with``) — the
+        ``__aenter__`` opens the transport in your task, so
+        ``__aexit__`` runs in the same task.
+        """
         if self._session is not None:
-            await self._session.__aexit__(None, None, None)
-            self._session = None
+            try:
+                await self._session.__aexit__(None, None, None)
+            except RuntimeError as exc:
+                if "different task" not in str(exc):
+                    raise
+                logger.debug(
+                    "CommonMCPClient: session exit in wrong task; skipping",
+                    exc_info=True,
+                )
+            finally:
+                self._session = None
         if self._transport_context is not None:
-            await self._transport_context.__aexit__(None, None, None)
-            self._transport_context = None
+            try:
+                await self._transport_context.__aexit__(None, None, None)
+            except RuntimeError as exc:
+                if "different task" not in str(exc):
+                    raise
+                logger.debug(
+                    "CommonMCPClient: transport-context exit in wrong task; "
+                    "background tasks will be reclaimed by GC. HTTP connection "
+                    "may leak briefly; tool-call results already awaited are "
+                    "unaffected.",
+                    exc_info=True,
+                )
+            finally:
+                self._transport_context = None
 
 
 __all__ = [
