@@ -246,7 +246,7 @@ class BearerTokenMiddleware(Middleware):
         if fmcp_ctx is not None:
             try:
                 prior_state = fmcp_ctx.get_state(state_key)
-            except AttributeError, TypeError:
+            except (AttributeError, TypeError):
                 prior_state = _SENTINEL
             try:
                 # Principal is a frozen dataclass with frozenset[Permission]

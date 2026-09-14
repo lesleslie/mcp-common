@@ -7,6 +7,15 @@ Phase 10.1: Production Hardening - Health Check Endpoints
 
 Extended 2026-02-27: Added HTTP dependency checking with Oneiric integration.
 See docs/plans/2026-02-27-health-check-system-design.md for design rationale.
+
+Phase 1 (2026-09-14, transport unification plan §5 tasks 4 + 5):
+    Added the :mod:`mcp_common.health.feed` sub-module
+    (``HealthFeedState``, ``StatusValue``, ``ReasonCode``, ``record_success`` /
+    ``record_error`` / ``is_healthy``) and :mod:`mcp_common.health.aggregator`
+    (``aggregate_feed_states``). The package layout moved from a flat
+    ``health.py`` to ``mcp_common/health/``; all existing
+    ``from mcp_common.health import X`` paths continue to work because the
+    public API is re-exported from this ``__init__.py``.
 """
 
 from __future__ import annotations
@@ -21,6 +30,17 @@ from datetime import UTC, datetime
 from enum import StrEnum
 
 from mcp_common.auth.health import AuthHealth
+
+# Phase 1 (2026-09-14): re-exports of the new feed-state + aggregator types.
+from mcp_common.health.aggregator import aggregate_feed_states
+from mcp_common.health.feed import (
+    HealthFeedState,
+    ReasonCode,
+    StatusValue,
+    is_healthy,
+    record_error,
+    record_success,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -273,7 +293,7 @@ class WaitResult:
     """Result of waiting for dependencies.
 
     Attributes:
-        success: Whether all required dependencies are healthy
+        success: Whether all required dependencies became healthy
         dependencies: Per-dependency health check results
         total_wait_seconds: Total time spent waiting
         failed_required: List of failed required dependency names
@@ -312,7 +332,9 @@ class HealthChecker:
     def _create_http_action(self) -> t.Any:
         """Create HTTP action, with fallback if Oneiric unavailable."""
         try:
-            from oneiric.actions.http import HttpFetchAction
+            from oneiric.actions.http import (  # type: ignore[import-untyped]
+                HttpFetchAction,
+            )
 
             return HttpFetchAction()
         except ImportError:
@@ -526,7 +548,7 @@ class DependencyWaiter:
 # =============================================================================
 
 
-def register_health_tools(  # noqa: C901  # noqa: C901
+def register_health_tools(  # noqa: C901
     mcp: t.Any,
     service_name: str = "mcp-server",
     version: str = "0.0.0",
@@ -549,7 +571,7 @@ def register_health_tools(  # noqa: C901  # noqa: C901
     Args:
         mcp: FastMCP server instance
         service_name: Name of this service
-        version: Service version
+        version: Service version string
         start_time: Server start time (time.time()), defaults to now
         dependencies: Configured dependencies to check
 
@@ -670,11 +692,11 @@ def register_health_tools(  # noqa: C901  # noqa: C901
         Uses exponential backoff for retries.
 
         Args:
-            dep_service_name: Name of the service to wait for
+            dep_service_name: Name of the dependency to wait for
             host: Hostname or IP address
             port: Port number
             timeout: Maximum wait time in seconds
-            required: Whether this is a required dependency
+            required: Whether this dependency is required
             use_tls: Use HTTPS instead of HTTP
             health_path: Path to health endpoint (default: /health, MCP servers use /mcp)
 
@@ -886,18 +908,29 @@ def register_http_health_route(
 
 
 __all__ = [
-    # Core types
+    # Pre-Phase-1 public API (preserved verbatim across the package migration)
+    # ComponentHealth, DependencyConfig, DependencyWaiter, HealthCheckFunc,
+    # HealthCheckResponse, HealthCheckResult, HealthChecker, HealthStatus,
+    # WaitResult, register_health_tools, register_http_health_route
+    # Phase 1 (2026-09-14): feed-state aggregator
+    # HealthFeedState, ReasonCode, StatusValue, aggregate_feed_states,
+    # is_healthy, record_error, record_success
     "ComponentHealth",
-    # HTTP dependency checking
     "DependencyConfig",
     "DependencyWaiter",
     "HealthCheckFunc",
     "HealthCheckResponse",
     "HealthCheckResult",
     "HealthChecker",
+    "HealthFeedState",
     "HealthStatus",
+    "ReasonCode",
+    "StatusValue",
     "WaitResult",
-    # FastMCP integration
+    "aggregate_feed_states",
+    "is_healthy",
+    "record_error",
+    "record_success",
     "register_health_tools",
     "register_http_health_route",
 ]
