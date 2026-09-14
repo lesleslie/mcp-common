@@ -5,7 +5,7 @@
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![Python: 3.14+](https://img.shields.io/badge/python-3.14%2B-green)](https://www.python.org/downloads/)
 
-**Version:** 0.25.1 (Oneiric-Native)
+**Version:** 0.25.2 (Oneiric-Native)
 **Status:** Production Ready
 
 ______________________________________________________________________
@@ -28,10 +28,10 @@ Crackerjack is the standard quality-control and CI/CD gate for changes to this l
 
 **🎯 What This Library Provides:**
 
-- **Tool Profile System** - Gated tool registration to reduce MCP context overhead (~391 tools across the 5 Bodai ecosystem components)
+- **Tool Profile System** - Gated tool registration to reduce MCP context overhead (~400+ tools across the 5 Bodai ecosystem components at FULL profile; per-server counts vary)
 - **Description Trimming** - Utility to trim tool docstrings to 200 chars for token efficiency
 - **Oneiric CLI Factory** - Standardized server lifecycle with start/stop/restart/status/health commands
-- **HTTP Client Adapter** - Connection pooling with httpx for 11x performance
+- **HTTP Client Adapter** - Connection pooling with httpx (reduces handshake overhead on warm connections; ratio depends on payload, concurrency, and TLS resumption — see `tests/performance/test_http_pooling.py` for measurement harness)
 - **Prompting/Notification Adapter** - Unified cross-platform user interaction with automatic backend detection
 - **Security Utilities** - API key validation (with 90% faster caching) and input sanitization (2x faster)
 - **Rich Console UI** - Beautiful panels and notifications for server operations
@@ -77,7 +77,7 @@ python cli_server.py stop
 
 Demonstrates **HTTP adapters** and **FastMCP integration**:
 
-- HTTPClientAdapter with connection pooling (11x performance)
+- HTTPClientAdapter with connection pooling (warm-connection speedup depends on workload)
 - MCPBaseSettings with YAML + environment configuration
 - ServerPanels for beautiful terminal UI
 - Oneiric configuration patterns (direct instantiation)
@@ -97,18 +97,10 @@ ______________________________________________________________________
 ### Installation
 
 ```bash
-pip install mcp-common>=0.3.6
+pip install mcp-common>=0.25.2
 ```
 
-This automatically installs Pydantic, Rich, and all required dependencies.
-
-If you plan to run an MCP server (e.g., the examples), install a protocol host such as FastMCP separately:
-
-```bash
-pip install fastmcp
-# or
-uv add fastmcp
-```
+This automatically installs Pydantic, Rich, FastMCP (≥3.4), and all required dependencies. FastMCP is a hard dependency as of v0.17 — no separate install needed.
 
 ### Minimal Example
 
@@ -133,7 +125,7 @@ class MyServerSettings(MCPBaseSettings):
 
 
 # my_server/main.py
-from fastmcp import FastMCP  # Optional: install fastmcp separately
+from fastmcp import FastMCP  # Hard dependency since v0.17
 from mcp_common import ServerPanels, HTTPClientAdapter, HTTPClientSettings
 from my_server.settings import MyServerSettings
 
@@ -174,7 +166,7 @@ ______________________________________________________________________
 
 **Connection Pooling with httpx:**
 
-- 11x faster than creating clients per request
+- Avoids per-request TLS handshake by reusing the connection pool across requests (exact speedup is workload-dependent; live measurement against a public endpoint averaged ~2x — see `tests/performance/test_http_pooling.py`)
 - Automatic initialization and cleanup
 - Configurable timeouts, retries, connection limits
 
@@ -481,6 +473,8 @@ Reduce MCP context overhead by gating which tools are registered at startup. Eac
 
 **Why:** A server with 170 tools sends ~70k tokens of tool definitions to Claude on every request. Profile gating reduces this to ~10-20k tokens for daily development.
 
+**MANDATORY_TOOLS:** Tools added to `mcp_common.tools.MANDATORY_TOOLS` are always registered regardless of profile. The default set is empty; add infrastructure-critical tool names (health probes, liveness, readiness) per-server so they survive profile gating.
+
 **ToolProfile enum:**
 
 ```python
@@ -499,7 +493,7 @@ assert ToolProfile.from_string("unknown") == ToolProfile.FULL
 **Description trimming:**
 
 ```python
-# Strip Args/Returns/Raises sections, keep first paragraph, max 200 chars
+# Keep first paragraph, trim at word boundary up to max_length chars (default 200)
 trimmed = trim_description("""Check health of a service.
 
     Args:
@@ -548,7 +542,10 @@ ______________________________________________________________________
 ## Documentation
 
 - **[examples/README.md](./examples/README.md)** - **START HERE** - Example servers and usage patterns
-- **[ONEIRIC_CLI_FACTORY\_\*.md](./docs/)** - CLI factory documentation and implementation guides
+- **[ONEIRIC_CLI_FACTORY_IMPLEMENTATION.md](./docs/ONEIRIC_CLI_FACTORY_IMPLEMENTATION.md)** - CLI factory implementation guide
+- **[ONEIRIC_CLI_FACTORY_PLAN.md](./docs/ONEIRIC_CLI_FACTORY_PLAN.md)** - CLI factory design plan
+- **[ONEIRIC_CLI_FACTORY_SPEC_REVIEW.md](./docs/ONEIRIC_CLI_FACTORY_SPEC_REVIEW.md)** - CLI factory spec review
+- **[ONEIRIC_CLI_AUDIT_RESPONSE.md](./docs/ONEIRIC_CLI_AUDIT_RESPONSE.md)** - Audit response with cross-references
 
 ______________________________________________________________________
 
@@ -576,7 +573,7 @@ ______________________________________________________________________
 
 | Scenario | Before | After | Speedup |
 |----------|--------|-------|---------|
-| Clean text (no sensitive data) | 22μs | 10μs | **2.2x faster** ⚡ |
+| Clean text (no sensitive data) | 22μs | 10μs | ~2x faster (illustrative) |
 | Text with sensitive data | 22μs | 22μs | No change |
 
 **API Key Validation Caching:**
@@ -584,22 +581,25 @@ ______________________________________________________________________
 | Call Type | Time | Speedup |
 |-----------|------|---------|
 | First call (uncached) | 100μs | baseline |
-| Subsequent calls (cached) | 10μs | **10x faster** ⚡ |
+| Subsequent calls (cached) | 10μs | ~10x faster (illustrative) |
 
 **Impact:**
 
-- 2x faster for clean text sanitization (most common case)
-- 10x faster for repeated API key validations
-- Cache size: 128 most recent entries
+- ~2x faster for clean text sanitization (most common case); ratio is illustrative, run `tests/performance/test_sanitization_benchmarks.py` to measure on your workload
+- ~10x faster for repeated API key validations (illustrative; based on typical `@lru_cache` cost amortization)
+- Cache size: 128 most recent entries (`@lru_cache(maxsize=128)` in `mcp_common/security/api_keys.py`)
 - Zero breaking changes
 
 ### HTTP Client Adapter (vs new client per request)
 
 ```
-Before: 100 requests in 45 seconds, 500MB memory
-After:  100 requests in 4 seconds, 50MB memory
+Before: 100 requests, ~500MB peak memory with new client per request
+After:  100 requests, ~50MB peak memory with a shared pooled client
 
-Result: 11x faster, 10x less memory
+Result: avoids per-request client allocation; exact throughput and memory
+savings depend on request count, payload size, and TLS resumption.
+Run `pytest tests/performance/test_http_pooling.py --benchmark-only` to measure
+on your workload.
 ```
 
 ### Rate Limiter Overhead
@@ -621,7 +621,7 @@ Result: +4% overhead (negligible vs network I/O)
 | v0.6.0 | 615 | 99%+ |
 | v0.15.0 | ~1,400 | 95% |
 | v0.17.9 | ~1,687 | 96% |
-| v0.25.1 (current) | 2,133 | ≥90% (gate) |
+| v0.25.2 (current) | 2,116 | 90.0% (CI hard gate) |
 
 **Testing Capabilities:**
 
@@ -748,7 +748,7 @@ ruff check
 mypy mcp_common tests
 
 # Run all quality checks
-crackerjack --all
+crackerjack run --all
 ```
 
 ______________________________________________________________________
@@ -757,7 +757,8 @@ ______________________________________________________________________
 
 **Recent Versions:**
 
-- **0.25.1** (current) - `register_http_health_route` helper, dependency-groups migration
+- **0.25.2** (current) - docs: correct `IdentityProviderConfig`→`IdentityProviderSpec` and `property-raises` pattern in `auth-design.md`
+- **0.25.1** - `register_http_health_route` helper, dependency-groups migration
 - **0.17.0** - Plan 7 Phase 1: FastMCP 3.4 foundation
 - **0.16.0** - AppleScript bridge + iTerm2 protocol spec, async multi-line escaping
 - **0.15.0** - LLM layer: per-tier retry loop, error sanitization, llama_server support, Multimodal TaskType
@@ -769,8 +770,8 @@ ______________________________________________________________________
 **Compatibility:**
 
 - Requires Python 3.14+
-- Optional: compatible with FastMCP 2.0+
-- Uses Pydantic 2.12+, Rich 14.2+
+- Requires FastMCP ≥3.4 (hard dependency, declared in `pyproject.toml`)
+- Uses Pydantic 2.13+, Rich 15+
 
 ______________________________________________________________________
 

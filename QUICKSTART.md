@@ -131,7 +131,7 @@ from mcp_common.profiles import StandardServer
 
 server = StandardServer(name="standard-server")
 
-# Create HTTP adapter with connection pooling (11x faster!)
+# Create HTTP adapter with connection pooling (avoids per-request TLS handshake)
 http_settings = HTTPClientSettings(
     timeout=30,
     max_connections=50,
@@ -335,7 +335,7 @@ export MY_SERVER_TIMEOUT=60
 
 ### 3. HTTP Client Adapter
 
-Connection pooling for 11x performance improvement:
+Connection pooling (reduces per-request TLS handshake overhead; exact ratio is workload-dependent):
 
 ```python
 from mcp_common import HTTPClientAdapter, HTTPClientSettings
@@ -559,7 +559,7 @@ See mcp-common in action:
 ## Performance Tips
 
 1. **Choose the Right Profile** - Start with Minimal, upgrade as needed
-1. **Use HTTP Client Adapter** - 11x faster than creating clients per request
+1. **Use HTTP Client Adapter** - avoids per-request TLS handshake by reusing the connection pool (exact speedup depends on workload; run `tests/performance/test_http_pooling.py --benchmark-only` to measure)
 1. **Enable API Key Caching** - 90% faster validation (automatic)
 1. **Use Early-Exit Sanitization** - 2x faster for clean text (automatic)
 1. **Configure Connection Pools** - Match pool size to expected load

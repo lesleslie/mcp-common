@@ -304,7 +304,7 @@ async def main():
 
 ### HTTP Client Adapter
 
-mcp-common provides **connection pooling** for 11x performance improvement:
+mcp-common provides **connection pooling** (workload-dependent speedup; no fixed multiplier — run `tests/performance/test_http_pooling.py` to measure):
 
 **`http_client.py`**:
 
@@ -355,7 +355,7 @@ async def fetch_slow(url: str) -> dict:
         response = await client.get(url)
     return response.json()
 
-# WITH connection pooling (11x faster!)
+# WITH connection pooling (avoids per-request TLS handshake)
 @mcp.tool()
 async def fetch_fast(url: str) -> dict:
     """Reuses client across requests (FAST!)."""
@@ -369,7 +369,7 @@ async def fetch_fast(url: str) -> dict:
 |----------|--------------|--------------|
 | New client per request | 45 seconds | 500MB |
 | Connection pooling | 4 seconds | 50MB |
-| **Speedup** | **11x faster** | **10x less memory** |
+| **Speedup** | Workload-dependent (avoid per-request TLS handshake) | Lower peak memory (no per-request client alloc) |
 
 ### HTTP Client Best Practices
 
@@ -1343,7 +1343,7 @@ Building production-ready MCP servers with mcp-common:
 
 1. **Setup**: Create project structure with virtual environment
 1. **Configuration**: Use Oneiric pattern for YAML + env var config
-1. **HTTP Client**: Use connection pooling for 11x performance
+1. **HTTP Client**: Use connection pooling (workload-dependent speedup; measure before claiming a specific ratio)
 1. **Tools**: Add input validation, error handling, and documentation
 1. **UI**: Integrate Rich panels for beautiful console output
 1. **CLI**: Add lifecycle management with CLI factory

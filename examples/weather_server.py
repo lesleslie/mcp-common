@@ -2,7 +2,7 @@
 """Example Oneiric-native MCP server using mcp-common foundation library.
 
 This weather API server demonstrates:
-- HTTPClientAdapter for connection pooling (11x performance improvement)
+- HTTPClientAdapter for connection pooling (avoids per-request TLS handshake; workload-dependent speedup)
 - MCPBaseSettings for YAML + environment variable configuration
 - ServerPanels for beautiful Rich UI output
 - Oneiric configuration patterns (direct instantiation)

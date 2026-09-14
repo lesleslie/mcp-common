@@ -243,7 +243,7 @@ A production-ready weather API server showcasing Oneiric-native mcp-common compo
 
 ### Features Demonstrated
 
-1. **HTTPClientAdapter** - Connection pooling for 11x performance improvement
+1. **HTTPClientAdapter** - Connection pooling (avoids per-request TLS handshake; exact speedup is workload-dependent)
 1. **MCPBaseSettings** - YAML + environment variable configuration
 1. **ServerPanels** - Beautiful Rich UI terminal output
 1. **Global Instance Pattern** - Clean, direct instantiation
@@ -270,7 +270,7 @@ You'll see beautiful terminal output like this:
 │    • Current weather by city                                         │
 │    • 5-day weather forecast                                          │
 │    • Multiple temperature units                                      │
-│    • Connection pooling (11x faster)                                 │
+│    • Connection pooling (workload-dependent speedup)                │
 │                                                                      │
 │  Configuration:                                                      │
 │    • Api Provider: OpenWeatherMap                                    │
@@ -394,7 +394,7 @@ http_settings = HTTPClientSettings(
 # Create global adapter instance
 http_adapter = HTTPClientAdapter(settings=http_settings)
 
-# Use in tools - client is reused (11x faster!)
+# Use in tools - client is reused (avoids per-request TLS handshake)
 response = await http_adapter.get("https://api.example.com/data")
 
 # Cleanup on shutdown
@@ -403,7 +403,7 @@ await http_adapter._cleanup_resources()
 
 **Benefits:**
 
-- 11x performance improvement vs per-request clients
+- Avoids per-request TLS handshake vs per-request clients (workload-dependent)
 - Automatic connection reuse
 - Configurable pool size
 - Built-in retry logic

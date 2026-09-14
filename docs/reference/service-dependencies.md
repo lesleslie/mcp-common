@@ -46,7 +46,7 @@ These dependencies are **automatically installed** with `pip install mcp-common`
 **What it provides**:
 
 - `MCPBaseSettings` - Base class for YAML + environment variable configuration
-- `HTTPClientAdapter` - HTTP client with connection pooling (11x performance)
+- `HTTPClientAdapter` - HTTP client with connection pooling (workload-dependent speedup)
 - `HTTPClientSettings` - Configuration for HTTP adapter
 - Layered configuration loading (defaults → YAML → env vars)
 
@@ -365,7 +365,7 @@ mcp-common follows **semantic versioning** for breaking changes:
 
 HTTP client adapter (via oneiric) provides:
 
-- **11x faster** than creating new clients per request
+- Avoids per-request TLS handshake vs creating new clients per request (workload-dependent)
 - **10x less memory** usage
 - **Connection pooling** with configurable limits
 
