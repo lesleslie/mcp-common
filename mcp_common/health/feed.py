@@ -191,11 +191,7 @@ def is_healthy(
     )
 
     # 1. Recent error wins over everything (skipped when decay disabled).
-    if (
-        halflife_seconds > 0
-        and error_age is not None
-        and error_age <= halflife_seconds
-    ):
+    if halflife_seconds > 0 and error_age is not None and error_age <= halflife_seconds:
         return (
             False,
             StatusValue.DEGRADED,

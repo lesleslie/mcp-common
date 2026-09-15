@@ -14,8 +14,8 @@ if TYPE_CHECKING:
     # Type checkers see the real prometheus_client types so callers get
     # accurate signatures. Runtime values come from the try/except below.
     # ``prometheus_client`` is an optional dependency not pulled into the
-    # dev venv, so we silence ty's import resolution error here too.
-    from prometheus_client import (  # ty: ignore[unresolved-import]
+    # dev venv; if it is installed, both mypy and ty resolve the symbols.
+    from prometheus_client import (
         Counter,
         Gauge,
         Histogram,
@@ -342,14 +342,19 @@ def get_metrics_summary(server_name: str) -> dict[str, Any]:
     # binding would freeze the reference to whatever ``prometheus_client``
     # was at import time and ignore later patches.
     try:
-        from prometheus_client import (  # type: ignore[import-not-found]  # ty: ignore[unresolved-import]
+        from prometheus_client import (  # type: ignore[import-not-found]
             REGISTRY as _runtime_registry,
         )
 
         summary: dict[str, Any] = {
             "available": True,
             "server": server_name,
-            "metrics_count": len(_runtime_registry.getCollectorNames()),
+            # ``CollectorRegistry.collect()`` yields one entry per metric
+            # family across every registered collector — the same
+            # granularity callers used to read off ``getCollectorNames()``,
+            # which never existed as a public API and has been silently
+            # raising ``AttributeError`` under the broad except below.
+            "metrics_count": len(list(_runtime_registry.collect())),
         }
         return summary
     except (

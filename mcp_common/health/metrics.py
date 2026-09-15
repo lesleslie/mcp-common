@@ -67,7 +67,7 @@ if TYPE_CHECKING:
 # enforces a unique metric name per registry (regardless of labels), so
 # the cache key is the registry's ``id()``. Each unique ``repo`` is just
 # a different label set on the SAME metric instances.
-_metric_cache: dict[int, "_RegistryMetrics"] = {}
+_metric_cache: dict[int, _RegistryMetrics] = {}
 
 
 class _RegistryMetrics:
@@ -78,31 +78,31 @@ class _RegistryMetrics:
     the ``repo`` parameter is encoded as a label.
     """
 
-    def __init__(self, registry: "CollectorRegistry") -> None:
+    def __init__(self, registry: CollectorRegistry) -> None:
         # Imported lazily so the module loads even when prometheus_client
         # isn't installed at import time (defensive — it's a hard runtime
         # dep on mcp-common, but this protects against partial installs).
         from prometheus_client import Gauge, Histogram
 
-        self.feed_status: "Gauge" = Gauge(
+        self.feed_status: Gauge = Gauge(
             "health_feed_status",
             "Per-feed health aggregator verdict (1 for current status, 0 otherwise).",
             labelnames=("repo", "feed", "status"),
             registry=registry,
         )
-        self.errors_within_window: "Gauge" = Gauge(
+        self.errors_within_window: Gauge = Gauge(
             "health_feed_errors_within_window",
             "Errors recorded since the last successful cycle, per feed.",
             labelnames=("repo", "feed"),
             registry=registry,
         )
-        self.halflife_seconds: "Gauge" = Gauge(
+        self.halflife_seconds: Gauge = Gauge(
             "mcp_common_health_halflife_seconds",
             "Time-bounded decay halflife in seconds (0 if --health-disable-decay).",
             labelnames=("repo",),
             registry=registry,
         )
-        self.aggregate_duration_ms: "Histogram" = Histogram(
+        self.aggregate_duration_ms: Histogram = Histogram(
             "mcp_common_health_aggregate_duration_ms",
             "Wall-time duration of aggregate_feed_states() calls.",
             labelnames=("repo",),
@@ -119,7 +119,7 @@ class _RegistryMetrics:
 
 
 def _get_registry_metrics(
-    registry: "CollectorRegistry",
+    registry: CollectorRegistry,
 ) -> _RegistryMetrics:
     """Return the cached :class:`_RegistryMetrics` for ``registry``.
 
@@ -137,7 +137,7 @@ def _get_registry_metrics(
 
 
 def update_health_metrics(
-    registry: "CollectorRegistry",
+    registry: CollectorRegistry,
     snap: HealthSnapshot,
     repo: str,
     halflife_seconds: float,
@@ -190,9 +190,9 @@ def update_health_metrics(
     last_seen = metrics._last_seen_pairs_by_repo.get(repo, set())
     stale = last_seen - current_pairs
     for stale_feed, stale_status in stale:
-        metrics.feed_status.labels(
-            repo=repo, feed=stale_feed, status=stale_status
-        ).set(0)
+        metrics.feed_status.labels(repo=repo, feed=stale_feed, status=stale_status).set(
+            0
+        )
     metrics._last_seen_pairs_by_repo[repo] = current_pairs
 
     # errors_within_window: emit 0 for every feed (the aggregator's
@@ -200,9 +200,7 @@ def update_health_metrics(
     # want the real value can extend this helper with their own
     # snapshot-to-feed-state plumbing).
     for feed_name in snap["checks"]:
-        metrics.errors_within_window.labels(
-            repo=repo, feed=feed_name
-        ).set(0)
+        metrics.errors_within_window.labels(repo=repo, feed=feed_name).set(0)
 
     metrics.halflife_seconds.labels(repo=repo).set(halflife_seconds)
     metrics.aggregate_duration_ms.labels(repo=repo).observe(duration_ms)

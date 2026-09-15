@@ -218,10 +218,17 @@ class TestWebSocketMetrics:
     ) -> None:
         monkeypatch.setattr(metrics_module, "PROMETHEUS_AVAILABLE", True)
 
+        # ``CollectorRegistry.collect()`` yields one entry per metric
+        # family across every registered collector; that is the public
+        # API we read for ``metrics_count``. The previous test mocked a
+        # ``getCollectorNames()`` method that never existed on
+        # ``CollectorRegistry`` — the broad ``except`` in
+        # ``get_metrics_summary`` had been swallowing the AttributeError
+        # and returning ``{"error": ...}`` instead of a real count.
         registry = type(
             "Registry",
             (),
-            {"getCollectorNames": lambda self: {"a", "b", "c"}},
+            {"collect": lambda self: iter(["metric-a", "metric-b", "metric-c"])},
         )()
         fake_module = ModuleType("prometheus_client")
         fake_module.REGISTRY = registry  # ty: ignore[unresolved-attribute]
@@ -233,7 +240,7 @@ class TestWebSocketMetrics:
         assert summary["metrics_count"] == 3
 
         class BrokenRegistry:
-            def getCollectorNames(self) -> set[str]:
+            def collect(self) -> None:
                 raise RuntimeError("boom")
 
         fake_module.REGISTRY = BrokenRegistry()  # ty: ignore[unresolved-attribute]

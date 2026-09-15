@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.26.4] - 2026-09-15
+
+### Added
+
+- mcp-common: Add --health-disable-decay CLI flag (Phase 4 task 7)
+- mcp-common: Emit prometheus_client metrics from the health aggregator
+
 ## [0.26.3] - 2026-09-15
 
 ### Fixed
@@ -15,17 +22,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- mcp-common: ``mcp_common.health.metrics.update_health_metrics`` wires the aggregator's ``HealthSnapshot`` into the consumer's existing ``prometheus_client.CollectorRegistry`` (plan §4 Observability + §11.4). Emits four metrics: ``health_feed_status{repo, feed, status}``, ``health_feed_errors_within_window{repo, feed}``, ``mcp_common_health_halflife_seconds{repo}``, ``mcp_common_health_aggregate_duration_ms{repo}`` (histogram). These are the metric names referenced in the PromQL alert rules at ``config/prometheus/health_aggregator_alerts.yml``. ``prometheus_client>=0.20.0`` promoted to a direct runtime dep so the metrics contract is explicit instead of relying on transitive availability.
+- mcp-common: `mcp_common.health.metrics.update_health_metrics` wires the aggregator's `HealthSnapshot` into the consumer's existing `prometheus_client.CollectorRegistry` (plan §4 Observability + §11.4). Emits four metrics: `health_feed_status{repo, feed, status}`, `health_feed_errors_within_window{repo, feed}`, `mcp_common_health_halflife_seconds{repo}`, `mcp_common_health_aggregate_duration_ms{repo}` (histogram). These are the metric names referenced in the PromQL alert rules at `config/prometheus/health_aggregator_alerts.yml`. `prometheus_client>=0.20.0` promoted to a direct runtime dep so the metrics contract is explicit instead of relying on transitive availability.
 
-- mcp-common: ``--health-disable-decay`` CLI flag on ``MCPServerCLIFactory.start`` (plan §5 task 7). Sets ``HEALTH_FEED_HALFLIFE_SECONDS=0`` before the lifespan runs; emits WARNING + OTel event ``health.aggregate.decay_disabled``. Operators use this during incident triage when a known upstream regression is firing repeated errors that would otherwise mask real downstream faults.
+- mcp-common: `--health-disable-decay` CLI flag on `MCPServerCLIFactory.start` (plan §5 task 7). Sets `HEALTH_FEED_HALFLIFE_SECONDS=0` before the lifespan runs; emits WARNING + OTel event `health.aggregate.decay_disabled`. Operators use this during incident triage when a known upstream regression is firing repeated errors that would otherwise mask real downstream faults.
 
 ### Fixed
 
-- mcp-common: ``is_healthy`` treats ``halflife_seconds <= 0`` as the "decay disabled" sentinel — no error is ever treated as "recent" regardless of when it occurred. The CLI flag above propagates through to the probe bodies, which already read the env var.
+- mcp-common: `is_healthy` treats `halflife_seconds <= 0` as the "decay disabled" sentinel — no error is ever treated as "recent" regardless of when it occurred. The CLI flag above propagates through to the probe bodies, which already read the env var.
 
 ### Changed
 
-- mcp-common: ``aggregate_feed_states`` returns a typed ``HealthSnapshot`` instead of ``dict[str, object]`` — surface TypedDicts ``FeedSnapshot`` + ``HealthSnapshot`` for cross-module type resolution.
+- mcp-common: `aggregate_feed_states` returns a typed `HealthSnapshot` instead of `dict[str, object]` — surface TypedDicts `FeedSnapshot` + `HealthSnapshot` for cross-module type resolution.
 
 ### Fixed
 

@@ -11,6 +11,7 @@ import os
 import sys
 import time
 from collections.abc import Callable
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -466,8 +467,10 @@ class MCPServerCLIFactory:
             # Emit an OTel event so observability tooling can alert on
             # the disable window. The event is fire-and-forget — the
             # server may not have an OTel tracer configured yet, in
-            # which case the emit is a no-op.
-            try:
+            # which case the emit is a no-op. OTel is an optional
+            # dependency; ``suppress(ImportError)`` swallows the missing
+            # import. The log warning above is the operator-facing signal.
+            with suppress(ImportError):
                 from opentelemetry import trace
 
                 tracer = trace.get_tracer(__name__)
@@ -475,10 +478,6 @@ class MCPServerCLIFactory:
                 span.set_attribute("health.decay.disabled", True)
                 span.set_attribute("server.name", self.server_name)
                 span.end()
-            except ImportError:
-                # OTel not installed — silently skip. The log
-                # warning above is the operator-facing signal.
-                pass
 
         self._validate_cache_and_check_process(force, json_output)
         self._write_pid_and_health_snapshot()
