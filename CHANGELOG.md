@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- mcp-common: Distinguish never-cycled feed from warming_up in `is_healthy` (Phase 4 task 6 / HNSW-on-DuckDB hardening). A feed whose producer reports `ingester_running=True` but `cycles_total == 0` now returns DEGRADED with `FEED_NEVER_POPULATED` instead of WARMING_UP, so operators see a broken-before-first-success producer rather than a healthy-but-still-loading feed.
+
 ## [0.26.2] - 2026-09-15
 
 ### Added

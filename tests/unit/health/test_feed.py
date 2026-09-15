@@ -164,6 +164,63 @@ def test_is_warming_up_when_empty_and_no_errors_and_ingester_running() -> None:
 
 
 # ---------------------------------------------------------------------------
+# is_healthy — HNSW-on-DuckDB hardening (plan §5 task 6)
+# ---------------------------------------------------------------------------
+
+
+def test_is_degraded_when_empty_and_never_cycled() -> None:
+    """Empty feed + producer alive + zero cycles → DEGRADED, not WARMING_UP.
+
+    Plan §5 task 6 HNSW hardening. A producer that reports
+    ``ingester_running=True`` but has not yet completed a single cycle is
+    *not* warming up — it is broken-before-first-success (e.g. an HNSW
+    index creation failing on the very first attempt). Surface this as
+    DEGRADED with ``FEED_NEVER_POPULATED`` so operators can distinguish
+    a stuck producer from a healthy-but-empty feed.
+
+    This is the regression test for the HNSW-on-DuckDB bug originally
+    surfaced in :mod:`akosha.ingestion.code_graph_ingester` /
+    :mod:`akosha.ingestion.otel_ingester` — when HNSW index creation
+    failed on the first ingest attempt, the producers incorrectly
+    reported as warming_up instead of degraded.
+    """
+    state = HealthFeedState(
+        entities_count=0,
+        cycles_total=0,  # ← never completed a single cycle
+        ingester_running=True,
+    )
+
+    healthy, status, codes = is_healthy(state)
+
+    assert healthy is False
+    assert status == StatusValue.DEGRADED
+    assert codes == [ReasonCode.FEED_NEVER_POPULATED]
+
+
+def test_is_failed_when_empty_never_cycled_and_ingester_not_running() -> None:
+    """Empty feed + zero cycles + producer dead → FAILED, not DEGRADED.
+
+    Companion to :func:`test_is_degraded_when_empty_and_never_cycled`:
+    when the producer has also exited (``ingester_running=False``), the
+    feed is FAILED rather than DEGRADED. FAILED outranks DEGRADED in
+    the aggregator's worst-case roll-up; operators reading the
+    top-level ``status`` see the more severe condition first.
+    """
+    state = HealthFeedState(
+        entities_count=0,
+        cycles_total=0,
+        ingester_running=False,
+    )
+
+    healthy, status, codes = is_healthy(state)
+
+    assert healthy is False
+    assert status == StatusValue.FAILED
+    assert ReasonCode.FEED_NEVER_POPULATED in codes
+    assert ReasonCode.INGESTER_NOT_RUNNING in codes
+
+
+# ---------------------------------------------------------------------------
 # is_healthy — empty-feed failed branch
 # ---------------------------------------------------------------------------
 

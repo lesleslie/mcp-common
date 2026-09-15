@@ -155,12 +155,22 @@ def is_healthy(
         - ``last_error_at`` outside ``halflife_seconds`` → HEALTHY (decayed).
         - No error ever recorded → pure entity-count check.
 
+    HNSW-on-DuckDB hardening (plan §5 task 6):
+        A feed where the producer reports ``ingester_running=True`` but
+        ``cycles_total == 0`` has never completed a single cycle — it is
+        *not* "warming up", it is broken-before-first-success. This branch
+        surfaces as DEGRADED with ``FEED_NEVER_POPULATED`` so operators
+        can distinguish a stuck producer (e.g. HNSW index creation
+        failing on the very first attempt) from a healthy-but-empty feed.
+
     Order of evaluation:
         1. Recent error → DEGRADED (terminal: errors override everything else).
-        2. Empty feed + ingester not running → FAILED.
-        3. Empty feed + ingester running → WARMING_UP.
-        4. Populated, error aged out → HEALTHY (with decayed-error reason).
-        5. Populated, no errors → HEALTHY (no reason codes).
+        2. Empty feed + ``cycles_total == 0`` + ingester running →
+           DEGRADED (HNSW hardening; never-cycled producer).
+        3. Empty feed + ingester not running → FAILED.
+        4. Empty feed + ingester running + at least one cycle → WARMING_UP.
+        5. Populated, error aged out → HEALTHY (with decayed-error reason).
+        6. Populated, no errors → HEALTHY (no reason codes).
     """
     now = time.time()
 
@@ -178,12 +188,23 @@ def is_healthy(
 
     # 2. Empty-feed handling (no recent error).
     if state.entities_count == 0:
+        # 2a. HNSW hardening: producer is alive but has never completed a
+        # cycle. Distinguish from "warming up" (which implies the producer
+        # has at least produced once and is mid-stride to filling the feed).
+        if state.cycles_total == 0 and state.ingester_running:
+            return (
+                False,
+                StatusValue.DEGRADED,
+                [ReasonCode.FEED_NEVER_POPULATED],
+            )
+        # 2b. Producer dead and no data.
         if not state.ingester_running:
             return (
                 False,
                 StatusValue.FAILED,
                 [ReasonCode.FEED_NEVER_POPULATED, ReasonCode.INGESTER_NOT_RUNNING],
             )
+        # 2c. Producer alive and has cycled at least once but no entities yet.
         return (
             False,
             StatusValue.WARMING_UP,
