@@ -44,6 +44,13 @@ dependencies = [
     "websockets>=16.0",
     "httpx2>=0.28.1",
     "fastmcp>=3.4.0",
+    # Phase 4 (2026-09-15): health aggregator metrics emission
+    # (mcp_common.health.metrics.update_health_metrics). prometheus_client
+    # is the canonical Prometheus exposition library; every Bodai MCP
+    # server already imports it for its existing /metrics endpoint,
+    # so making it a direct runtime dep here pins the metrics contract
+    # instead of relying on transitive availability.
+    "prometheus_client>=0.20.0",
 ]
 
 [project.license]

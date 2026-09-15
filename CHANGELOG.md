@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- mcp-common: ``mcp_common.health.metrics.update_health_metrics`` wires the aggregator's ``HealthSnapshot`` into the consumer's existing ``prometheus_client.CollectorRegistry`` (plan §4 Observability + §11.4). Emits four metrics: ``health_feed_status{repo, feed, status}``, ``health_feed_errors_within_window{repo, feed}``, ``mcp_common_health_halflife_seconds{repo}``, ``mcp_common_health_aggregate_duration_ms{repo}`` (histogram). These are the metric names referenced in the PromQL alert rules at ``config/prometheus/health_aggregator_alerts.yml``. ``prometheus_client>=0.20.0`` promoted to a direct runtime dep so the metrics contract is explicit instead of relying on transitive availability.
+
 - mcp-common: ``--health-disable-decay`` CLI flag on ``MCPServerCLIFactory.start`` (plan §5 task 7). Sets ``HEALTH_FEED_HALFLIFE_SECONDS=0`` before the lifespan runs; emits WARNING + OTel event ``health.aggregate.decay_disabled``. Operators use this during incident triage when a known upstream regression is firing repeated errors that would otherwise mask real downstream faults.
 
 ### Fixed

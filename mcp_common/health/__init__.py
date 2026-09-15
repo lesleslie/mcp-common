@@ -41,6 +41,7 @@ from mcp_common.health.feed import (
     record_error,
     record_success,
 )
+from mcp_common.health.metrics import update_health_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -915,6 +916,8 @@ __all__ = [
     # Phase 1 (2026-09-14): feed-state aggregator
     # HealthFeedState, ReasonCode, StatusValue, aggregate_feed_states,
     # is_healthy, record_error, record_success
+    # Phase 4 (2026-09-15): Prometheus metrics emission
+    # update_health_metrics
     "ComponentHealth",
     "DependencyConfig",
     "DependencyWaiter",
@@ -933,4 +936,5 @@ __all__ = [
     "record_success",
     "register_health_tools",
     "register_http_health_route",
+    "update_health_metrics",
 ]
