@@ -155,6 +155,16 @@ def is_healthy(
         - ``last_error_at`` outside ``halflife_seconds`` → HEALTHY (decayed).
         - No error ever recorded → pure entity-count check.
 
+    Decay-disabled sentinel (plan §5 task 7 / ``--health-disable-decay``):
+        ``halflife_seconds <= 0`` disables the time-bounded check entirely
+        — no error is ever treated as "recent" regardless of when it
+        occurred. Operators use this during incident triage when a known
+        upstream regression is firing repeated errors that would
+        otherwise mask real downstream faults. The CLI flag
+        ``--health-disable-decay`` (via MCPServerCLIFactory) sets
+        ``HEALTH_FEED_HALFLIFE_SECONDS=0`` before the lifespan runs,
+        which the probe bodies read and translate to ``0`` here.
+
     HNSW-on-DuckDB hardening (plan §5 task 6):
         A feed where the producer reports ``ingester_running=True`` but
         ``cycles_total == 0`` has never completed a single cycle — it is
@@ -165,11 +175,13 @@ def is_healthy(
 
     Order of evaluation:
         1. Recent error → DEGRADED (terminal: errors override everything else).
+           Skipped when ``halflife_seconds <= 0`` (decay disabled).
         2. Empty feed + ``cycles_total == 0`` + ingester running →
            DEGRADED (HNSW hardening; never-cycled producer).
         3. Empty feed + ingester not running → FAILED.
         4. Empty feed + ingester running + at least one cycle → WARMING_UP.
         5. Populated, error aged out → HEALTHY (with decayed-error reason).
+           Skipped when ``halflife_seconds <= 0`` (decay disabled).
         6. Populated, no errors → HEALTHY (no reason codes).
     """
     now = time.time()
@@ -178,8 +190,12 @@ def is_healthy(
         now - state.last_error_at if state.last_error_at is not None else None
     )
 
-    # 1. Recent error wins over everything.
-    if error_age is not None and error_age <= halflife_seconds:
+    # 1. Recent error wins over everything (skipped when decay disabled).
+    if (
+        halflife_seconds > 0
+        and error_age is not None
+        and error_age <= halflife_seconds
+    ):
         return (
             False,
             StatusValue.DEGRADED,

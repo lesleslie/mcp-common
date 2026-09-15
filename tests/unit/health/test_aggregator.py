@@ -265,3 +265,38 @@ def test_aggregate_worst_case_failed_outranks_never_cycled_degraded() -> None:
     # Both per-feed statuses round-trip intact.
     assert snap["checks"]["failed_feed"]["status"] == StatusValue.FAILED
     assert snap["checks"]["never_cycled_feed"]["status"] == StatusValue.DEGRADED
+
+
+# ---------------------------------------------------------------------------
+# Decay-disabled sentinel (plan §5 task 7 / ``--health-disable-decay``)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.req(["REQ-002", "REQ-007"])
+def test_aggregate_decay_disabled_never_escalates_to_degraded() -> None:
+    """``halflife_seconds=0`` propagates through the aggregator.
+
+    Plan §5 task 7 / ``--health-disable-decay``: when the CLI flag
+    is set, ``HEALTH_FEED_HALFLIFE_SECONDS=0`` is exported before the
+    lifespan runs. The probe bodies read it and pass ``0`` to the
+    aggregator; the aggregator passes it to ``is_healthy`` which
+    skips the time-bounded check. The feed stays HEALTHY even when
+    there's a fresh error in the window.
+    """
+    state = HealthFeedState(
+        entities_count=100,
+        last_updated_timestamp=time.time(),
+        cycles_total=10,
+        ingester_running=True,
+        errors_total=1,
+        last_error_at=time.time() - 5.0,  # would normally be within halflife
+    )
+
+    snap = aggregate_feed_states({"local_traces": state}, halflife_seconds=0)
+
+    # Aggregate + per-feed are HEALTHY despite the recent error.
+    assert snap["status"] == StatusValue.HEALTHY
+    assert snap["checks"]["local_traces"]["status"] == StatusValue.HEALTHY
+    assert snap["checks"]["local_traces"]["healthy"] is True
+    # No DEGRADED-elevated reason codes surface.
+    assert ReasonCode.ERROR_WITHIN_HALFLIFE not in snap["checks"]["local_traces"]["reason_codes"]

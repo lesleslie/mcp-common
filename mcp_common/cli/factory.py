@@ -6,6 +6,7 @@ CLIs with lifecycle management, health monitoring, and graceful shutdown.
 
 import asyncio
 import json
+import logging
 import os
 import sys
 import time
@@ -31,6 +32,8 @@ from mcp_common.cli.security import (
 )
 from mcp_common.cli.settings import MCPServerSettings
 from mcp_common.cli.signals import SignalHandler
+
+logger = logging.getLogger(__name__)
 
 
 class ExitCode:
@@ -430,8 +433,53 @@ class MCPServerCLIFactory:
         json_output: bool = typer.Option(
             False, "--json", help="Output JSON instead of text"
         ),
+        health_disable_decay: bool = typer.Option(
+            False,
+            "--health-disable-decay",
+            help=(
+                "Disable the time-bounded decay predicate in "
+                "/health aggregator (plan §5 task 7). Equivalent to "
+                "setting HEALTH_FEED_HALFLIFE_SECONDS=0; time-bounded "
+                "semantics disabled. Use during incident triage when "
+                "a known upstream regression is firing repeated "
+                "errors that would otherwise mask real downstream "
+                "faults. Emits WARNING + OTel event "
+                "health.aggregate.decay_disabled at startup."
+            ),
+        ),
     ) -> None:
         """Start the MCP server."""
+        # Apply decay-disable BEFORE any lifespan handler runs so the
+        # probe body reads HEALTH_FEED_HALFLIFE_SECONDS=0 from the
+        # env on its first call. The aggregator's
+        # ``is_healthy`` predicate treats ``halflife_seconds <= 0``
+        # as the "disabled" sentinel (skips the recent-error check).
+        if health_disable_decay:
+            os.environ["HEALTH_FEED_HALFLIFE_SECONDS"] = "0"
+            logger.warning(
+                "HEALTH_FEED_HALFLIFE_SECONDS=0; time-bounded semantics "
+                "disabled (--health-disable-decay). Fresh errors will "
+                "NOT escalate feeds to DEGRADED via the halflife "
+                "predicate. Restore by unsetting the env var or "
+                "removing the flag."
+            )
+            # Emit an OTel event so observability tooling can alert on
+            # the disable window. The event is fire-and-forget — the
+            # server may not have an OTel tracer configured yet, in
+            # which case the emit is a no-op.
+            try:
+                from opentelemetry import trace
+
+                tracer = trace.get_tracer(__name__)
+                span = tracer.start_span("health.aggregate.decay_disabled")
+                span.set_attribute("health.decay.disabled", True)
+                span.set_attribute("server.name", self.server_name)
+                span.end()
+            except ImportError:
+                # OTel not installed — silently skip. The log
+                # warning above is the operator-facing signal.
+                pass
+
         self._validate_cache_and_check_process(force, json_output)
         self._write_pid_and_health_snapshot()
         self._register_signal_handlers(json_output)

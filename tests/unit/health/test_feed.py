@@ -144,6 +144,65 @@ def test_is_degraded_when_error_within_halflife() -> None:
     assert ReasonCode.ERROR_WITHIN_HALFLIFE in codes
 
 
+# ---------------------------------------------------------------------------
+# is_healthy — decay-disabled sentinel (plan §5 task 7)
+# ---------------------------------------------------------------------------
+
+
+def test_is_healthy_decay_disabled_ignores_recent_error() -> None:
+    """``halflife_seconds <= 0`` disables time-bounded decay entirely.
+
+    With halflife disabled, even a freshly-recorded error does NOT
+    escalate to DEGRADED — the populated-feed branch returns HEALTHY
+    instead. Operators trigger this via the
+    ``--health-disable-decay`` CLI flag (which sets
+    ``HEALTH_FEED_HALFLIFE_SECONDS=0``) during incident triage when
+    known upstream regressions are firing repeated errors that
+    would otherwise mask real downstream faults.
+    """
+    state = HealthFeedState(
+        entities_count=100,
+        last_updated_timestamp=time.time(),
+        cycles_total=10,
+        ingester_running=True,
+        errors_total=1,
+        # 1 second ago — would be well within any normal halflife.
+        last_error_at=time.time() - 1.0,
+    )
+
+    # halflife_seconds=0 is the canonical "disabled" sentinel.
+    healthy, status, codes = is_healthy(state, halflife_seconds=0)
+
+    assert healthy is True
+    assert status == StatusValue.HEALTHY
+    # The error is reported (so operators still see it) but not
+    # escalated to DEGRADED.
+    assert ReasonCode.ERROR_OUTSIDE_HALFLIFE in codes
+    assert ReasonCode.ERROR_WITHIN_HALFLIFE not in codes
+
+
+def test_is_healthy_decay_disabled_negative_halflife() -> None:
+    """Negative ``halflife_seconds`` is also treated as disabled.
+
+    Defensive coverage: a misconfigured operator who sets
+    ``HEALTH_FEED_HALFLIFE_SECONDS=-1`` (e.g. from a wrapper script)
+    should not get the opposite behaviour (everything DEGRADED).
+    """
+    state = HealthFeedState(
+        entities_count=100,
+        last_updated_timestamp=time.time(),
+        cycles_total=10,
+        ingester_running=True,
+        errors_total=1,
+        last_error_at=time.time() - 1.0,
+    )
+
+    healthy, status, _codes = is_healthy(state, halflife_seconds=-1.0)
+
+    assert healthy is True
+    assert status == StatusValue.HEALTHY
+
+
 def test_is_warming_up_when_empty_and_no_errors_and_ingester_running() -> None:
     """Empty feed + ingester running + no errors → WARMING_UP.
 

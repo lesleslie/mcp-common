@@ -84,6 +84,59 @@ def test_start_with_handler_outputs_status(factory: MCPServerCLIFactory, runner:
     assert called == [True]
 
 
+def test_start_health_disable_decay_sets_env_var(
+    factory: MCPServerCLIFactory, runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``--health-disable-decay`` sets ``HEALTH_FEED_HALFLIFE_SECONDS=0``.
+
+    Plan §5 task 7: the flag is the per-repo operator escape hatch for
+    incident triage. The env var must be set BEFORE the start handler
+    runs (so the probe body's first read sees the disabled sentinel).
+    """
+    monkeypatch.delenv("HEALTH_FEED_HALFLIFE_SECONDS", raising=False)
+    called: list[bool] = []
+
+    def start() -> None:
+        # Probe bodies read HEALTH_FEED_HALFLIFE_SECONDS via the env
+        # at request time, so the env must already be set when the
+        # handler runs (i.e., the lifespan entry has already executed).
+        assert os.environ.get("HEALTH_FEED_HALFLIFE_SECONDS") == "0"
+        called.append(True)
+
+    factory.start_handler = start
+    app = factory.create_app()
+    result = runner.invoke(app, ["start", "--health-disable-decay"])
+
+    assert result.exit_code == ExitCode.SUCCESS
+    assert called == [True]
+
+
+def test_start_without_health_disable_decay_does_not_set_env_var(
+    factory: MCPServerCLIFactory, runner: CliRunner, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Without ``--health-disable-decay`` the env var stays untouched.
+
+    Regression: the flag must NOT clobber a pre-existing
+    ``HEALTH_FEED_HALFLIFE_SECONDS`` value or set it to ``0`` by
+    default. Operators who don't pass the flag see the canonical
+    300s default that the probe bodies already use.
+    """
+    monkeypatch.delenv("HEALTH_FEED_HALFLIFE_SECONDS", raising=False)
+    called: list[bool] = []
+
+    def start() -> None:
+        # Env var must NOT be set to "0" when the flag is absent.
+        assert "HEALTH_FEED_HALFLIFE_SECONDS" not in os.environ
+        called.append(True)
+
+    factory.start_handler = start
+    app = factory.create_app()
+    result = runner.invoke(app, ["start"])
+
+    assert result.exit_code == ExitCode.SUCCESS
+    assert called == [True]
+
+
 def test_execute_start_handler_json(
     factory: MCPServerCLIFactory, capsys: pytest.CaptureFixture
 ) -> None:

@@ -12,6 +12,8 @@ union-on-tie so multiple feeds at the same severity contribute all codes).
 
 from __future__ import annotations
 
+from typing import TypedDict
+
 from mcp_common.health.feed import (
     HealthFeedState,
     ReasonCode,
@@ -20,10 +22,33 @@ from mcp_common.health.feed import (
 )
 
 
+class FeedSnapshot(TypedDict):
+    """Per-feed verdict inside :data:`HealthSnapshot.checks`."""
+
+    status: StatusValue
+    healthy: bool
+    reason_codes: list[ReasonCode]
+
+
+class HealthSnapshot(TypedDict):
+    """Top-level roll-up returned by :func:`aggregate_feed_states`.
+
+    ``status`` is the worst severity seen; ``checks`` retains every input
+    feed (sparse dict is OK — feeds with no data still appear because
+    empty inputs signal broken producers); ``reason_codes`` carries the
+    worst feed's reasons (or a deduped union when multiple feeds tie at
+    the worst severity).
+    """
+
+    status: StatusValue
+    checks: dict[str, FeedSnapshot]
+    reason_codes: list[ReasonCode]
+
+
 def aggregate_feed_states(
     states: dict[str, HealthFeedState],
     halflife_seconds: float = 300,
-) -> dict[str, object]:
+) -> HealthSnapshot:
     """Roll up per-feed health into a single snapshot.
 
     Returns::
@@ -32,6 +57,7 @@ def aggregate_feed_states(
             "status": StatusValue,             # worst across all feeds
             "checks": {feed_name: {            # per-feed detail
                 "status": StatusValue,
+                "healthy": bool,
                 "reason_codes": list[ReasonCode],
             }},
             "reason_codes": list[ReasonCode],   # codes from worst feed(s)
@@ -46,13 +72,14 @@ def aggregate_feed_states(
             Phase 4 wiring plan; Phase 4 may override per-environment.
 
     Returns:
-        A JSON-serialisable dict. ``status`` is the worst severity seen;
-        ``checks`` retains every input feed (sparse dict is OK — feeds with
-        no data still appear because empty inputs signal broken producers);
-        ``reason_codes`` carries the worst feed's reasons (or a deduped
-        union when multiple feeds tie at the worst severity).
+        A JSON-serialisable :class:`HealthSnapshot`. ``status`` is the
+        worst severity seen; ``checks`` retains every input feed (sparse
+        dict is OK — feeds with no data still appear because empty inputs
+        signal broken producers); ``reason_codes`` carries the worst
+        feed's reasons (or a deduped union when multiple feeds tie at
+        the worst severity).
     """
-    checks: dict[str, dict[str, object]] = {}
+    checks: dict[str, FeedSnapshot] = {}
     worst_status: StatusValue = StatusValue.HEALTHY
     worst_reasons: list[ReasonCode] = []
 
@@ -80,4 +107,4 @@ def aggregate_feed_states(
     }
 
 
-__all__ = ["aggregate_feed_states"]
+__all__ = ["FeedSnapshot", "HealthSnapshot", "aggregate_feed_states"]

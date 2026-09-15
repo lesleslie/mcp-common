@@ -13,6 +13,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- mcp-common: ``--health-disable-decay`` CLI flag on ``MCPServerCLIFactory.start`` (plan §5 task 7). Sets ``HEALTH_FEED_HALFLIFE_SECONDS=0`` before the lifespan runs; emits WARNING + OTel event ``health.aggregate.decay_disabled``. Operators use this during incident triage when a known upstream regression is firing repeated errors that would otherwise mask real downstream faults.
+
+### Fixed
+
+- mcp-common: ``is_healthy`` treats ``halflife_seconds <= 0`` as the "decay disabled" sentinel — no error is ever treated as "recent" regardless of when it occurred. The CLI flag above propagates through to the probe bodies, which already read the env var.
+
+### Changed
+
+- mcp-common: ``aggregate_feed_states`` returns a typed ``HealthSnapshot`` instead of ``dict[str, object]`` — surface TypedDicts ``FeedSnapshot`` + ``HealthSnapshot`` for cross-module type resolution.
+
 ### Fixed
 
 - mcp-common: Distinguish never-cycled feed from warming_up in `is_healthy` (Phase 4 task 6 / HNSW-on-DuckDB hardening). A feed whose producer reports `ingester_running=True` but `cycles_total == 0` now returns DEGRADED with `FEED_NEVER_POPULATED` instead of WARMING_UP, so operators see a broken-before-first-success producer rather than a healthy-but-still-loading feed.
