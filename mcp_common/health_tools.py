@@ -10,6 +10,7 @@ Refs:
 - .claude/decisions/mcp-backend-wiring-discipline.md
 - docs/audits/2026-09-15-decomposition-final-review.md §2.1 W4
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -33,4 +34,4 @@ def aggregate_health(server: Any) -> dict[str, Any]:
     return {"status": "UNKNOWN", "feeds": {}}
 
 
-__all__ = ["register_feed", "aggregate_health"]
+__all__ = ["aggregate_health", "register_feed"]

@@ -9,6 +9,7 @@ Refs:
 - docs/superpowers/specs/2026-09-14-dhara-mcp-decomposition-design.md §4.11
 - docs/audits/2026-09-15-decomposition-final-review.md §2.1 W4
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -26,7 +27,9 @@ class AgentCanonicalSchema(BaseModel):
         default_factory=list,
         description="List of capabilities the agent advertises",
     )
-    owner: str | None = Field(default=None, description="Owning component (mahavishnu, akosha, ...)")
+    owner: str | None = Field(
+        default=None, description="Owning component (mahavishnu, akosha, ...)"
+    )
     metadata: dict[str, Any] = Field(
         default_factory=dict, description="Free-form additional metadata"
     )

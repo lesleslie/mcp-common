@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.26.2] - 2026-09-15
+
+### Added
+
+- mcp-common: Add Phase 1/4/12 module prerequisites (6 net-new modules + tests)
+
+### Fixed
+
+- mcp-common: Tolerate BaseExceptionGroup-wrapped cross-task teardown
+- mcp-common: Tolerate cross-task aclose() in CommonMCPClient (REQ-001)
+
 ## [0.26.1] - 2026-09-14
 
 ### Fixed

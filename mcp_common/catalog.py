@@ -8,12 +8,15 @@ Refs:
 - docs/superpowers/specs/2026-09-14-dhara-mcp-decomposition-design.md §4.11
 - docs/audits/2026-09-15-decomposition-final-review.md §2.1 W4
 """
+
 from __future__ import annotations
 
 from typing import Any
 
 
-def catalog(query: str, *, component: str | None = None, limit: int = 20) -> list[dict[str, Any]]:
+def catalog(
+    query: str, *, component: str | None = None, limit: int = 20
+) -> list[dict[str, Any]]:
     """Search the cross-component capability catalog.
 
     Currently a stub — Phase 4 wires this to Oneiric's adapter catalog

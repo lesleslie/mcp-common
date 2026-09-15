@@ -34,7 +34,7 @@ all session lifecycle correctly.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Self
 from urllib.parse import urlparse
 
 import httpx2 as httpx
@@ -42,6 +42,8 @@ import httpx2 as httpx
 from mcp_common.exceptions import MCPServerError
 
 if TYPE_CHECKING:
+    import types
+
     from mcp.client.session import ClientSession
 
 logger = logging.getLogger(__name__)
@@ -229,7 +231,7 @@ class CommonMCPClient:
                 f"MCP tool call {name!r} timed out after {timeout} seconds"
             ) from exc
 
-    async def __aenter__(self) -> "CommonMCPClient":
+    async def __aenter__(self) -> Self:
         """Enter the async context: establish the session upfront so the
         transport context is opened in the *entering* task.
 
@@ -251,7 +253,12 @@ class CommonMCPClient:
         await self._ensure_session()
         return self
 
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: types.TracebackType | None,
+    ) -> None:
         """Exit the async context: close from the same task that entered.
 
         ``self.aclose()`` tolerates cross-task calls as a safety net —
