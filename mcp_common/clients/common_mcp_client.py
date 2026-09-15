@@ -268,7 +268,18 @@ class CommonMCPClient:
         entered in a different asyncio task than the one calling
         ``aclose()``, its anyio ``TaskGroup`` raises
         ``RuntimeError: Attempted to exit cancel scope in a different
-        task than it was entered in``. We catch that specific case:
+        task than it was entered in``. In Python 3.11+, anyio wraps that
+        ``RuntimeError`` in a :class:`BaseExceptionGroup`, so we must
+        recognize both shapes (see :func:`_is_cross_task_teardown`).
+
+        Caught case (any of these shapes are tolerated):
+
+        - Plain ``RuntimeError("...different task...")`` (older anyio).
+        - ``BaseExceptionGroup`` containing one or more of the above.
+        - Nested ``BaseExceptionGroup`` (defensive — uncommon but
+          permitted by the exception-group spec).
+
+        Side effects when swallowed:
 
         - The leaked background tasks (GET SSE drain, post writer) are
           reclaimed by Python's garbage collector on full session
@@ -288,8 +299,8 @@ class CommonMCPClient:
         if self._session is not None:
             try:
                 await self._session.__aexit__(None, None, None)
-            except RuntimeError as exc:
-                if "different task" not in str(exc):
+            except (RuntimeError, BaseExceptionGroup) as exc:
+                if not _is_cross_task_teardown(exc):
                     raise
                 logger.debug(
                     "CommonMCPClient: session exit in wrong task; skipping",
@@ -300,8 +311,8 @@ class CommonMCPClient:
         if self._transport_context is not None:
             try:
                 await self._transport_context.__aexit__(None, None, None)
-            except RuntimeError as exc:
-                if "different task" not in str(exc):
+            except (RuntimeError, BaseExceptionGroup) as exc:
+                if not _is_cross_task_teardown(exc):
                     raise
                 logger.debug(
                     "CommonMCPClient: transport-context exit in wrong task; "
@@ -312,6 +323,30 @@ class CommonMCPClient:
                 )
             finally:
                 self._transport_context = None
+
+
+def _is_cross_task_teardown(exc: BaseException) -> bool:
+    """Return True if ``exc`` is anyio's cross-task teardown error.
+
+    Recognized shapes:
+
+    - ``RuntimeError("...different task...")`` (anyio without
+      :class:`BaseExceptionGroup`).
+    - :class:`BaseExceptionGroup` containing only the above
+      ``RuntimeError``(s), at any nesting depth.
+
+    Any exception that doesn't match these shapes returns False, which
+    causes the caller to re-raise. This keeps genuine bugs (e.g.
+    transport crashes, protocol errors) visible while silencing the
+    anyio task-affinity warning that surfaces harmlessly when
+    ``asyncio.gather`` cancels siblings across task boundaries.
+    """
+    if isinstance(exc, BaseExceptionGroup):
+        # ``exc.exceptions`` is the flat list of sub-exceptions; nested
+        # BaseExceptionGroups appear as a BaseExceptionGroup element, so
+        # recursion handles arbitrary depth.
+        return all(_is_cross_task_teardown(e) for e in exc.exceptions)
+    return isinstance(exc, RuntimeError) and "different task" in str(exc)
 
 
 __all__ = [

@@ -542,6 +542,109 @@ async def test_aclose_propagates_other_runtime_errors() -> None:
 
 @pytest.mark.req(["REQ-001"])
 @pytest.mark.asyncio
+async def test_aclose_tolerates_cross_task_base_exception_group() -> None:
+    """``aclose()`` swallows anyio's BaseExceptionGroup-wrapped cross-task error.
+
+    In Python 3.11+, ``anyio.TaskGroup.__aexit__`` wraps its sub-exceptions
+    in a :class:`BaseExceptionGroup` rather than raising them individually.
+    The plain ``RuntimeError`` path covered by
+    :func:`test_aclose_tolerates_cross_task_runtime_error` does not match
+    the group wrapper, so the SDK must also recognize the grouped shape.
+
+    Regression test for the ``asyncio.gather`` teardown path that surfaced
+    in akosha's REQ-009 cross-repo smoke test — two ``CodeGraphIngester``
+    instances torn down after a concurrent ``gather`` triggered the
+    grouped error from the underlying ``streamable_http_client`` transport.
+    """
+    client = CommonMCPClient(base_url="http://localhost:8680/mcp")
+
+    # Session close is fine; transport close raises the wrapped error.
+    fake_session_close = AsyncMock(return_value=None)
+    fake_session = MagicMock(name="ClientSession-after-setup")
+    fake_session.__aexit__ = fake_session_close
+
+    cross_task_runtime = RuntimeError(
+        "Attempted to exit cancel scope in a different task "
+        "than it was entered in"
+    )
+    fake_transport_close = AsyncMock(
+        side_effect=BaseExceptionGroup("unhandled errors in a TaskGroup", [cross_task_runtime])
+    )
+    fake_transport = MagicMock(name="transport-context")
+    fake_transport.__aexit__ = fake_transport_close
+
+    client._session = fake_session  # type: ignore[assignment]
+    client._transport_context = fake_transport  # type: ignore[assignment]
+
+    # Must not raise — the BaseExceptionGroup-wrapped cross-task error
+    # is recognized by ``_is_cross_task_teardown`` and swallowed.
+    await client.aclose()
+
+    fake_session_close.assert_awaited_once()
+    fake_transport_close.assert_awaited_once()
+    assert client._session is None
+    assert client._transport_context is None
+
+
+@pytest.mark.req(["REQ-001"])
+@pytest.mark.asyncio
+async def test_aclose_tolerates_nested_cross_task_base_exception_group() -> None:
+    """``aclose()`` swallows nested ``BaseExceptionGroup``(s) of cross-task errors.
+
+    Defensive coverage — the exception-group spec permits arbitrary
+    nesting, and anyio may produce nested groups when sub-task-groups
+    cancel mid-flight. The helper recurses through ``exc.exceptions``
+    so any depth of cross-task wrapping is tolerated.
+    """
+    client = CommonMCPClient(base_url="http://localhost:8680/mcp")
+
+    cross_task_runtime = RuntimeError(
+        "Attempted to exit cancel scope in a different task than it was entered in"
+    )
+    inner_group = BaseExceptionGroup("inner", [cross_task_runtime])
+    outer_group = BaseExceptionGroup("outer", [inner_group])
+
+    fake_transport = MagicMock(name="transport-context")
+    fake_transport.__aexit__ = AsyncMock(side_effect=outer_group)
+
+    client._transport_context = fake_transport  # type: ignore[assignment]
+
+    # Must not raise.
+    await client.aclose()
+    assert client._transport_context is None
+
+
+@pytest.mark.req(["REQ-001"])
+@pytest.mark.asyncio
+async def test_aclose_propagates_unrelated_base_exception_group() -> None:
+    """``aclose()`` re-raises ``BaseExceptionGroup``(s) that aren't cross-task.
+
+    A :class:`BaseExceptionGroup` whose sub-exceptions include anything
+    other than a cross-task ``RuntimeError`` is a genuine bug or upstream
+    error and must propagate. The cross-task tolerance must not become a
+    blanket ``BaseExceptionGroup`` sink.
+    """
+    client = CommonMCPClient(base_url="http://localhost:8680/mcp")
+
+    cross_task_runtime = RuntimeError("Attempted to exit cancel scope in a different task")
+    unrelated = ValueError("transport genuinely misconfigured")
+    mixed_group = BaseExceptionGroup(
+        "unhandled errors in a TaskGroup", [cross_task_runtime, unrelated]
+    )
+
+    fake_transport = MagicMock(name="transport-context")
+    fake_transport.__aexit__ = AsyncMock(side_effect=mixed_group)
+
+    client._transport_context = fake_transport  # type: ignore[assignment]
+
+    with pytest.raises(BaseExceptionGroup) as exc_info:
+        await client.aclose()
+    # The unrelated ValueError must still be present in the propagated group.
+    assert any(isinstance(e, ValueError) for e in exc_info.value.exceptions)
+
+
+@pytest.mark.req(["REQ-001"])
+@pytest.mark.asyncio
 async def test_async_context_manager_lifecycle() -> None:
     """``async with CommonMCPClient(...) as c:`` opens and closes in
     the same task — guarantees anyio TaskGroup cleanup succeeds.
