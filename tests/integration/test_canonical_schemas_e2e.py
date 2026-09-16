@@ -6,24 +6,34 @@ Goal
 ----
 Verify that ``AgentMetadata`` and ``SkillMetadata`` exposed by every Bodai
 component (``akosha``, ``mahavishnu``, ``session-buddy``, ``crackerjack``)
-resolve to the same class object as the canonical schemas in
-``mcp_common.canonical_schemas``. The canonical schema is the wire shape
-returned by ``mcp__<server>__list_agents`` / ``mcp__<server>__get_agent``
-(and the same for skills), so a divergence between components would
-break federation clients.
+produce the same canonical wire shape as
+``mcp_common.canonical_schemas``. The canonical schema is the wire
+shape returned by ``mcp__<server>__list_agents`` /
+``mcp__<server>__get_agent`` (and the same for skills), so a
+divergence between components would break federation clients.
 
-Design intent
--------------
-The brief specifies the alias pattern:
+Wire-shape contract (not class-identity)
+---------------------------------------
+Per Bodai memo (revert Phase 10 task 4 to the minimal-envelope
+strategy), per-repo ``AgentMetadata`` classes MAY extend the
+canonical schema with installer fields (``id``, ``server_key``,
+``system_prompt``, ``content_hash``, ``signature``, etc.) and
+per-repo validators. The canonical bus-publication envelope is the
+6/8-field subset common to all variants.
 
-    # <component>/<component>/mcp/agent_schema.py
-    from mcp_common.canonical_schemas.agent import AgentCanonicalSchema
-    AgentMetadata = AgentCanonicalSchema
+Federation clients compare via the canonical envelope, not via
+``IS`` class identity. Two helpers in ``mcp_common.canonical_schemas``
+normalize any per-repo schema to the envelope:
 
-This pattern means ``AgentMetadata IS AgentCanonicalSchema`` holds at
-runtime — Python treats ``AgentMetadata`` as the same class object.
-Per-repo additions live in the ``agents_tools`` layer (not the schema
-layer) so the canonical class object stays shared.
+- :func:`to_agent_envelope` — 6-field bus surface for agents
+- :func:`to_skill_envelope` — 8-field bus surface for skills
+
+The static, dynamic, and parity checks below all assert wire-shape
+equality through these helpers, never class identity. A repo may
+use ``AgentMetadata = AgentCanonicalSchema`` (alias), ``class
+AgentMetadata(AgentCanonicalSchema)`` (subclass), or a pre-migration
+local class — all three are accepted as long as the envelope
+extraction matches.
 
 Constraint: this test runs in mcp-common's venv. Other repos' packages
 are NOT installed. The find_spec + AST pattern documented below is the
@@ -35,16 +45,9 @@ find_spec + AST pattern
 ``importlib.util.find_spec(<module_path>)`` returns a ``ModuleSpec``
 without importing the module. When the spec's ``origin`` is set, the
 module's source file is at that path and we can read + AST-parse it
-to verify imports and module-level assignments. This is sufficient to
-prove ``AgentMetadata IS AgentCanonicalSchema`` at runtime:
-
-- Source imports ``AgentCanonicalSchema`` from the canonical path, AND
-- Source has a module-level ``AgentMetadata = AgentCanonicalSchema``,
-
-then by Python's import semantics, ``from <component>.mcp.agent_schema
-import AgentMetadata`` will resolve to the canonical class object.
-The ``IS`` check is implicitly satisfied; we don't need to trigger
-the import chain.
+to verify imports. This catches gross wire-shape drift: if a repo
+stops importing the canonical envelope module at all, the federation
+guarantee is broken.
 
 When ``find_spec`` returns ``None`` (the parent package is not
 installed in this venv), we skip with a docstring note. The test
@@ -70,6 +73,8 @@ import pytest
 from mcp_common.canonical_schemas import (
     AgentCanonicalSchema,
     SkillCanonicalSchema,
+    to_agent_envelope,
+    to_skill_envelope,
 )
 
 if TYPE_CHECKING:
@@ -132,11 +137,15 @@ def _ast_find_module_import_from(tree: ast.Module, module: str, name: str) -> bo
 def _ast_find_module_alias(tree: ast.Module, alias_name: str, target_name: str) -> bool:
     """Return True iff the module AST has top-level ``alias_name = target_name``.
 
-    The brief specifies the alias pattern ``AgentMetadata = AgentCanonicalSchema``
-    at module scope — a plain assignment, NOT a class definition. A subclass
-    like ``class AgentMetadata(AgentCanonicalSchema): ...`` would fail this
-    check, which is the desired behavior (a subclass is a different class
-    object, not an alias).
+    The Phase 10 brief originally specified the alias pattern
+    ``AgentMetadata = AgentCanonicalSchema`` at module scope. Per the
+    revert strategy, per-repo schemas MAY instead be a subclass
+    (``class AgentMetadata(AgentCanonicalSchema): ...``) or a
+    pre-migration local class — the alias check is therefore no
+    longer the gate. Kept here for callers that still want to assert
+    the alias pattern; the e2e tests below use
+    :func:`_is_wire_shape_via_static_analysis` instead, which only
+    checks for the canonical import.
     """
     for node in tree.body:
         if not isinstance(node, ast.Assign):
@@ -148,33 +157,33 @@ def _ast_find_module_alias(tree: ast.Module, alias_name: str, target_name: str) 
     return False
 
 
-def _is_alias_via_static_analysis(
+def _is_wire_shape_via_static_analysis(
     component: str,
     schema_kind: str,
     canonical_module: str,
     canonical_name: str,
-    alias_name: str,
 ) -> bool:
-    """Static-analysis proof that ``from <component>.mcp.<schema>_schema import <alias>``
-    resolves to ``<canonical_name>`` at runtime.
+    """Static-analysis proof that ``<component>.mcp.<schema_kind>_schema``
+    imports the canonical envelope.
 
     Returns ``True`` iff:
 
     1. ``find_spec(<component>.mcp.<schema>_schema)`` returns a spec with origin.
     2. The source file at spec.origin contains
        ``from <canonical_module> import <canonical_name>``.
-    3. The source file has a top-level assignment
-       ``<alias_name> = <canonical_name>``.
+
+    Note: per the revert strategy, this no longer asserts the
+    ``<alias> = <canonical>`` assignment — per-repo schemas may use
+    the alias pattern, the subclass pattern, or a pre-migration local
+    class. Wire-shape parity is verified dynamically via the
+    :func:`to_agent_envelope` / :func:`to_skill_envelope` helpers.
     """
     source_path = _resolve_schema_source(component, schema_kind)
     if source_path is None:
         return False
     source = source_path.read_text(encoding="utf-8")
     tree = ast.parse(source, filename=str(source_path))
-    return (
-        _ast_find_module_import_from(tree, canonical_module, canonical_name)
-        and _ast_find_module_alias(tree, alias_name, canonical_name)
-    )
+    return _ast_find_module_import_from(tree, canonical_module, canonical_name)
 
 
 def _try_dynamic_import_alias(
@@ -295,12 +304,18 @@ def test_canonical_skill_construction_equal() -> None:
 
 @pytest.mark.parametrize("component", COMPONENTS)
 def test_agent_metadata_aliases_canonical_static(component: str) -> None:
-    """Static proof that ``<component>.mcp.agent_schema.AgentMetadata`` aliases the canonical.
+    """Static proof that ``<component>.mcp.agent_schema`` imports the canonical envelope.
 
     Uses find_spec + AST (documented above). Skips when the parent
     package is not installed in this venv — the test still runs in
     every component's own dev venv because each component has itself
     editable-installed.
+
+    Per the wire-shape contract (not class-identity), per-repo schemas
+    MAY use the alias pattern, the subclass pattern, or a
+    pre-migration local class. We assert only that the canonical
+    envelope module is referenced — wire-shape parity is verified
+    dynamically by :test_agent_metadata_construction_via_alias.
     """
     source_path = _resolve_schema_source(component, "agent")
     if source_path is None:
@@ -309,24 +324,23 @@ def test_agent_metadata_aliases_canonical_static(component: str) -> None:
             "run from the component's own dev venv to exercise this check."
         )
 
-    source = source_path.read_text(encoding="utf-8")
-    tree = ast.parse(source, filename=str(source_path))
-
-    assert _ast_find_module_import_from(tree, CANONICAL_AGENT_PATH, CANONICAL_AGENT_NAME), (
+    assert _is_wire_shape_via_static_analysis(
+        component, "agent", CANONICAL_AGENT_PATH, CANONICAL_AGENT_NAME
+    ), (
         f"{source_path}: must import {CANONICAL_AGENT_NAME} from "
-        f"{CANONICAL_AGENT_PATH!r} (the canonical envelope contract)."
-    )
-    assert _ast_find_module_alias(tree, CANONICAL_AGENT_ALIAS, CANONICAL_AGENT_NAME), (
-        f"{source_path}: must have a module-level "
-        f"{CANONICAL_AGENT_ALIAS} = {CANONICAL_AGENT_NAME} alias. "
-        "A subclass (e.g. class AgentMetadata(AgentCanonicalSchema)) is NOT "
-        "an alias and breaks the IS-equals-canonical contract."
+        f"{CANONICAL_AGENT_PATH!r} (the canonical envelope contract). "
+        "A wire-shape mismatch in federation clients breaks every "
+        "consumer that reads the bus-publication surface."
     )
 
 
 @pytest.mark.parametrize("component", COMPONENTS)
 def test_skill_metadata_aliases_canonical_static(component: str) -> None:
-    """Static proof that ``<component>.mcp.skill_schema.SkillMetadata`` aliases the canonical."""
+    """Static proof that ``<component>.mcp.skill_schema`` imports the canonical envelope.
+
+    Mirror of :func:`test_agent_metadata_aliases_canonical_static`
+    for ``SkillMetadata``.
+    """
     source_path = _resolve_schema_source(component, "skill")
     if source_path is None:
         pytest.skip(
@@ -334,16 +348,11 @@ def test_skill_metadata_aliases_canonical_static(component: str) -> None:
             "run from the component's own dev venv to exercise this check."
         )
 
-    source = source_path.read_text(encoding="utf-8")
-    tree = ast.parse(source, filename=str(source_path))
-
-    assert _ast_find_module_import_from(tree, CANONICAL_SKILL_PATH, CANONICAL_SKILL_NAME), (
+    assert _is_wire_shape_via_static_analysis(
+        component, "skill", CANONICAL_SKILL_PATH, CANONICAL_SKILL_NAME
+    ), (
         f"{source_path}: must import {CANONICAL_SKILL_NAME} from "
         f"{CANONICAL_SKILL_PATH!r} (the canonical envelope contract)."
-    )
-    assert _ast_find_module_alias(tree, CANONICAL_SKILL_ALIAS, CANONICAL_SKILL_NAME), (
-        f"{source_path}: must have a module-level "
-        f"{CANONICAL_SKILL_ALIAS} = {CANONICAL_SKILL_NAME} alias."
     )
 
 
@@ -353,42 +362,92 @@ def test_skill_metadata_aliases_canonical_static(component: str) -> None:
 
 
 @pytest.mark.parametrize("component", COMPONENTS)
-def test_agent_metadata_is_canonical_dynamic(component: str) -> None:
-    """Runtime proof: ``from <component>.mcp.agent_schema import AgentMetadata`` resolves
-    to the SAME class object as the canonical AgentCanonicalSchema.
+def test_agent_metadata_wire_shape_dynamic(component: str) -> None:
+    """Wire-shape proof: ``to_agent_envelope(<alias instance>)`` equals the canonical envelope.
 
-    Only runs when the component's parent package is installed in this
-    venv. This is a stronger check than the static analysis above: it
-    catches runtime import machinery issues (re-exports, conditional
-    imports, lazy loaders) that AST can't see.
+    Per the wire-shape contract, federation clients compare bus
+    surfaces via :func:`mcp_common.canonical_schemas.to_agent_envelope`
+    — NOT via class identity. This test asserts that constructing a
+    per-repo ``AgentMetadata`` instance and extracting its envelope
+    produces the same dict as constructing the canonical envelope
+    directly.
+
+    Only runs when the component's parent package is installed in
+    this venv. This catches runtime import machinery issues
+    (re-exports, conditional imports, lazy loaders) that AST alone
+    cannot see — including stale site-packages copies of the
+    component's schema module that pre-date the canonical migration.
     """
-    alias = _try_dynamic_import_alias(component, "agent", CANONICAL_AGENT_ALIAS)
-    if alias is None:
+    alias_cls = _try_dynamic_import_alias(component, "agent", CANONICAL_AGENT_ALIAS)
+    if alias_cls is None:
         pytest.skip(
             f"{component!r} is not installed in this venv; "
             "the static-analysis check above provides equivalent coverage."
         )
 
-    assert alias is AgentCanonicalSchema, (
-        f"{component}.mcp.agent_schema.{CANONICAL_AGENT_ALIAS} is not the "
-        f"same class object as {CANONICAL_AGENT_NAME}. Federation clients "
-        "rely on identity (IS) equality, not just shape."
+    canonical_envelope = AgentCanonicalSchema(
+        name="wire-shape-agent",
+        version="1.0.0",
+        description="Wire shape verification across components",
+        capabilities=["wire-shape"],
+        owner=component,
+    )
+
+    # Build the per-repo instance with a permissive kwarg set so
+    # any local validator that rejects empty strings doesn't fire.
+    # We then extract the canonical envelope via :func:`to_agent_envelope`,
+    # which reads attributes defensively without invoking validators.
+    alias_instance = alias_cls(
+        name="wire-shape-agent",
+        version="1.0.0",
+        description="Wire shape verification across components",
+        capabilities=["wire-shape"],
+        owner=component,
+    )
+
+    alias_envelope = to_agent_envelope(alias_instance)
+
+    assert alias_envelope.model_dump() == canonical_envelope.model_dump(), (
+        f"{component}.mcp.agent_schema.{CANONICAL_AGENT_ALIAS} produces a "
+        "different wire envelope than the canonical AgentCanonicalSchema. "
+        "Check that the per-repo class carries name/version/description/"
+        "capabilities/owner/metadata fields with the same semantics."
     )
 
 
 @pytest.mark.parametrize("component", COMPONENTS)
-def test_skill_metadata_is_canonical_dynamic(component: str) -> None:
-    """Runtime proof for SkillMetadata (mirrors the AgentMetadata check above)."""
-    alias = _try_dynamic_import_alias(component, "skill", CANONICAL_SKILL_ALIAS)
-    if alias is None:
+def test_skill_metadata_wire_shape_dynamic(component: str) -> None:
+    """Wire-shape proof for SkillMetadata (mirrors the AgentMetadata check above)."""
+    alias_cls = _try_dynamic_import_alias(component, "skill", CANONICAL_SKILL_ALIAS)
+    if alias_cls is None:
         pytest.skip(
             f"{component!r} is not installed in this venv; "
             "the static-analysis check above provides equivalent coverage."
         )
 
-    assert alias is SkillCanonicalSchema, (
-        f"{component}.mcp.skill_schema.{CANONICAL_SKILL_ALIAS} is not the "
-        f"same class object as {CANONICAL_SKILL_NAME}."
+    canonical_envelope = SkillCanonicalSchema(
+        name="wire-shape-skill",
+        version="1.0.0",
+        description="Wire shape verification across components",
+        tags=["wire-shape"],
+        owner=component,
+    )
+
+    alias_instance = alias_cls(
+        name="wire-shape-skill",
+        version="1.0.0",
+        description="Wire shape verification across components",
+        tags=["wire-shape"],
+        owner=component,
+    )
+
+    alias_envelope = to_skill_envelope(alias_instance)
+
+    assert alias_envelope.model_dump() == canonical_envelope.model_dump(), (
+        f"{component}.mcp.skill_schema.{CANONICAL_SKILL_ALIAS} produces a "
+        "different wire envelope than the canonical SkillCanonicalSchema. "
+        "Check that the per-repo class carries name/version/description/"
+        "tags/owner/prompt/signature/metadata fields with the same semantics."
     )
 
 
@@ -399,18 +458,24 @@ def test_skill_metadata_is_canonical_dynamic(component: str) -> None:
 
 @pytest.mark.parametrize("component", COMPONENTS)
 def test_agent_metadata_construction_via_alias(component: str) -> None:
-    """Construct a sample through the canonical class and verify the alias path
-    produces an object equal in shape.
+    """End-to-end construction parity via the canonical envelope.
 
-    The brief: "Constructs a sample AgentCanonicalSchema via the canonical
-    path, then verifies the same construction via each alias yields an
-    equal object."
+    Construct a sample through the canonical class and verify the
+    alias path produces an object with the same wire envelope
+    (via :func:`to_agent_envelope`). Per the wire-shape contract,
+    the envelope — not the full ``model_dump()`` — is the
+    cross-component contract.
 
-    When the alias is the canonical class (IS-equal), the two objects
-    compare equal. When the alias is a subclass, equality falls through
-    to Pydantic's model equality (field-by-field) and still holds.
-    When the alias is a different class entirely (e.g. mahavishnu's
-    legacy local class), this check fails — surfacing the migration gap.
+    Tolerates per-repo field extensions (``id``, ``server_key``,
+    ``system_prompt``, etc.) and per-repo validators (the envelope
+    helper reads attributes, never invokes source-model validators).
+
+    When the alias is the canonical class (IS-equal), the envelope is
+    trivially equal. When the alias is a subclass, the envelope is
+    extracted from the inherited fields. When the alias is a
+    pre-migration local class (e.g. mahavishnu's legacy
+    ``AgentMetadata``), the envelope still matches as long as the
+    local class carries the canonical 6-field bus surface.
     """
     canonical_agent = AgentCanonicalSchema(
         name="parity-agent",
@@ -427,7 +492,9 @@ def test_agent_metadata_construction_via_alias(component: str) -> None:
             "shape parity via the alias cannot be exercised here."
         )
 
-    # Same construction kwargs through the alias path.
+    # Same construction kwargs through the alias path. We pass a
+    # permissive kwarg set so local validators that reject empty
+    # strings don't fire during construction.
     alias_agent = alias_cls(
         name="parity-agent",
         version="1.0.0",
@@ -436,10 +503,13 @@ def test_agent_metadata_construction_via_alias(component: str) -> None:
         owner=component,
     )
 
-    assert alias_agent.model_dump() == canonical_agent.model_dump(), (
+    alias_envelope = to_agent_envelope(alias_agent)
+
+    assert alias_envelope.model_dump() == canonical_agent.model_dump(), (
         f"{component}.mcp.agent_schema.{CANONICAL_AGENT_ALIAS} produces a "
-        "different shape than the canonical AgentCanonicalSchema. "
-        "Check field set, validators, and defaults."
+        "different wire envelope than the canonical AgentCanonicalSchema. "
+        "Check that the per-repo class carries name/version/description/"
+        "capabilities/owner/metadata fields with the same semantics."
     )
 
 
@@ -469,7 +539,9 @@ def test_skill_metadata_construction_via_alias(component: str) -> None:
         owner=component,
     )
 
-    assert alias_skill.model_dump() == canonical_skill.model_dump(), (
+    alias_envelope = to_skill_envelope(alias_skill)
+
+    assert alias_envelope.model_dump() == canonical_skill.model_dump(), (
         f"{component}.mcp.skill_schema.{CANONICAL_SKILL_ALIAS} produces a "
-        "different shape than the canonical SkillCanonicalSchema."
+        "different wire envelope than the canonical SkillCanonicalSchema."
     )
