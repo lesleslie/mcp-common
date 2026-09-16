@@ -59,6 +59,8 @@ class SkillCanonicalSchema(BaseModel):
     # error message carries the B-4 allowlist wording (the akosha
     # test suite matches on the literal ``"allowlist"`` token).
     name: str = Field(..., description="Skill name (e.g. 'crackerjack-fast-hooks')")
+    # Local SkillMetadata schemas had ``version: str`` (no default).
+    # Keep it required.
     version: str = Field(..., min_length=1, description="Semantic version of the skill")
 
     # --- Bus-publication surface (Phase 4 minimal envelope) ---

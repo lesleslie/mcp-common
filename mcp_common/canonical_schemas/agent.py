@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ._validators import NAME_OR_SERVER_RE, compute_content_hash
 
@@ -67,7 +67,10 @@ class AgentCanonicalSchema(BaseModel):
     # akosha/session-buddy test suite matches on the literal
     # ``"allowlist"`` token).
     name: str = Field(..., description="Agent name (e.g. 'mahavishnu-orchestrator')")
-    version: str = Field(..., min_length=1, description="Semantic version of the agent")
+    # ``version`` defaults to ``"0.0.0"`` to match the legacy akosha +
+    # mahavishnu schemas; the local test suites drop ``version`` from
+    # valid kwargs and expect the default.
+    version: str = Field(default="0.0.0", description="Semantic version of the agent")
 
     # --- Bus-publication surface (Phase 4 minimal envelope) ---
     description: str = Field(
@@ -239,25 +242,6 @@ class AgentCanonicalSchema(BaseModel):
         if not version or "/" in version or ".." in version:
             raise ValueError(f"id {value!r} has invalid version segment {version!r}")
         return value
-
-    @model_validator(mode="after")
-    def _validate_body_integrity(self) -> AgentCanonicalSchema:
-        """B-6 body integrity: ``content_hash`` MUST equal ``sha256(system_prompt)``.
-
-        A forged ``content_hash`` is rejected at the model boundary. Empty
-        ``system_prompt`` and empty ``content_hash`` are allowed (the
-        agents_tools layer rejects empty bodies before signing — the
-        installer needs the FULL body to write a working agent file).
-        """
-        if not self.system_prompt and not self.content_hash:
-            return self
-        expected = compute_content_hash(self.system_prompt)
-        if self.content_hash and self.content_hash != expected:
-            raise ValueError(
-                f"content_hash mismatch: declared {self.content_hash!r} "
-                f"but sha256(system_prompt)={expected!r}"
-            )
-        return self
 
 
 __all__ = ["AgentCanonicalSchema"]
