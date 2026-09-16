@@ -34,6 +34,13 @@ class SkillCanonicalSchema(BaseModel):
     content_hash, body_size, body_format, allowed_tools, server_pubkey_id,
     timestamp). The four local SkillMetadata classes re-export this model
     under the legacy name.
+
+    Validation behavior:
+
+    - ``name``, ``version`` — required, strict (empty string rejected).
+    - ``server``, ``id`` — optional with empty default; when set, strict.
+    - ``description`` — optional with empty default; when set, must be
+      non-empty after strip AND bounded at 1024 chars.
     """
 
     model_config = ConfigDict(
@@ -46,12 +53,20 @@ class SkillCanonicalSchema(BaseModel):
         validate_assignment=True,
     )
 
-    schema_version: Literal[1] = 1
+    # --- Required identity (canonical envelope minimum) ---
+    # Empty strings rejected by the ``_validate_name`` validator below —
+    # keeping the constraint in code rather than ``min_length`` so the
+    # error message carries the B-4 allowlist wording (the akosha
+    # test suite matches on the literal ``"allowlist"`` token).
+    name: str = Field(..., description="Skill name (e.g. 'crackerjack-fast-hooks')")
+    version: str = Field(..., min_length=1, description="Semantic version of the skill")
 
     # --- Bus-publication surface (Phase 4 minimal envelope) ---
-    name: str = Field(..., description="Skill name (e.g. 'crackerjack-fast-hooks')")
-    version: str = Field(..., description="Semantic version of the skill")
-    description: str = Field(default="", description="One-line skill description")
+    description: str = Field(
+        default="",
+        max_length=1024,
+        description="One-line skill description (≤1024 chars, non-empty when set)",
+    )
     tags: list[str] = Field(default_factory=list, description="Search/discovery tags")
     owner: str | None = Field(default=None, description="Owning component")
     prompt: str | None = Field(default=None, description="Optional prompt body")
@@ -64,6 +79,8 @@ class SkillCanonicalSchema(BaseModel):
     )
 
     # --- Installer / Pydantic surface (Phase 3 rich schema, extended in Phase 10 task 4) ---
+    schema_version: Literal[1] = 1
+
     # ``id`` is the globally unique skill identifier — ``{server}:{name}:{version}``.
     id: str = Field(default="", description="Globally unique skill id (server:name:version)")
 
@@ -101,31 +118,54 @@ class SkillCanonicalSchema(BaseModel):
         """Serialize to a dict for bus publication."""
         return self.model_dump(mode="json")
 
-    @field_validator("server", "name")
+    @field_validator("name")
     @classmethod
-    def _validate_allowlist(cls, value: str) -> str:
-        """Enforce B-4 path-traversal allowlist on ``name`` and ``server``.
+    def _validate_name(cls, value: str) -> str:
+        """Enforce B-4 path-traversal allowlist on ``name`` (strict).
 
-        Skipped when the field is empty (the canonical schema allows
-        minimal envelope construction with just name + version).
+        Empty strings ARE rejected — the local akosha test suite matches
+        the literal ``"allowlist"`` token for ``test_empty_string``.
+        """
+        if not NAME_OR_SERVER_RE.fullmatch(value):
+            raise ValueError(
+                f"name {value!r} does not match allowlist regex "
+                r"'^[a-z0-9][a-z0-9._-]{0,62}$' "
+                "(forbidden: '/', uppercase, leading '.', length > 63)"
+            )
+        if ".." in value:
+            raise ValueError(f"name {value!r} contains forbidden substring '..'")
+        return value
+
+    @field_validator("server")
+    @classmethod
+    def _validate_server(cls, value: str) -> str:
+        """Enforce B-4 path-traversal allowlist on ``server`` (when set).
+
+        Empty ``server`` is allowed because the canonical envelope
+        contract requires only ``name`` + ``version``.
         """
         if not value:
             return value
         if not NAME_OR_SERVER_RE.fullmatch(value):
             raise ValueError(
-                f"value {value!r} does not match allowlist regex "
+                f"server {value!r} does not match allowlist regex "
                 r"'^[a-z0-9][a-z0-9._-]{0,62}$' "
                 "(forbidden: '/', uppercase, leading '.', length > 63)"
             )
         if ".." in value:
-            raise ValueError(f"value {value!r} contains forbidden substring '..'")
+            raise ValueError(f"server {value!r} contains forbidden substring '..'")
         return value
 
     @field_validator("description")
     @classmethod
     def _validate_description(cls, value: str) -> str:
-        """Description must be non-empty after stripping whitespace (when set)."""
-        if value and not value.strip():
+        """Description must be non-empty after stripping whitespace (when set).
+
+        With ``str_strip_whitespace=True``, Pydantic strips leading/trailing
+        whitespace BEFORE the validator runs, so a whitespace-only value
+        arrives here as ``""``. We reject empty descriptions.
+        """
+        if not value.strip():
             raise ValueError("description must be non-empty")
         return value
 

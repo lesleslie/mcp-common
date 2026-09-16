@@ -23,7 +23,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from ._validators import compute_content_hash
+from ._validators import NAME_OR_SERVER_RE, compute_content_hash
 
 
 class AgentCanonicalSchema(BaseModel):
@@ -36,6 +36,16 @@ class AgentCanonicalSchema(BaseModel):
     re-export this model under the legacy name; per-repo additions live
     as Pydantic subclasses (e.g. crackerjack's stricter
     ``_validate_system_prompt``).
+
+    Validation behavior:
+
+    - ``name``, ``version`` — required, strict (empty string rejected).
+    - ``server_key``, ``id``, ``model``, ``system_prompt``, ``content_hash``
+      — optional with empty default; when set, strict (empty rejected).
+    - ``description`` — optional with empty default; when set, must be
+      non-empty after strip AND bounded at 1024 chars.
+    - ``tools``, ``dependencies``, ``tool_refs``, ``capabilities`` — list
+      fields; default to ``[]`` (no length constraint).
     """
 
     model_config = ConfigDict(
@@ -50,10 +60,21 @@ class AgentCanonicalSchema(BaseModel):
         validate_assignment=True,
     )
 
-    # --- Bus-publication surface (Phase 4 minimal envelope) ---
+    # --- Required identity (canonical envelope minimum) ---
+    # Empty strings rejected by the ``_validate_allowlist`` validator
+    # below — keeping the constraint in code rather than ``min_length``
+    # so the error message carries the B-4 allowlist wording (the
+    # akosha/session-buddy test suite matches on the literal
+    # ``"allowlist"`` token).
     name: str = Field(..., description="Agent name (e.g. 'mahavishnu-orchestrator')")
-    version: str = Field(..., description="Semantic version of the agent")
-    description: str = Field(default="", description="One-line agent description")
+    version: str = Field(..., min_length=1, description="Semantic version of the agent")
+
+    # --- Bus-publication surface (Phase 4 minimal envelope) ---
+    description: str = Field(
+        default="",
+        max_length=1024,
+        description="One-line agent description (≤1024 chars, non-empty when set)",
+    )
     capabilities: list[str] = Field(
         default_factory=list,
         description="List of capabilities the agent advertises",
@@ -85,13 +106,6 @@ class AgentCanonicalSchema(BaseModel):
 
     # ``title`` is the picker display name (e.g. ``"Akosha Specialist"``).
     title: str | None = Field(default=None, description="Picker display name")
-
-    # ``description`` follows Claude Code's frontmatter convention. The
-    # bus-publication field above is unbounded; the legacy local schemas
-    # bounded it at 1024 chars. We keep the cap here for parity.
-    # (Pydantic v2 allows redefinition of the same field only if the new
-    # field adds constraints — we use a separate field for the bounded
-    # string in subclasses if needed.)
 
     # Semantic version, required for federation tie-break.
     version_detail: str = Field(
@@ -150,27 +164,46 @@ class AgentCanonicalSchema(BaseModel):
         """Serialize to a dict for bus publication."""
         return self.model_dump(mode="json")
 
-    @field_validator("server_key", "name")
+    @field_validator("name")
     @classmethod
-    def _validate_allowlist(cls, value: str) -> str:
-        """Enforce B-4 path-traversal allowlist on ``name`` and ``server_key``.
+    def _validate_name(cls, value: str) -> str:
+        """Enforce B-4 path-traversal allowlist on ``name`` (strict).
 
-        Skipped when the field is empty (the canonical schema allows
-        minimal envelope construction with just name + version; the
-        agents_tools layer enforces the allowlist at the API boundary).
+        Empty strings ARE rejected — the local akosha/session-buddy
+        test suite matches the literal ``"allowlist"`` token for
+        ``test_empty_string``. We keep ``min_length`` off ``name`` so
+        this validator owns the constraint and the error message stays
+        uniform.
         """
-        if not value:
-            return value
-        from ._validators import NAME_OR_SERVER_RE
-
         if not NAME_OR_SERVER_RE.fullmatch(value):
             raise ValueError(
-                f"value {value!r} does not match allowlist regex "
+                f"name {value!r} does not match allowlist regex "
                 r"'^[a-z0-9][a-z0-9._-]{0,62}$' "
                 "(forbidden: '/', uppercase, leading '.', length > 63)"
             )
         if ".." in value:
-            raise ValueError(f"value {value!r} contains forbidden substring '..'")
+            raise ValueError(f"name {value!r} contains forbidden substring '..'")
+        return value
+
+    @field_validator("server_key")
+    @classmethod
+    def _validate_server_key(cls, value: str) -> str:
+        """Enforce B-4 path-traversal allowlist on ``server_key`` (when set).
+
+        Empty ``server_key`` is allowed because the canonical envelope
+        contract requires only ``name`` + ``version``; the agents_tools
+        layer enforces ``server_key`` at the API boundary.
+        """
+        if not value:
+            return value
+        if not NAME_OR_SERVER_RE.fullmatch(value):
+            raise ValueError(
+                f"server_key {value!r} does not match allowlist regex "
+                r"'^[a-z0-9][a-z0-9._-]{0,62}$' "
+                "(forbidden: '/', uppercase, leading '.', length > 63)"
+            )
+        if ".." in value:
+            raise ValueError(f"server_key {value!r} contains forbidden substring '..'")
         return value
 
     @field_validator("description")
@@ -198,8 +231,6 @@ class AgentCanonicalSchema(BaseModel):
             raise ValueError(
                 f"id {value!r} must be 'server_key:name:version' (exactly 3 colon-separated parts)"
             )
-        from ._validators import NAME_OR_SERVER_RE
-
         server_key, name, version = parts
         if not NAME_OR_SERVER_RE.fullmatch(server_key):
             raise ValueError(f"id {value!r} has invalid server_key segment {server_key!r}")
