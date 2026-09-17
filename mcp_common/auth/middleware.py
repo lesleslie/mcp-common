@@ -193,7 +193,14 @@ class BearerTokenMiddleware(Middleware):
         # FastMCP API change (or unusual embedding) cannot crash the
         # middleware with a programming-error leak.
         try:
-            headers = _fmcp_dependencies.get_http_headers()
+            # FastMCP's get_http_headers() strips `authorization` from the
+            # returned headers by default (it's in `exclude_headers`).
+            # `include={"authorization"}` opts in so the middleware can
+            # actually see the bearer token on HTTP transport. Without
+            # this, the middleware is functionally inert on HTTP — every
+            # request would hit the `token is None` branch below and
+            # fall through to per-tool decorators.
+            headers = _fmcp_dependencies.get_http_headers(include={"authorization"})
         except RuntimeError:
             # stdio / non-HTTP transport — Bearer auth is meaningless;
             # pass through and let per-tool allow_anonymous decide.
