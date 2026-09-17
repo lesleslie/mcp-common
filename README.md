@@ -533,7 +533,6 @@ def get_active_profile(env_var="MY_SERVER_TOOL_PROFILE"):
 | mahavishnu | 1 group (health) | 7 groups | 14 groups (~174 tools) |
 | crackerjack | 2 groups | 7 groups | 12 groups (~60 tools) |
 | akosha | 1 group (health) | 2 groups | 4 groups (~5 tools) |
-| dhara | 1 group (kv/store) | 3 groups | 3 groups (~17 tools) |
 
 **discover_tools meta-tool:** Each server registers a `discover_tools(query)` tool that is always available, letting Claude find unloaded tools and suggest profile changes.
 
