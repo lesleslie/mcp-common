@@ -243,23 +243,34 @@ class BearerTokenMiddleware(Middleware):
         # FastMCP-native consumers (middleware / tools that read state).
         token_handle = seed_principal(principal)
 
-        # M-R2-3 fix: capture prior state so we can restore it in finally.
-        # FastMCP's Context.set_state returns None (not a Token); we have
-        # to snapshot the prior value ourselves via get_state() and restore
-        # with delete_state() / set_state() in finally.
+        # FastMCP session-scoped state — survives the ASGI-task →
+        # anyio-worker-task boundary that defeats contextvars. We serialize
+        # the Principal to a JSON-friendly dict (Principal.to_dict) so it
+        # can land in fastmcp._state_store; serializable=True is the default
+        # but we pass it explicitly to make the storage location obvious.
+        #
+        # Trade-off vs the prior serializable=False: the prior path put the
+        # Principal in Context._request_state (in-memory dict on the
+        # middleware's Context A) which is NOT inherited by the tool body's
+        # Context B (different anyio task, no parent ContextVar). The new
+        # path puts the dict in fastmcp._state_store, keyed by
+        # f"{session_id}:principal" — session-scoped, persists across
+        # requests in the same MCP session, visible to get_state() in any
+        # task that opens a Context with the same session_id.
         fmcp_ctx = getattr(context, "fastmcp_context", None)
         state_key = "principal"
         prior_state: Any = _SENTINEL
         if fmcp_ctx is not None:
             try:
-                prior_state = fmcp_ctx.get_state(state_key)
-            except AttributeError, TypeError:
+                prior_state = await fmcp_ctx.get_state(state_key)
+            except (AttributeError, TypeError) as exc:
+                # get_state is best-effort; contextvars is the source of truth.
+                logger.debug("get_state failed in middleware (non-fatal): %s", exc)
                 prior_state = _SENTINEL
             try:
-                # Principal is a frozen dataclass with frozenset[Permission]
-                # and datetime — not JSON-serializable. serializable=False
-                # scopes the entry to the current request only.
-                fmcp_ctx.set_state(state_key, principal, serializable=False)
+                principal_payload = principal.to_dict()
+                # serializable=True (default) writes to fastmcp._state_store.
+                await fmcp_ctx.set_state(state_key, principal_payload)
             except (AttributeError, TypeError) as exc:
                 # set_state is best-effort; contextvars is the source of truth.
                 logger.debug("set_state failed in middleware (non-fatal): %s", exc)
@@ -274,9 +285,12 @@ class BearerTokenMiddleware(Middleware):
             if fmcp_ctx is not None and prior_state is not _SENTINEL:
                 with suppress(AttributeError, TypeError):
                     if prior_state is None:
-                        fmcp_ctx.delete_state(state_key)
+                        await fmcp_ctx.delete_state(state_key)
                     else:
-                        fmcp_ctx.set_state(state_key, prior_state, serializable=False)
+                        # prior_state was set by a previous middleware
+                        # invocation (same session, same key); it's already
+                        # a dict (Principal.to_dict form). Re-set as-is.
+                        await fmcp_ctx.set_state(state_key, prior_state)
 
     def _select_provider(self, token: str) -> IdentityProvider:
         """Pick provider by ``default_provider`` hint or single-provider fallback.

@@ -55,37 +55,40 @@ from mcp_common.auth.exceptions import (
     InsufficientPermissionError,
 )
 from mcp_common.auth.permissions import Permission
+from mcp_common.auth.principal import Principal
 
 logger = logging.getLogger(__name__)
 
 
-def _resolve_principal() -> Any:
+async def _resolve_principal() -> Any:
     """Read the request-scoped Principal with FastMCP-state fallback.
 
     Order of resolution:
     1. ``_current_principal()`` (the contextvar seeded by
        ``BearerTokenMiddleware.seed_principal``). This is the source of
        truth in the same execution context as the middleware.
-    2. FastMCP's request-scoped ``Context._request_state["principal"]`` —
+    2. FastMCP's session-scoped state store via ``Context.get_state`` —
        the defense-in-depth path the middleware populates via
-       ``Context.set_state("principal", ..., serializable=False)`` at
-       ``middleware.py:262``. FastMCP's request state propagates across
-       the streamable-HTTP task boundary (the middleware runs in the
-       ASGI task; tool bodies run in a separate anyio task) via the
-       parent-to-child ``_request_state`` inheritance at
-       ``fastmcp/server/context.py:262``.
+       ``await ctx.set_state("principal", principal.to_dict())`` at
+       ``middleware.py``. The session-scoped store (MemoryStore) is keyed
+       by ``f"{session_id}:principal"`` and persists across the
+       streamable-HTTP task boundary (the middleware runs in the ASGI
+       task; tool bodies run in a separate anyio task). The middleware
+       no longer writes to ``Context._request_state`` (request-scoped
+       dict) because that dict does not propagate across the anyio task
+       boundary; the session store does.
 
-    Both reads are best-effort. If neither path has a Principal — and
-    ``fastmcp`` is not importable — the wrapper's existing
+    Returns a ``Principal`` instance, or ``None`` if neither path has
+    one (``fastmcp`` not importable, no current Context, session not
+    initialized, etc.). All reads are best-effort; the wrapper's
     ``allow_anonymous`` / ``AuthenticationRequiredError`` branch handles
     the absence.
 
-    Note: the FastMCP fallback reads from the module-private
-    ``_current_context`` ContextVar and the ``_request_state`` attribute
-    on the resulting Context instance. This is intentional — it bridges
-    the FastMCP streamable-HTTP task-isolation gap. If FastMCP's
-    internal API changes, this fallback needs an update; the upstream
-    test suite (``tests/auth/test_decorator.py::test_resolve_principal_*``)
+    Note: the FastMCP fallback reads the module-private ``_current_context``
+    ContextVar to obtain the active Context, then awaits ``get_state``
+    (which is async because the underlying MemoryStore is async).
+    If FastMCP's internal API changes, this fallback needs an update;
+    the test suite (``tests/auth/test_decorator.py::test_resolve_principal_*``)
     catches the breakage.
     """
     principal = _current_principal()
@@ -101,10 +104,18 @@ def _resolve_principal() -> Any:
         return None
     if ctx is None:
         return None
+    # Context.get_state is async (the underlying MemoryStore is async).
+    # It returns None when the key is absent; it returns a Principal
+    # dict (Principal.to_dict form) when the middleware populated it.
     try:
-        prefixed_key = f"{ctx.session_id}:principal"
-        return ctx._request_state.get(prefixed_key)
-    except (AttributeError, KeyError):
+        payload = await ctx.get_state("principal")
+    except (AttributeError, TypeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    try:
+        return Principal.from_dict(payload)
+    except (KeyError, ValueError):
         return None
 
 
@@ -165,7 +176,7 @@ def require_auth(
         @wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
             func_name = getattr(func, "__name__", "<unknown>")
-            principal = _resolve_principal()
+            principal = await _resolve_principal()
 
             if principal is None:
                 if allow_anonymous:
