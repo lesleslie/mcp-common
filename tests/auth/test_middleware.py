@@ -65,12 +65,24 @@ def _reset_context():
 
 @pytest.fixture
 def patch_headers(monkeypatch):
-    """Return a setter that monkey-patches get_http_headers for the test."""
+    """Return a setter that monkey-patches get_http_headers for the test.
+
+    The middleware calls ``get_http_headers(include={"authorization"})`` —
+    the lambda must accept (and ignore) that kwarg, plus any others that
+    may be added in future FastMCP versions. Without the wildcard kwargs
+    the production call raises ``TypeError: lambda() got an unexpected
+    keyword argument 'include'`` and the test fails on the middleware's
+    header read, not on the assertion under test.
+    """
 
     def _set(headers: dict[str, str]) -> None:
         from fastmcp.server import dependencies
 
-        monkeypatch.setattr(dependencies, "get_http_headers", lambda: headers)
+        monkeypatch.setattr(
+            dependencies,
+            "get_http_headers",
+            lambda include=None, **kwargs: headers,
+        )
 
     return _set
 
@@ -301,7 +313,10 @@ async def test_middleware_skips_verify_when_get_http_headers_raises_runtimeerror
     provider = MockProvider(raises=TokenInvalidError("would fail if called"))
     mw = BearerTokenMiddleware(auth_config=config, providers={"mock": provider})
 
-    def _raise():
+    def _raise(*args, **kwargs):
+        # Accept and ignore kwargs (e.g. ``include={...}``) so the middleware's
+        # call to ``get_http_headers(include=...)`` reaches this raising
+        # implementation rather than TypeError-ing on the kwarg.
         raise RuntimeError("no active request")
 
     monkeypatch.setattr(dependencies, "get_http_headers", _raise)
@@ -448,7 +463,15 @@ async def test_middleware_calls_audit_logger_log_failure_on_auth_error(patch_hea
 
 
 class _MockFastMCPContext:
-    """FastMCP-shaped Context stub supporting set_state / get_state / delete_state."""
+    """FastMCP-shaped Context stub supporting set_state / get_state / delete_state.
+
+    These are ``async`` to mirror the real FastMCP API (``fastmcp/server/context.py``,
+    Context.set_state / get_state / delete_state are all coroutine functions).
+    Synchronous mocks would have side effects fire BEFORE the ``await None``
+    TypeError — so even with the middleware's defensive try/except, sync
+    mocks leave the state dirty. Async mocks keep the test surface honest
+    with production.
+    """
 
     def __init__(self) -> None:
         self.state: dict[str, Any] = {}
@@ -457,17 +480,17 @@ class _MockFastMCPContext:
         self.delete_calls: list[str] = []
         self.raise_on_set: Exception | None = None
 
-    def get_state(self, key: str) -> Any:
+    async def get_state(self, key: str) -> Any:
         self.get_calls.append(key)
         return self.state.get(key)
 
-    def set_state(self, key: str, value: Any, *, serializable: bool = True) -> None:
+    async def set_state(self, key: str, value: Any, *, serializable: bool = True) -> None:
         self.set_calls.append((key, value))
         if self.raise_on_set is not None:
             raise self.raise_on_set
         self.state[key] = value
 
-    def delete_state(self, key: str) -> None:
+    async def delete_state(self, key: str) -> None:
         self.delete_calls.append(key)
         self.state.pop(key, None)
 
@@ -475,7 +498,17 @@ class _MockFastMCPContext:
 @pytest.mark.asyncio
 async def test_middleware_seeds_principal_into_fmcp_context(patch_headers):
     """When the MiddlewareContext carries a fastmcp_context, the middleware
-    also stashes Principal there for FastMCP-native consumers."""
+    also stashes Principal there for FastMCP-native consumers.
+
+    As of the session-state fix (6d83afa), the middleware writes the
+    Principal as a JSON-friendly dict (``principal.to_dict()``) via the
+    default ``serializable=True`` path so the entry survives the
+    streamable-HTTP ASGI-task → anyio-worker-task boundary (the prior
+    ``serializable=False`` path put a Principal in
+    ``Context._request_state`` which is per-Context and dies with the
+    middleware's Context). The decorator reconstructs via
+    ``Principal.from_dict`` on read.
+    """
     config = AuthConfig(
         enabled=True,
         service_name="test-service",
@@ -504,8 +537,12 @@ async def test_middleware_seeds_principal_into_fmcp_context(patch_headers):
     patch_headers({"authorization": "Bearer good.token"})
     result = await mw.on_request(ctx, call_next)
     assert result == "ok"
-    # Principal was set during call_next
-    assert captured["state"].get("principal") is principal
+    # Principal was set during call_next — stored as a dict (the JSON-
+    # friendly form produced by Principal.to_dict). The decorator
+    # reconstructs via Principal.from_dict when it reads back via
+    # Context.get_state. Round-trip equality is the contract.
+    assert captured["state"].get("principal") == principal.to_dict()
+    assert Principal.from_dict(captured["state"]["principal"]) == principal
     # After call_next, the prior state (None, absent) is restored — so the
     # key is removed via delete_state.
     assert "principal" not in fmcp.state
@@ -514,7 +551,13 @@ async def test_middleware_seeds_principal_into_fmcp_context(patch_headers):
 
 @pytest.mark.asyncio
 async def test_middleware_restores_prior_fmcp_state(patch_headers):
-    """When fmcp_context has a prior principal, the middleware restores it."""
+    """When fmcp_context has a prior principal, the middleware restores it.
+
+    Prior state is whatever the prior caller wrote — in production this is
+    ``Principal.to_dict()`` (the dict form), since that's what
+    ``Context.get_state`` returns. The middleware round-trips it through
+    the session-scoped state store and writes it back as-is on restore.
+    """
     config = AuthConfig(
         enabled=True,
         service_name="test-service",
@@ -536,21 +579,25 @@ async def test_middleware_restores_prior_fmcp_state(patch_headers):
     )
     provider = MockProvider(principal=incoming_principal)
     fmcp = _MockFastMCPContext()
-    # Seed prior state
-    fmcp.state["principal"] = prior_principal
+    # Seed prior state with the dict form (what get_state would return
+    # in production after a prior middleware invocation wrote to the
+    # session-scoped state store).
+    fmcp.state["principal"] = prior_principal.to_dict()
     mw = BearerTokenMiddleware(auth_config=config, providers={"mock": provider})
 
     ctx = MockContext()
     ctx.fastmcp_context = fmcp
 
     async def call_next(ctx_arg):
-        assert fmcp.state["principal"] is incoming_principal
+        assert fmcp.state["principal"] == incoming_principal.to_dict()
+        assert Principal.from_dict(fmcp.state["principal"]) == incoming_principal
         return "ok"
 
     patch_headers({"authorization": "Bearer good.token"})
     await mw.on_request(ctx, call_next)
-    # After call_next, the prior principal is restored.
-    assert fmcp.state["principal"] is prior_principal
+    # After call_next, the prior principal dict is restored verbatim.
+    assert fmcp.state["principal"] == prior_principal.to_dict()
+    assert Principal.from_dict(fmcp.state["principal"]) == prior_principal
 
 
 @pytest.mark.asyncio
