@@ -99,6 +99,15 @@ class _FakeAuthConfig:
     def identity_providers(self):
         return self._identity_providers
 
+    @property
+    def resolved_secret(self):
+        # The real AuthConfig promotes ``secret`` (or its env-var fallback)
+        # into ``resolved_secret`` via ``_resolve_secret`` — see
+        # ``mcp_common/auth/config.py``. ``validate_auth_config`` reads
+        # ``resolved_secret``; the stand-in mirrors that field so the test
+        # exercises the same attribute path the production code does.
+        return self._secret
+
 
 def test_validate_skips_when_disabled():
     cfg = _FakeAuthConfig(enabled=False, trusted_issuers=())

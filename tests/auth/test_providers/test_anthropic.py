@@ -34,6 +34,13 @@ def _fake_jwt(kid: str = "test-kid") -> str:
     """Build a structurally valid JWT so PyJWKClient extracts kid and hits JWKS.
 
     The signature segment is dummy; verification is not asserted here.
+    Note: PyJWT 2.14+ decodes the signature segment inside
+    ``get_unverified_header`` via ``_decode_base64url_segment``, which
+    requires RFC 4648 base64url WITHOUT padding and length divisible by
+    4. A literal ``"fake-signature"`` (14 chars) is invalid base64 and
+    raises ``DecodeError("Invalid crypto padding")`` before the JWKS
+    fetch even runs. We use 48 zero bytes (a stand-in for an RSA-256
+    signature) which encodes to 64 base64url chars with no padding.
     """
     header = _b64url({"alg": "RS256", "kid": kid, "typ": "JWT"})
     payload = _b64url(
@@ -45,7 +52,8 @@ def _fake_jwt(kid: str = "test-kid") -> str:
             "exp": 9_999_999_999,
         }
     )
-    return f"{header}.{payload}.fake-signature"
+    signature = base64.urlsafe_b64encode(b"\x00" * 48).decode("ascii")
+    return f"{header}.{payload}.{signature}"
 
 
 @pytest.fixture
