@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.27.0] - 2026-09-18
+
+### Added
+
+- mcp-common: Extend canonical schemas with installer field set (Phase 10 task 4)
+
+### Fixed
+
+- auth/decorator: Read Principal from FastMCP request state as fallback
+- auth/middleware: Opt authorization header back into FastMCP's get_http_headers
+- auth: Persist Principal across streamable-HTTP task boundary via session-scoped state store
+- mcp-common: Default agent version to "0.0.0"; remove body-integrity model_validator (Phase 10 task 4)
+- mcp-common: Rescope canonical schema e2e test to wire-shape parity via to_envelope
+- mcp-common: Split name vs server_key allowlist validators (Phase 10 task 4)
+
+### Documentation
+
+- Drop dhara row from MCP tool inventory table (Phase 8 T16)
+
+### Testing
+
+- auth/middleware: Fix sync-mock mismatch with async FastMCP state API
+- auth: Fix pre-existing failures for PyJWT 2.14 and resolved_secret
+- mcp-common: Add canonical_schemas e2e test (Phase 10 task 5)
+
 ## [0.26.4] - 2026-09-15
 
 ### Added

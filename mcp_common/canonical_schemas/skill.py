@@ -84,12 +84,18 @@ class SkillCanonicalSchema(BaseModel):
     schema_version: Literal[1] = 1
 
     # ``id`` is the globally unique skill identifier — ``{server}:{name}:{version}``.
-    id: str = Field(default="", description="Globally unique skill id (server:name:version)")
+    id: str = Field(
+        default="", description="Globally unique skill id (server:name:version)"
+    )
 
     server: str = Field(default="", description="Originating server (registry key)")
 
-    tool_refs: list[str] = Field(default_factory=list, description="MCP tool names referenced by this skill")
-    dependencies: list[str] = Field(default_factory=list, description="Other agent/skill names this skill needs")
+    tool_refs: list[str] = Field(
+        default_factory=list, description="MCP tool names referenced by this skill"
+    )
+    dependencies: list[str] = Field(
+        default_factory=list, description="Other agent/skill names this skill needs"
+    )
     content_type: Literal["skill", "agent", "prompt"] = Field(
         default="skill", description="Body content classification"
     )
@@ -97,14 +103,18 @@ class SkillCanonicalSchema(BaseModel):
     # Body integrity. ``content_hash`` is the lowercase hex SHA-256 of
     # the body bytes; ``body_size`` is the byte length. Both are
     # asserted by the client before write (B-1 / plan §11 B-1).
-    content_hash: str = Field(default="", description="Lowercase hex SHA-256 of body bytes")
+    content_hash: str = Field(
+        default="", description="Lowercase hex SHA-256 of body bytes"
+    )
     body_size: int = Field(default=0, description="Body byte length")
     body_format: Literal["yaml-frontmatter+markdown"] = Field(
         default="yaml-frontmatter+markdown",
         description="Wire format of the body (B-1 contract)",
     )
 
-    allowed_tools: list[str] = Field(default_factory=list, description="Tools this skill may invoke")
+    allowed_tools: list[str] = Field(
+        default_factory=list, description="Tools this skill may invoke"
+    )
 
     # Signing payload. ``server_pubkey_id`` is populated by the tool
     # handler AFTER signing; the canonical signing payload is the

@@ -113,9 +113,9 @@ def coerce_tools_value(value: Any) -> list[str]:
 
 __all__ = [
     "NAME_OR_SERVER_RE",
+    "_validate_allowlist_value",
     "allowlisted_name",
     "build_agent_id",
-    "compute_content_hash",
     "coerce_tools_value",
-    "_validate_allowlist_value",
+    "compute_content_hash",
 ]

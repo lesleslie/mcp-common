@@ -51,7 +51,7 @@ class Principal:
             "subject": self.subject,
             "permissions": sorted(p.value for p in self.permissions),
             "expires_at": self.expires_at.isoformat(),
-            "raw_claims": dict(self.raw_claims),
+            "raw_claims": self.raw_claims.copy(),
         }
 
     @classmethod

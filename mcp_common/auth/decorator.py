@@ -109,13 +109,13 @@ async def _resolve_principal() -> Any:
     # dict (Principal.to_dict form) when the middleware populated it.
     try:
         payload = await ctx.get_state("principal")
-    except (AttributeError, TypeError):
+    except AttributeError, TypeError:
         return None
     if not isinstance(payload, dict):
         return None
     try:
         return Principal.from_dict(payload)
-    except (KeyError, ValueError):
+    except KeyError, ValueError:
         return None
 
 

@@ -23,7 +23,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from ._validators import NAME_OR_SERVER_RE, compute_content_hash
+from ._validators import NAME_OR_SERVER_RE
 
 
 class AgentCanonicalSchema(BaseModel):
@@ -96,7 +96,9 @@ class AgentCanonicalSchema(BaseModel):
     # ``{server_key}:{name}:{version}``. The validator below enforces
     # the allowlist on the constituent fields; ``id`` itself is built
     # from them and is therefore constrained transitively.
-    id: str = Field(default="", description="Globally unique agent id (server_key:name:version)")
+    id: str = Field(
+        default="", description="Globally unique agent id (server_key:name:version)"
+    )
 
     # ``server_key`` is the registry key for the originating server
     # (e.g. ``"akosha"``, ``"mahavishnu"``, ``"session-buddy"``,
@@ -127,17 +129,25 @@ class AgentCanonicalSchema(BaseModel):
     # ``system_prompt`` is the FULL body. Plan §11 B-6: Claude Code reads
     # this directly. Default is ``""`` so tests can construct minimal
     # payloads; the agents_tools layer rejects empty values before signing.
-    system_prompt: str = Field(default="", description="Full agent body (B-6 installer reads verbatim)")
+    system_prompt: str = Field(
+        default="", description="Full agent body (B-6 installer reads verbatim)"
+    )
 
-    dependencies: list[str] = Field(default_factory=list, description="Other agent/skill names this agent needs")
-    tool_refs: list[str] = Field(default_factory=list, description="MCP tool names referenced by this agent")
+    dependencies: list[str] = Field(
+        default_factory=list, description="Other agent/skill names this agent needs"
+    )
+    tool_refs: list[str] = Field(
+        default_factory=list, description="MCP tool names referenced by this agent"
+    )
 
     # Audit / governance metadata. All optional.
     category: str | None = Field(default=None, description="Agent category")
     status: Literal["active", "archived", "draft"] | None = Field(
         default=None, description="Lifecycle status"
     )
-    last_reviewed: str | None = Field(default=None, description="Last review date (YYYY-MM-DD)")
+    last_reviewed: str | None = Field(
+        default=None, description="Last review date (YYYY-MM-DD)"
+    )
     scope: Literal["user-global", "project-local"] = Field(
         default="user-global", description="Installation scope"
     )
@@ -147,13 +157,17 @@ class AgentCanonicalSchema(BaseModel):
     # so a forged hash is rejected at the boundary. Empty default allows
     # minimal bus-publication payloads; the agents_tools layer rejects
     # unsigned content before sending.
-    content_hash: str = Field(default="", description="Lowercase hex SHA-256 of system_prompt bytes")
+    content_hash: str = Field(
+        default="", description="Lowercase hex SHA-256 of system_prompt bytes"
+    )
 
     # Signing payload. Both fields are populated by the tool handler
     # AFTER signing; ``signature`` carries the base64 ed25519 signature
     # and ``server_pubkey_id`` is the 16-char hex ``key_id`` from the
     # server's pubkey manifest.
-    signature: str | None = Field(default=None, description="ed25519 signature (populated post-sign)")
+    signature: str | None = Field(
+        default=None, description="ed25519 signature (populated post-sign)"
+    )
     server_pubkey_id: str | None = Field(
         default=None, description="16-char hex key_id of signing pubkey"
     )
@@ -161,7 +175,9 @@ class AgentCanonicalSchema(BaseModel):
     # Federation timestamp. Optional — the canonical bus publication
     # doesn't require it, but downstream consumers can use it for
     # freshness checks.
-    timestamp: float | None = Field(default=None, description="Unix timestamp of publication")
+    timestamp: float | None = Field(
+        default=None, description="Unix timestamp of publication"
+    )
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to a dict for bus publication."""
@@ -236,7 +252,9 @@ class AgentCanonicalSchema(BaseModel):
             )
         server_key, name, version = parts
         if not NAME_OR_SERVER_RE.fullmatch(server_key):
-            raise ValueError(f"id {value!r} has invalid server_key segment {server_key!r}")
+            raise ValueError(
+                f"id {value!r} has invalid server_key segment {server_key!r}"
+            )
         if not NAME_OR_SERVER_RE.fullmatch(name):
             raise ValueError(f"id {value!r} has invalid name segment {name!r}")
         if not version or "/" in version or ".." in version:
