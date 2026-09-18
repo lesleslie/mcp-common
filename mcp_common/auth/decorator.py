@@ -59,6 +59,55 @@ from mcp_common.auth.permissions import Permission
 logger = logging.getLogger(__name__)
 
 
+def _resolve_principal() -> Any:
+    """Read the request-scoped Principal with FastMCP-state fallback.
+
+    Order of resolution:
+    1. ``_current_principal()`` (the contextvar seeded by
+       ``BearerTokenMiddleware.seed_principal``). This is the source of
+       truth in the same execution context as the middleware.
+    2. FastMCP's request-scoped ``Context._request_state["principal"]`` —
+       the defense-in-depth path the middleware populates via
+       ``Context.set_state("principal", ..., serializable=False)`` at
+       ``middleware.py:262``. FastMCP's request state propagates across
+       the streamable-HTTP task boundary (the middleware runs in the
+       ASGI task; tool bodies run in a separate anyio task) via the
+       parent-to-child ``_request_state`` inheritance at
+       ``fastmcp/server/context.py:262``.
+
+    Both reads are best-effort. If neither path has a Principal — and
+    ``fastmcp`` is not importable — the wrapper's existing
+    ``allow_anonymous`` / ``AuthenticationRequiredError`` branch handles
+    the absence.
+
+    Note: the FastMCP fallback reads from the module-private
+    ``_current_context`` ContextVar and the ``_request_state`` attribute
+    on the resulting Context instance. This is intentional — it bridges
+    the FastMCP streamable-HTTP task-isolation gap. If FastMCP's
+    internal API changes, this fallback needs an update; the upstream
+    test suite (``tests/auth/test_decorator.py::test_resolve_principal_*``)
+    catches the breakage.
+    """
+    principal = _current_principal()
+    if principal is not None:
+        return principal
+    try:
+        from fastmcp.server.context import _current_context
+    except ImportError:
+        return None
+    try:
+        ctx = _current_context.get()
+    except LookupError:
+        return None
+    if ctx is None:
+        return None
+    try:
+        prefixed_key = f"{ctx.session_id}:principal"
+        return ctx._request_state.get(prefixed_key)
+    except (AttributeError, KeyError):
+        return None
+
+
 # api-security R2-3 fix: control-character regex for audit-field sanitization.
 # Strips C0 controls except ``\t`` (0x09). The spec allows ``\n`` for
 # legitimate log line breaks; ``\r`` is stripped to prevent log injection.
@@ -116,7 +165,7 @@ def require_auth(
         @wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
             func_name = getattr(func, "__name__", "<unknown>")
-            principal = _current_principal()
+            principal = _resolve_principal()
 
             if principal is None:
                 if allow_anonymous:
