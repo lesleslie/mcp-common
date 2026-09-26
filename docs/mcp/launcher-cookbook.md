@@ -154,10 +154,20 @@ def main() -> int:
 """Launch wrapper for the Oneiric FastMCP server (mcp-common launcher edition)."""
 from __future__ import annotations
 
-import argparse
-import asyncio
+import os
 import sys
 from pathlib import Path
+
+# Venv bootstrap — see Trap L. When invoked from system python (e.g. via
+# launchd, which has a $PATH without the repo's .venv), re-exec into the
+# repo's venv python so `mcp_common` (a venv-only dep) is importable.
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+_VENV_PYTHON = _REPO_ROOT / ".venv" / "bin" / "python"
+if Path(sys.executable).resolve() != _VENV_PYTHON.resolve():
+    os.execvp(str(_VENV_PYTHON), [str(_VENV_PYTHON), __file__, *sys.argv[1:]])
+
+import argparse
+import asyncio
 from types import SimpleNamespace
 
 
@@ -295,10 +305,20 @@ def main() -> int:
 """Launch wrapper for the Mahavishnu MCP server (mcp-common launcher edition)."""
 from __future__ import annotations
 
-import asyncio
-import signal
+import os
 import sys
 from pathlib import Path
+
+# Venv bootstrap — see Trap L. When invoked from system python (e.g. via
+# launchd, which has a $PATH without the repo's .venv), re-exec into the
+# repo's venv python so `mcp_common` (a venv-only dep) is importable.
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+_VENV_PYTHON = _REPO_ROOT / ".venv" / "bin" / "python"
+if Path(sys.executable).resolve() != _VENV_PYTHON.resolve():
+    os.execvp(str(_VENV_PYTHON), [str(_VENV_PYTHON), __file__, *sys.argv[1:]])
+
+import asyncio
+import signal
 
 from mcp_common.server import launch
 
@@ -512,10 +532,20 @@ def _run_mcp_server(mcp_app, mcp_config, http_mode) -> None:
 # crackerjack/scripts/launch_mcp.py (planned per Phase 4a Task 4a.2)
 from __future__ import annotations
 
-import asyncio
-import signal
+import os
 import sys
 from pathlib import Path
+
+# Venv bootstrap — see Trap L. When invoked from system python (e.g. via
+# launchd, which has a $PATH without the repo's .venv), re-exec into the
+# repo's venv python so `mcp_common` (a venv-only dep) is importable.
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+_VENV_PYTHON = _REPO_ROOT / ".venv" / "bin" / "python"
+if Path(sys.executable).resolve() != _VENV_PYTHON.resolve():
+    os.execvp(str(_VENV_PYTHON), [str(_VENV_PYTHON), __file__, *sys.argv[1:]])
+
+import asyncio
+import signal
 
 from mcp_common.server import launch
 from crackerjack.mcp.server_core import create_mcp_server
@@ -681,6 +711,53 @@ signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
 - For exit-during-lifespan-teardown cases (SIGTERM lands while uvicorn is unwinding `__aexit__`/lifespan), prefer `os._exit(0)` over `sys.exit(0)` — `mcp_common/cli/signals.py:53-97` is the canonical pattern. `sys.exit` raises `SystemExit`, which propagates through the asyncio loop and can chain-exception on `finally` blocks during lifespan teardown.
 
 This refines the existing failure-modes row rather than replacing it: keep both, treat the row as the safe fallback and this section as the optimized contract.
+
+### Trap L — wrapper shebang + missing venv bootstrap causes `ModuleNotFoundError: No module named 'mcp_common'`
+
+Wrappers that use `#!/usr/bin/env python3` as their shebang resolve to
+whatever `python3` is in the launchd `$PATH` (typically `/usr/local/bin/python3`
+from Homebrew — system Python). System Python does NOT have `mcp_common`
+installed (it's a venv-only dep). So `from mcp_common.server import launch`
+raises `ModuleNotFoundError`, the wrapper crashes on boot, and the launchd
+plist sees the process die.
+
+**Symptom**: `ModuleNotFoundError: No module named 'mcp_common'` at the wrapper's
+`from mcp_common.server import launch` line, repeated every launchd restart.
+
+**Why the OLD wrappers worked**: they did trivial work (parse `secrets.env`) in
+system Python, then `os.execvp`'d into the venv Python before importing
+`mcp_common`. The new launcher-based wrappers lost this hop when they replaced
+the `os.execvp` call with the `launch()` call.
+
+**Fix** — add a self-bootstrapping `os.execvp` block at the top of every
+wrapper, BEFORE any non-stdlib imports:
+
+```python
+#!/usr/bin/env python3
+"""..."""
+
+from __future__ import annotations
+
+import os
+import sys
+from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+_VENV_PYTHON = _REPO_ROOT / ".venv" / "bin" / "python"
+if Path(sys.executable).resolve() != _VENV_PYTHON.resolve():
+    os.execvp(str(_VENV_PYTHON), [str(_VENV_PYTHON), __file__, *sys.argv[1:]])
+```
+
+**Idempotency**: the guard `Path(sys.executable).resolve() != _VENV_PYTHON.resolve()`
+ensures no infinite-loop when invoked from the venv already (e.g.
+`uv run scripts/launch_mcp.py`).
+
+**Path safety**: `_REPO_ROOT` is computed RELATIVE to the script's `__file__`
+location — no hardcoded `/Users/les/...` absolute paths (per
+`mahavishnu-launcher-venv-discovery` memory rule).
+
+**Where it lands in this patch**: the cookbook's Examples 1, 2, and 4 wrapper
+templates should each have this block prepended. Patch those lines.
 
 ## Failure modes / Rollback
 
