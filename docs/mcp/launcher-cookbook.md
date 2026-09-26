@@ -213,7 +213,7 @@ def main() -> int:
         launch(
             build_server=build_server,
             component_name="oneiric",
-            secrets_path=Path("~/.config/secrets.env"),
+            secrets_path=Path.home() / ".config" / "secrets.env",
             settings_path=settings_path,
             host=args.host,
             port=args.port,
@@ -343,7 +343,7 @@ def main() -> int:
         launch(
             build_server=build_server,
             component_name="mahavishnu",
-            secrets_path=Path("~/.config/secrets.env"),
+            secrets_path=Path.home() / ".config" / "secrets.env",
             # No settings_path — Mahavishnu's /health reports skills_signer +
             # plan_index, not the generic `settings` feed, so warming here
             # would be a no-op for the visible body.
@@ -449,7 +449,7 @@ def main() -> int:
         launch(
             build_server=build_server(mode),
             component_name="akosha",
-            secrets_path=Path("~/.config/secrets.env"),
+            secrets_path=Path.home() / ".config" / "secrets.env",
             host="127.0.0.1",
             port=8682,
         )
@@ -602,6 +602,85 @@ For a maintainer migrating a repo's MCP launch script to `mcp_common.server.laun
 
 8. **Verify the Backward Compatibility Test Matrix row stays green** (per REQ-013): public CLI commands + launchd plist `ProgramArguments` + smoke test must all match the pre-migration matrix entry.
 9. **Confirm `pyproject.toml` version is unchanged.** Per [[feedback-mcp-common-version-bump-is-user]], mcp-common version bumps are user-owned via `crackerjack run -p minor`. Do not bump in the migration commit.
+
+## Cross-cutting pitfalls (Traps)
+
+The launcher cookbook's Examples above were authored against a planning draft and the verified surface in mcp-common 0.28.0; the nine original Phase-4a/4b traps (A–I) are catalogued in [[feedback-mcp-launcher-cookbook-gaps-2026-09-26]]. Three additional traps surfaced during the Phase-4 / Phase-2.5a rollout and are listed here as **J**, **K**, and the **G clarification**. Each entry follows the same code-first, fix-it-in-the-snippet style as the in-line trap callouts in the Examples above.
+
+### Trap J — `Path("~/...")` is not expanded by `.exists()` / `.read_text()` (silent secrets no-op)
+
+`pathlib.Path("~/...")` does **not** call `expanduser()` — `.exists()`, `.is_file()`, and `.read_text()` stat the literal `"~/..."` path, which never exists on disk. So the launcher wraps secrets loading with the right interface, but a wrapper that passes a literal `Path("~/.config/secrets.env")` silently no-ops: the launcher's `load_secrets()` short-circuits on `path.exists() is False` and the wrapper boots with an empty `os.environ`. Verified at `mcp_common/server/launcher.py:74-109` (the `if not path.exists(): return {}` path).
+
+`DEFAULT_SECRETS_PATH` in `mcp_common.server.launcher` uses the canonical expansion-safe form, so **omitting** `secrets_path` (or passing `Path.home() / ".config" / "secrets.env"`) works; the literal `Path("~/.config/secrets.env")` does not. Examples 1 (line 216), 2 (line 346), and 3 (line 452) above were patched to use the expansion-safe form. The same trap also applies to `settings_path=Path("~/...")` — use `Path.home() / "..."` explicitly.
+
+**Correct pattern:**
+
+```python
+# WRONG — silent no-op; load_secrets() returns {}
+secrets_path=Path("~/.config/secrets.env"),
+
+# RIGHT — same path the launcher's DEFAULT_SECRETS_PATH uses
+secrets_path=Path.home() / ".config" / "secrets.env",
+```
+
+(Symptoms: `os.environ` lacks `MINIMAX_API_KEY`/`OPENAI_API_KEY`/etc. after launch, FastMCP `/health=200` but tool calls return `Unauthorized` or `MissingCredentials`; the wrapper still binds and serves /health, so this is *silent* until an authenticated tool runs.)
+
+### Trap K — `warm_settings_feed()` constructs the wrong `HealthFeedState` class for the consumer's `/health` route
+
+`mcp_common.server.launcher.warm_settings_feed()` (`launcher.py:117-154`) builds a `mcp_common.health.feed.HealthFeedState` and `launch()` calls it via `if settings_path is not None: warm_settings_feed(settings_path)` (`launcher.py:255-256`) but discards the returned state — it does **not** thread it into `build_server`. Consumers with custom `/health` routes (oneiric, akosha, anything that registers its own feed-keyed handlers) read their own feed types — `oneiric.mcp.health.HealthFeedState` and so on. `is_healthy()` semantics differ between subclasses (different predicates, different `WARMING_UP_*` bitmasks). The launcher-warmed state has **no observable effect** on the consumer's `/health` body.
+
+**Correct pattern:** pre-build a consumer-shaped warm dict outside `launch()` and inject it into `build_server`'s closure (capture as an enclosing-scope variable, REQ-003):
+
+```python
+# WRONG — relies on warm_settings_feed(), which is a no-op for consumer feeds
+asyncio.run(launch(..., settings_path=settings_yaml_path))
+
+# RIGHT — bypass the broken warm; build the dict the consumer's /health expects
+from oneiric.mcp.health import HealthFeedState  # consumer's own class, NOT mcp_common's
+
+warm = {
+    "settings": HealthFeedState(
+        name="settings",
+        entities_count=1,
+        cycles_total=1,
+        ingester_running=True,
+        last_updated_timestamp=time.time(),
+    ),
+    # leave `context` and `progress` at zero per REQ-004 — they populate via tool calls
+}
+
+def build_server():
+    from oneiric.mcp.server import build_mcp_server
+    return build_mcp_server(
+        config=SimpleNamespace(name="oneiric"),
+        auth_config=mcp_auth_config,
+        providers=providers,
+        processor=processor,
+        health_feeds=warm,
+    )
+
+asyncio.run(launch(build_server=build_server, ...))
+```
+
+(Symptoms: `/health=200` flaps between healthy and `WARMING_UP_EMPTY_FEED`; `curl /health | jq .checks.settings.healthy` flips from `false` → `true` only after the first `tools/list` rather than being warm from the first probe.)
+
+### Trap G (clarification) — when wrappers must install a SIGTERM handler themselves
+
+The original Trap G (in the failure-modes table below, "Vanilla FastMCP/uvicorn exits with `returncode=-15` on SIGTERM, NOT `0`") requires wrappers to install:
+
+```python
+signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
+```
+
+**before `launch(...)`**. Per the session-buddy Phase-4d design note §6.4, mcp-common ≥ 0.28.0's `launch()` pre-launch sequence installs the SIGTERM handler with `os._exit(0)` automatically — so consumers **do not** need to install it themselves **if** `launch()` is the FIRST entry point after `sys.argv` parsing. (Verifier: confirm the final `launch()` in mcp-common 0.28.0+ installs the handler in its first lines; session-buddy's design note assumes that has landed. The original Trap G row remains the safe fallback until this is confirmed.)
+
+**Refined rule:**
+
+- Install `signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))` yourself BEFORE `launch(...)` **only if** your wrapper has other startup steps between `sys.argv` parsing and the `launch()` call (settings validation, mode dispatch, custom logging setup, secrets pre-checks, etc.) that could catch SIGTERM before `launch()` runs.
+- If `launch()` is the FIRST startup action in your wrapper (the common case for Examples 1, 4), rely on the launcher's pre-launch handler.
+- For exit-during-lifespan-teardown cases (SIGTERM lands while uvicorn is unwinding `__aexit__`/lifespan), prefer `os._exit(0)` over `sys.exit(0)` — `mcp_common/cli/signals.py:53-97` is the canonical pattern. `sys.exit` raises `SystemExit`, which propagates through the asyncio loop and can chain-exception on `finally` blocks during lifespan teardown.
+
+This refines the existing failure-modes row rather than replacing it: keep both, treat the row as the safe fallback and this section as the optimized contract.
 
 ## Failure modes / Rollback
 
