@@ -29,6 +29,7 @@ from mcp_common.server.availability import (
     get_availability_status,
 )
 from mcp_common.server.base import BaseOneiricServerMixin
+from mcp_common.server.launcher import launch
 from mcp_common.server.runtime import (
     RuntimeComponents,
     create_runtime_components,
@@ -44,6 +45,7 @@ __all__ = [
     "check_serverpanels_available",
     "create_runtime_components",
     "get_availability_status",
+    "launch",
 ]
 
 __version__ = "0.4.0"

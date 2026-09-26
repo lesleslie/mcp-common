@@ -78,6 +78,7 @@ from mcp_common.health import (
 from mcp_common.interfaces import DualUseTool, ensure_dual_use
 from mcp_common.profiles import FullServer, MinimalServer, StandardServer
 from mcp_common.schemas import ToolInput, ToolResponse
+from mcp_common.server.launcher import launch
 from mcp_common.tools import MANDATORY_TOOLS, ToolProfile, trim_description
 from mcp_common.ui import ServerPanels
 from mcp_common.validation import validate_input, validate_output
@@ -145,6 +146,7 @@ __all__: list[str] = [
     "ServerInitializationError",
     "ServerPanels",
     "StandardServer",
+    "launch",
     "ToolInput",
     "ToolProfile",
     "ToolResponse",
