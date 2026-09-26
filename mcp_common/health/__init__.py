@@ -852,13 +852,19 @@ def register_http_health_route(
 
     The handler always returns HTTP 200 with body shape::
 
-        {"status": "ok" | "degraded", "service": <service_name>, "version": <version>, "components": [...]}
+        {"status": "healthy" | "degraded", "service": <service_name>, "version": <version>, "components": [...]}
 
-    The ``status`` field in the body reports the aggregated health; the HTTP
-    status code is unconditionally 200 to preserve the launchd probe contract
+    The ``status`` field in the body reports the aggregated health using the
+    canonical :class:`~mcp_common.health.feed.StatusValue` 4-value enum
+    (``healthy`` / ``warming_up`` / ``degraded`` / ``failed``). HTTP status
+    code is unconditionally 200 to preserve the launchd probe contract
     across 9 sibling servers. A degraded auth provider flips the body status
     to ``"degraded"`` without changing the response code; the 503 semantic
-    is reserved for a future ``/readyz`` endpoint.
+    is reserved for a future ``/readyz`` endpoint (now removed fleet-wide;
+    retained here for historical context). This helper previously hardcoded
+    the legacy ``"ok"`` string instead of ``StatusValue.HEALTHY.value``,
+    which silently defeated the canonicalization contract across every
+    consumer that called it; the fix landed in 0.30.0.
 
     Args:
         mcp: The FastMCP server instance to register the route on.
@@ -867,7 +873,7 @@ def register_http_health_route(
             ``"unknown"``).
         extra_components: Optional list of component health dicts to merge
             into the response. Each dict is passed through verbatim
-            (e.g. ``[{"name": "db", "status": "ok"}]``).
+            (e.g. ``[{"name": "db", "status": "healthy"}]``).
         auth_health_provider: Optional callable invoked on every request
             to fetch the current :class:`~mcp_common.auth.health.AuthHealth`
             snapshot. The callable is re-invoked per request (not captured
@@ -895,8 +901,20 @@ def register_http_health_route(
             # anonymous /health response must not leak last_error strings.
             components.extend(auth_health.as_components())
 
-        # I-7 fix: body status reports ok|degraded; HTTP code is always 200.
-        status = "degraded" if is_degraded else "ok"
+        # I-7 fix: body status reports canonical StatusValue ("healthy"|"degraded").
+        # HTTP code is always 200 to preserve the launchd probe contract
+        # across 9 sibling servers. StatusValue is the 4-value enum from
+        # ``mcp_common.health.feed`` (the canonical "healthy" / "warming_up" /
+        # "degraded" / "failed" set used across all Bodai consumers).
+        # Previous implementation emitted the legacy 3-value string ``"ok"``,
+        # which silently defeated canonicalization on every consumer that
+        # routed through this helper (see feedback-mcp-surface-health-illusion.md);
+        # fixed in mcp-common 0.30.0.
+        status = (
+            StatusValue.DEGRADED.value
+            if is_degraded
+            else StatusValue.HEALTHY.value
+        )
         return JSONResponse(
             {
                 "status": status,
