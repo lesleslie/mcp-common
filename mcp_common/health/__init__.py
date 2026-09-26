@@ -911,9 +911,7 @@ def register_http_health_route(
         # routed through this helper (see feedback-mcp-surface-health-illusion.md);
         # fixed in mcp-common 0.30.0.
         status = (
-            StatusValue.DEGRADED.value
-            if is_degraded
-            else StatusValue.HEALTHY.value
+            StatusValue.DEGRADED.value if is_degraded else StatusValue.HEALTHY.value
         )
         return JSONResponse(
             {
