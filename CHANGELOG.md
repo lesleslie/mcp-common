@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.28.0] - 2026-09-26
+
+### Added
+
+- mcp-common: Add canonical MCP server launcher (REQ-001..008, 014)
+
+### Documentation
+
+- mcp-common: Patch launcher cookbook with Phase 4a/4b discovery findings
+
+### Internal
+
+- Pin crackerjack>=0.83.9 and prep 0.28.0 changelog
+
 ## [0.27.0] - 2026-09-18
 
 ### Added
