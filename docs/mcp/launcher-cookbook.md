@@ -154,13 +154,18 @@ def main() -> int:
 """Launch wrapper for the Oneiric FastMCP server (mcp-common launcher edition)."""
 from __future__ import annotations
 
+import site
 import sys
 from pathlib import Path
 
 # Venv bootstrap — see Trap L. When invoked from system python (e.g. via
 # launchd, which has a $PATH without the repo's .venv), the wrapper's
 # `from mcp_common.server import launch` would fail because mcp_common
-# is a venv-only dep. Prepend the venv's site-packages to sys.path.
+# is a venv-only dep. Use `site.addsitedir` (NOT just `sys.path.insert`)
+# so `.pth` files in the venv's site-packages get processed at runtime —
+# handles editable-install pointers like `_editable_impl_<pkg>.pth`. A
+# plain `sys.path.insert` misses .pth files because Python's site init
+# ran before our bootstrap prepend.
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _VENV_SITE_PACKAGES = _REPO_ROOT / ".venv" / "lib" / f"python{sys.version_info.major}.{sys.version_info.minor}" / "site-packages"
 try:
@@ -169,7 +174,7 @@ try:
 except ValueError:
     _IN_VENV = False
 if not _IN_VENV and _VENV_SITE_PACKAGES.is_dir():
-    sys.path.insert(0, str(_VENV_SITE_PACKAGES))
+    site.addsitedir(str(_VENV_SITE_PACKAGES))
 
 import argparse
 import asyncio
@@ -310,13 +315,18 @@ def main() -> int:
 """Launch wrapper for the Mahavishnu MCP server (mcp-common launcher edition)."""
 from __future__ import annotations
 
+import site
 import sys
 from pathlib import Path
 
 # Venv bootstrap — see Trap L. When invoked from system python (e.g. via
 # launchd, which has a $PATH without the repo's .venv), the wrapper's
 # `from mcp_common.server import launch` would fail because mcp_common
-# is a venv-only dep. Prepend the venv's site-packages to sys.path.
+# is a venv-only dep. Use `site.addsitedir` (NOT just `sys.path.insert`)
+# so `.pth` files in the venv's site-packages get processed at runtime —
+# handles editable-install pointers like `_editable_impl_<pkg>.pth`. A
+# plain `sys.path.insert` misses .pth files because Python's site init
+# ran before our bootstrap prepend.
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _VENV_SITE_PACKAGES = _REPO_ROOT / ".venv" / "lib" / f"python{sys.version_info.major}.{sys.version_info.minor}" / "site-packages"
 try:
@@ -325,7 +335,7 @@ try:
 except ValueError:
     _IN_VENV = False
 if not _IN_VENV and _VENV_SITE_PACKAGES.is_dir():
-    sys.path.insert(0, str(_VENV_SITE_PACKAGES))
+    site.addsitedir(str(_VENV_SITE_PACKAGES))
 
 import asyncio
 import signal
@@ -542,13 +552,18 @@ def _run_mcp_server(mcp_app, mcp_config, http_mode) -> None:
 # crackerjack/scripts/launch_mcp.py (planned per Phase 4a Task 4a.2)
 from __future__ import annotations
 
+import site
 import sys
 from pathlib import Path
 
 # Venv bootstrap — see Trap L. When invoked from system python (e.g. via
 # launchd, which has a $PATH without the repo's .venv), the wrapper's
 # `from mcp_common.server import launch` would fail because mcp_common
-# is a venv-only dep. Prepend the venv's site-packages to sys.path.
+# is a venv-only dep. Use `site.addsitedir` (NOT just `sys.path.insert`)
+# so `.pth` files in the venv's site-packages get processed at runtime —
+# handles editable-install pointers like `_editable_impl_<pkg>.pth`. A
+# plain `sys.path.insert` misses .pth files because Python's site init
+# ran before our bootstrap prepend.
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _VENV_SITE_PACKAGES = _REPO_ROOT / ".venv" / "lib" / f"python{sys.version_info.major}.{sys.version_info.minor}" / "site-packages"
 try:
@@ -557,7 +572,7 @@ try:
 except ValueError:
     _IN_VENV = False
 if not _IN_VENV and _VENV_SITE_PACKAGES.is_dir():
-    sys.path.insert(0, str(_VENV_SITE_PACKAGES))
+    site.addsitedir(str(_VENV_SITE_PACKAGES))
 
 import asyncio
 import signal
@@ -753,10 +768,12 @@ is still not importable. The `os.execvp` shape was therefore broken on every
 Homebrew Python install — only `uv run scripts/launch_mcp.py` (which puts the
 venv python on `$PATH` first) happened to work, masking the bug.
 
-**Fix** — prepend the venv's `site-packages` to `sys.path` at the top of every
-wrapper, BEFORE any non-stdlib imports. Guard on `sys.prefix` (the venv root,
-which IS distinct between venv and Homebrew system python) instead of
-`sys.executable`:
+**Fix** — call `site.addsitedir(_VENV_SITE_PACKAGES)` at the top of every wrapper,
+BEFORE any non-stdlib imports. This both prepends the venv's `site-packages`
+directory AND processes any `.pth` files in it (which is critical for
+editable-installed packages — see "Why `site.addsitedir`" below). Guard on
+`sys.prefix` (the venv root, which IS distinct between venv and Homebrew
+system python) instead of `sys.executable`:
 
 ```python
 #!/usr/bin/env python3
@@ -764,6 +781,7 @@ which IS distinct between venv and Homebrew system python) instead of
 
 from __future__ import annotations
 
+import site
 import sys
 from pathlib import Path
 
@@ -775,8 +793,24 @@ try:
 except ValueError:
     _IN_VENV = False
 if not _IN_VENV and _VENV_SITE_PACKAGES.is_dir():
-    sys.path.insert(0, str(_VENV_SITE_PACKAGES))
+    site.addsitedir(str(_VENV_SITE_PACKAGES))
 ```
+
+**Why `site.addsitedir` (not just `sys.path.insert`)**: editable-installed
+packages (e.g. via `pip install -e .` or `uv pip install -e .`) are wired into
+the venv via `.pth` files in `site-packages` (e.g.
+`_editable_impl_mahavishnu.pth`). A `.pth` file's first line is a path that
+gets added to `sys.path` when Python's `site` module processes the file at
+startup. If you prepend the venv's site-packages via `sys.path.insert` AFTER
+Python's site init has already run, the `.pth` files are NOT processed — so
+editable packages remain unimportable even though their containing directory
+is on `sys.path`. `site.addsitedir` walks the directory at runtime and exec's
+any `.pth` it finds, handling both direct-install packages AND
+editable-install pointers. This is why the previous `sys.path.insert(0, ...)`
+attempt (mcp-common commit `f7656fe1`) was insufficient: editable-installed
+repos like mahavishnu and oneiric still failed with
+`ModuleNotFoundError: No module named 'mahavishnu'` /
+`oneiric` even after the path was on `sys.path`.
 
 **Idempotency**: the guard checks `sys.prefix` (the venv root), NOT
 `sys.executable` (which would alias to the same Homebrew cellar binary as
@@ -785,8 +819,9 @@ the venv root, the wrapper is already running in the venv (e.g.
 `uv run scripts/launch_mcp.py`) and the guard skips the prepend. When
 `sys.prefix` is Homebrew's cellar (`/usr/local/Cellar/python@3.14/...`), the
 prepend runs and `mcp_common` becomes importable. Verified live in
-`mahavishnu/scripts/launch_mcp.py` (commit `fdfad5ac`) and
-`oneiric/scripts/launch_mcp.py` (commit `e62c667`).
+`mahavishnu/scripts/launch_mcp.py` (commit `fdfad5ac`; the `site.addsitedir`
+follow-up is staged in the working tree but not yet committed at plan-write
+time) and `oneiric/scripts/launch_mcp.py` (commit `f9d9edb`).
 
 **Path safety**: `_REPO_ROOT` is computed RELATIVE to the script's `__file__`
 location — no hardcoded `/Users/les/...` absolute paths (per
