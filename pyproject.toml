@@ -283,7 +283,7 @@ max_complexity = 15
 # and openai deps directly in their own dependency-groups.
 [dependency-groups]
 dev = [
-    "crackerjack>=0.65.3",
+    "crackerjack>=0.83.9",
     "pytest-benchmark>=5.2.3",
     "respx>=0.23.1",
     "uv-bump>=0.5.0",

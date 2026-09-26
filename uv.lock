@@ -696,7 +696,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.81.2"
+version = "0.83.9"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiofiles" },
@@ -764,9 +764,9 @@ dependencies = [
     { name = "websockets" },
     { name = "zuban" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/81/16/593554e0999107672ad45cdec94deed9f02a50b29ec0523ffc6741972761/crackerjack-0.81.2.tar.gz", hash = "sha256:a1e0ca3d3766f926d9fc4a28acbb020133792fa02e856ee695215aad557a64e3", size = 5083222, upload-time = "2026-09-15T07:08:01.841Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/67/87/280f90fe6491724e5f6f08b635c11cc7a22ea1b5ec0e06ebd1f816deff75/crackerjack-0.83.9.tar.gz", hash = "sha256:b2303b7a274fd960cb0f392831b1f226147bda075bed441fd811dd965057dcc2", size = 5158015, upload-time = "2026-09-26T13:23:55.362Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0a/05/462e101bf3a0942d5db40569759a97d0706e628fdbb0a8e1c795f7e8fcfd/crackerjack-0.81.2-py3-none-any.whl", hash = "sha256:49659270cdb49903983f0912acd581b27ac355b58eea3d5d4bf8ca4734a00071", size = 1492029, upload-time = "2026-09-15T07:07:59.383Z" },
+    { url = "https://files.pythonhosted.org/packages/95/1d/c3e5fccbd5daf0476c9e9648862217b5e407e3bcf31114945b589d14a78d/crackerjack-0.83.9-py3-none-any.whl", hash = "sha256:f541c0e4e66cd48261f470a2d5be1574a61a30a87053b14cd608a0da572384a0", size = 1501474, upload-time = "2026-09-26T13:23:52.504Z" },
 ]
 
 [[package]]
@@ -2099,7 +2099,7 @@ wheels = [
 
 [[package]]
 name = "mcp-common"
-version = "0.26.4"
+version = "0.27.0"
 source = { editable = "." }
 dependencies = [
     { name = "cryptography" },
@@ -2159,7 +2159,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "crackerjack", specifier = ">=0.65.3" },
+    { name = "crackerjack", specifier = ">=0.83.9" },
     { name = "pytest-benchmark", specifier = ">=5.2.3" },
     { name = "respx", specifier = ">=0.23.1" },
     { name = "uv-bump", specifier = ">=0.5.0" },

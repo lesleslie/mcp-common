@@ -51,7 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - mcp-common: `--health-disable-decay` CLI flag on `MCPServerCLIFactory.start` (plan §5 task 7). Sets `HEALTH_FEED_HALFLIFE_SECONDS=0` before the lifespan runs; emits WARNING + OTel event `health.aggregate.decay_disabled`. Operators use this during incident triage when a known upstream regression is firing repeated errors that would otherwise mask real downstream faults.
 
-- mcp-common: `mcp_common.server.launcher` — canonical async launcher for Bodai MCP servers. Loads `~/.config/secrets.env`, optionally warms the `settings` health feed (one-shot init), runs FastMCP with `transport="http"` + `uvicorn_config={"timeout_graceful_shutdown": 30}`. Generic — no oneiric coupling. See `docs/mcp/launcher-cookbook.md` for migration patterns.
+- mcp-common: `mcp_common.server.launcher.launch` — canonical async launcher for Bodai MCP servers. Loads `~/.config/secrets.env`, optionally warms the `settings` health feed (one-shot init), runs FastMCP with `transport="http"` + `uvicorn_config={"timeout_graceful_shutdown": 30}`. Generic — no oneiric coupling. See `docs/mcp/launcher-cookbook.md` for migration patterns.
 
 ### Fixed
 
