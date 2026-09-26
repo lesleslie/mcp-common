@@ -3,7 +3,14 @@
 The helper registers a plain HTTP /health route on a FastMCP server, returning
 a JSONResponse with shape:
 
-    {"status": "ok", "service": <service_name>, "version": <version>, "components": [...]}
+    {"status": "healthy" | "degraded", "service": <service_name>, "version": <version>, "components": [...]}
+
+The ``status`` field reports the canonical :class:`~mcp_common.health.feed.StatusValue`
+4-value enum (``healthy`` / ``warming_up`` / ``degraded`` / ``failed``). HTTP code
+is unconditionally 200 (per the launchd probe contract that the helper
+preserves). ``StatusValue.HEALTHY`` is the no-degradation default; a registered
+``auth_health_provider`` that is degraded flips the body to ``StatusValue.DEGRADED``
+without changing the response code.
 
 This is the HTTP counterpart to register_health_tools (which registers MCP
 protocol tools). Repos use it from server bootstrap to satisfy the launchd
@@ -64,7 +71,7 @@ class TestRegisterHttpHealthRoute:
 
     @pytest.mark.asyncio
     async def test_response_echoes_service_and_version(self) -> None:
-        """status is 'ok'; service and version echo the inputs."""
+        """status is 'healthy'; service and version echo the inputs."""
         mcp = FastMCP(name="echo-svc")
         register_http_health_route(
             mcp, service_name="echo-svc", version="0.17.7"
@@ -73,7 +80,7 @@ class TestRegisterHttpHealthRoute:
         response = await _get_health(mcp)
         body = response.json()
 
-        assert body["status"] == "ok"
+        assert body["status"] == "healthy"
         assert body["service"] == "echo-svc"
         assert body["version"] == "0.17.7"
 
@@ -95,8 +102,8 @@ class TestRegisterHttpHealthRoute:
         """components round-trips extra_components when provided."""
         mcp = FastMCP(name="with-components")
         extra: list[dict[str, t.Any]] = [
-            {"name": "db", "status": "ok"},
-            {"name": "redis", "status": "ok"},
+            {"name": "db", "status": "healthy"},
+            {"name": "redis", "status": "healthy"},
         ]
         register_http_health_route(
             mcp,
@@ -109,8 +116,8 @@ class TestRegisterHttpHealthRoute:
         body = response.json()
 
         assert body["components"] == [
-            {"name": "db", "status": "ok"},
-            {"name": "redis", "status": "ok"},
+            {"name": "db", "status": "healthy"},
+            {"name": "redis", "status": "healthy"},
         ]
 
     @pytest.mark.asyncio
@@ -129,7 +136,8 @@ class TestRegisterHttpHealthRouteWithAuthHealth:
     """Test that the helper accepts auth_health_provider and includes AuthHealth.
 
     These tests cover Task 11 of the mcp-common auth-primitives plan:
-    - I-7 fix: /health stays 200-only; status field reports "ok" or "degraded"
+    - I-7 fix: /health stays 200-only; status field reports StatusValue.HEALTHY.value ("healthy")
+      or StatusValue.DEGRADED.value ("degraded"); never the legacy "ok" string.
     - B3 fix:  is_degraded is recomputed per request via the callable
     - R2-1 fix: parameter is a Callable, not a captured value
     - R2-2 fix: include_diagnostics=False is the default (last_error redacted)
@@ -164,7 +172,7 @@ class TestRegisterHttpHealthRouteWithAuthHealth:
         body = response.json()
 
         assert response.status_code == 200
-        assert body["status"] == "ok"
+        assert body["status"] == "healthy"
         names = [c["name"] for c in body["components"]]
         assert "auth" in names
 
@@ -244,7 +252,7 @@ class TestRegisterHttpHealthRouteWithAuthHealth:
 
         # Request 1: healthy
         response = await _get_health(mcp)
-        assert response.json()["status"] == "ok"
+        assert response.json()["status"] == "healthy"
 
         # Mutate the live snapshot; request 2 must reflect the new state
         current["snapshot"] = degraded
