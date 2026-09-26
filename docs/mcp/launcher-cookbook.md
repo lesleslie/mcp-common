@@ -31,12 +31,17 @@ The launcher is fully generic — no oneiric coupling — but it gives every con
 | 3 | Pass `uvicorn_config={"timeout_graceful_shutdown": 30}` (SIGTERM stops the server within the grace window) | `launcher.run_with_uvicorn_config()` | REQ-007, REQ-014 |
 | 4 | Pre-warm **only** the `settings` health feed with `entities_count > 0` (so `/health=200` on first probe; `context`/`progress` start unhealthy and populate via tool calls) | `launcher.warm_settings_feed()` | REQ-004 |
 | 5 | Variadic `build_server: Callable[..., Any]` signature (so oneiric's 6-kwarg `build_mcp_server` works without unpacking) | `launcher.launch()` | REQ-003 |
-| 6 | Expose `"launcher": "mcp_common.server.launcher@<version>"` in the `/health` body (incident triage: grep tells you which launcher build served the request) | consumer's `/health` route | REQ-005 |
+| 6 | Expose `"launcher": "mcp_common.server.launcher@<version>"` in the `/health` body (incident triage: grep tells you which launcher build served the request) | consumer's `/health` route (PATCH the existing handler — see below) | REQ-005 |
 
 A consumer must only:
 
 1. Define `build_server()` — a closure that constructs the FastMCP app with the component's own auth, processor, and feed wiring.
-2. Register a `/health` route on the app that emits `"launcher": "mcp_common.server.launcher@<version>"` (read `mcp_common.__version__` at request time so editable-install version drift doesn't lie). REQ-005 is a consumer contract, not a launcher-side enforcement — the launcher doesn't write to `/health`. The trivial smoke app in `scripts/launch_smoke.py` shows the canonical pattern: `@app.custom_route("/health", methods=["GET"])` returning JSON with the `launcher` field.
+2. **PATCH** the consumer's existing `/health` handler to include `"launcher": "mcp_common.server.launcher@<version>"` (read `mcp_common.__version__` at request time so editable-install version drift doesn't lie). REQ-005 is a consumer contract, not a launcher-side enforcement — the launcher doesn't write to `/health`. **Every consumer already has a `/health` route** (vishnu's `bootstrap.py:264-327`, crackerjack's `server_core.py:151-199`, akosha's `server.py:1164`, session-buddy inherits from mcp-common); **do NOT register a duplicate** `@app.custom_route("/health", ...)` — duplicate routes resolve first-or-last-wins and the existing contract will silently regress. Add one line to the existing handler:
+   ```python
+   import mcp_common  # at top
+   body["launcher"] = f"mcp_common.server.launcher@{mcp_common.__version__}"
+   ```
+   The trivial smoke app in `scripts/launch_smoke.py` shows the canonical pattern (for components that DON'T already have a `/health`): `@app.custom_route("/health", methods=["GET"])` returning JSON with the `launcher` field.
 
 If you find yourself writing `transport="http"` or `timeout_graceful_shutdown=30` outside of a `build_server` closure, the launcher abstraction has leaked — file a regression.
 
@@ -65,6 +70,8 @@ The variadic `build_server` contract (REQ-003) is load-bearing: a closure is all
 ## Cookbook examples
 
 Each example below is a worked migration with a diff between the existing bespoke launch script and the new launcher wrapper. Examples are runnable against the actual source paths cited; paths were verified via `ls -la` at plan-write time.
+
+> **Before using any Example below as a template** — verify each import against the actual source of the component (e.g., run `grep -rn "build_mahavishnu_mcp_app\|build_akosha_mcp_app\|create_mcp_server" <repo>` or read the design note in `<repo>/.claude/decisions/`). The Examples were authored before Phase 4a/4b discovery and **may cite placeholder symbols that don't exist in the current source** — Example 2 originally imported `from mahavishnu.mcp.server import build_mahavishnu_mcp_app`, which does not exist; the verified surface is `FastMCPServer` in `mahavishnu.mcp.server_core` (see the callout inside Example 2 and the linked design note). The same caveat applies to factory signatures — `crackerjack.mcp.server_core.create_mcp_server` is `async def` (verified 2026-09-26); Example 4's original `asyncio.get_event_loop().run_until_complete(...)` inside the closure was buggy because `launch()` calls `build_server()` from inside its own async context. The corrected pre-build pattern is shown in Example 4.
 
 ### Example 1: oneiric (closure + secrets + settings-feed warm + processor)
 
@@ -279,7 +286,9 @@ def main() -> int:
     return 1
 ```
 
-**After** — ~10 LOC. The regex parser is no longer needed (it lives at `mcp_common.server.launcher.load_secrets` per Task 1.1). The `os.execvp` hop is gone — we keep the same Python process and call `launch()` directly:
+**After** — ~30 LOC. The regex parser is no longer needed (it lives at `mcp_common.server.launcher.load_secrets` per Task 1.1). The `os.execvp` hop is gone — we keep the same Python process and call `launch()` directly:
+
+> **Note:** the import `from mahavishnu.mcp.server import build_mahavishnu_mcp_app` that originally appeared here was a planning placeholder — the symbol does **not** exist in the source. The verified surface is `FastMCPServer` in `mahavishnu.mcp.server_core` plus `MahavishnuApp` in `mahavishnu.core.app`, per the Phase 4a design note `mahavishnu/.claude/decisions/2026-09-26-mcp-launcher-migration.md`. The closure also needs a small `_RunAsyncAdapter` because `FastMCPServer` does not expose the launcher's duck-typed `run_async(transport=, host=, port=, uvicorn_config=)` directly — it exposes `start(host, port)` which hardcodes its own uvicorn_config and would silently drop the launcher's `timeout_graceful_shutdown=30` (REQ-007). The adapter calls the inner FastMCP's `run_http_async(...)` directly with the launcher-passed config.
 
 ```python
 #!/usr/bin/env python3
@@ -287,24 +296,57 @@ def main() -> int:
 from __future__ import annotations
 
 import asyncio
+import signal
 import sys
 from pathlib import Path
 
 from mcp_common.server import launch
-from mahavishnu.mcp.server import build_mahavishnu_mcp_app  # planned per plan §5 Phase 4a
+
+
+class _RunAsyncAdapter:
+    """Adapt FastMCPServer to the launcher's duck-typed run_async(...) contract.
+
+    FastMCPServer exposes start(host, port), which calls the lifecycle helper
+    that hardcodes its own uvicorn_config. The launcher needs
+    run_async(transport="http", host=, port=, uvicorn_config=) to drive
+    timeout_graceful_shutdown=30 (REQ-007). Calling the inner FastMCP's
+    run_http_async directly with the launcher-passed config is the bridge.
+    See mahavishnu/.claude/decisions/2026-09-26-mcp-launcher-migration.md §4 trap #1.
+    """
+
+    def __init__(self, mhv_server) -> None:
+        self._server = mhv_server
+
+    async def run_async(self, *, transport, host, port, uvicorn_config):
+        await self._server.server.run_http_async(
+            host=host, port=port, uvicorn_config=uvicorn_config,
+        )
 
 
 def build_server():
-    """Closure: returns the configured Mahavishnu FastMCP app. build_server() takes no args."""
-    return build_mahavishnu_mcp_app()
+    """Closure: returns the configured Mahavishnu MCP server. build_server() takes no args."""
+    from mahavishnu.core.app import MahavishnuApp
+    from mahavishnu.mcp.server_core import FastMCPServer
+
+    maha_app = MahavishnuApp()
+    mhv_server = FastMCPServer(maha_app)
+    return _RunAsyncAdapter(mhv_server)
 
 
 def main() -> int:
+    # REQ-014 — explicit SIGTERM handler so the wrapper exits 0 (not -15) on
+    # cooperative shutdown. See "Failure modes" row for why this is load-bearing
+    # for incident-response scripts.
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
+
     asyncio.run(
         launch(
             build_server=build_server,
             component_name="mahavishnu",
             secrets_path=Path("~/.config/secrets.env"),
+            # No settings_path — Mahavishnu's /health reports skills_signer +
+            # plan_index, not the generic `settings` feed, so warming here
+            # would be a no-op for the visible body.
             host="127.0.0.1",
             port=8680,
         )
@@ -464,11 +506,14 @@ def _run_mcp_server(mcp_app, mcp_config, http_mode) -> None:
 
 **After** — crackerjack has no auth subsystem and no `settings.yaml` consumed by the launcher, so the closure's pre-bind is minimal. `secrets_path=None` and `settings_path=None` opt out cleanly:
 
+> **Note:** `crackerjack.mcp.server_core.create_mcp_server` is **`async def`** (verified at `server_core.py:126`). The launcher's `build_server: Callable[..., Any]` is called **sync** from inside `launch()`'s async context. The pattern `asyncio.get_event_loop().run_until_complete(create_mcp_server(...))` shown in earlier drafts of this example is **BUGGY** — it raises `RuntimeError: This event loop is already running.` because a loop is already running by the time the closure is called. **Fix:** pre-build `mcp_app` upstream in `main()` via `asyncio.run(create_mcp_server(mcp_config))` BEFORE `launch()`, then the closure is just `return mcp_app`. See `crackerjack/.claude/decisions/2026-09-26-mcp-launcher-migration.md` §2.1 for the verified crackerjack shape.
+
 ```python
 # crackerjack/scripts/launch_mcp.py (planned per Phase 4a Task 4a.2)
 from __future__ import annotations
 
 import asyncio
+import signal
 import sys
 from pathlib import Path
 
@@ -476,20 +521,33 @@ from mcp_common.server import launch
 from crackerjack.mcp.server_core import create_mcp_server
 
 
-def build_server():
-    """Closure: cj has no auth and no settings.yaml; the launcher skips both."""
-    mcp_config = {"http_enabled": True, "http_host": "127.0.0.1", "http_port": 8676}
+def build_server(mcp_app):
+    """Closure factory: bind the pre-built FastMCP app; the returned closure takes no args.
 
-    # create_mcp_server is async + accepts config; the launcher build_server()
-    # is sync (variadic Callable[..., Any]). Bridge with a small helper.
-    server = asyncio.get_event_loop().run_until_complete(create_mcp_server(mcp_config))
-    return server
+    mcp_app is built upstream in main() via asyncio.run(create_mcp_server(...))
+    so the closure has no async work to do — it just returns the already-built
+    instance. This avoids the nested-event-loop trap entirely.
+    """
+    def _build():
+        return mcp_app
+    return _build
 
 
 def main() -> int:
+    mcp_config = {"http_enabled": True, "http_host": "127.0.0.1", "http_port": 8676}
+
+    # Pre-build mcp_app BEFORE launch() — create_mcp_server is async, but the
+    # launcher's build_server closure is sync (variadic Callable[..., Any]).
+    # Building here in main() sidesteps the nested-event-loop trap.
+    mcp_app = asyncio.run(create_mcp_server(mcp_config))
+
+    # REQ-014 — explicit SIGTERM handler so the wrapper exits 0 (not -15) on
+    # cooperative shutdown. See "Failure modes" row for why this is load-bearing.
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
+
     asyncio.run(
         launch(
-            build_server=build_server,
+            build_server=build_server(mcp_app),
             component_name="crackerjack",
             # cj has no auth subsystem, so no secrets.env pre-bind:
             secrets_path=None,
@@ -550,15 +608,19 @@ For a maintainer migrating a repo's MCP launch script to `mcp_common.server.laun
 | Symptom | Likely cause | What to check |
 |---|---|---|
 | `curl /health` returns **503** indefinitely | `settings` health feed not warmed (entities_count==0 AND cycles_total>=1 AND ingester_running) | Run `curl /health | jq .checks.settings`. If `healthy: false` AND `entities_count: 0`, your closure is rebuilding the feed rather than letting the launcher's `warm_settings_feed()` run. Pass `settings_path=...` to `launch()`. |
-| `curl /health` returns **200 but no `"launcher"` field** | The component's `/health` route handler doesn't emit the field (REQ-005 is consumer-side, not launcher-side) | Add a `@app.custom_route("/health", methods=["GET"])` handler that reads `mcp_common.__version__` and includes `"launcher": f"mcp_common.server.launcher@{mcp_common.__version__}"`. See `scripts/launch_smoke.py` for a working reference. |
+| `curl /health` returns **200 but no `"launcher"` field** | The component's existing `/health` handler doesn't emit the field (REQ-005 is consumer-side, not launcher-side) | **PATCH the existing handler** — every consumer already has a `/health` route; do NOT register a duplicate `@app.custom_route("/health", ...)`. Add one line inside the existing handler: `body["launcher"] = f"mcp_common.server.launcher@{mcp_common.__version__}"` (with `import mcp_common` at the top). For NEW components without an existing `/health`, use the `@app.custom_route("/health", methods=["GET"])` shape from `scripts/launch_smoke.py`. |
 | `TypeError: TransportMixin.run_stdio_async() got an unexpected keyword argument 'host'` | The `build_server` closure returned a server that lacks `run_async(transport=...)`, or the launcher was bypassed | Verify the wrapper's `main()` calls `launch(...)`. If migrating in stages, ensure no legacy `app.run(...)` / `app.run_async(host=, port=)` site survives. |
 | Server boot loops every KeepAlive cycle in launchd | Stale `os.execvp` chain (Example 2 old shape) replaced by direct `launch()` but launchd still restarts on non-zero exit | Confirm the wrapper returns 0 on cooperative shutdown; don't bypass the launcher's signal handling. |
 | `RuntimeError: schedule_task requires a processor; none supplied.` on first boot | Component forgot to bind a processor / WorkflowBridge inside `build_server` (per [[feedback-oneiric-cli-mcp-loader-gap]]) | Check the closure: `_build_processor()` must be called and the processor must be passed to the FastMCP factory. |
 | `/health=200` immediately, then **503** ~30s later after first tool call | Pre-warmed feed was overwritten by a tool that records `record_success(entities_count=0)`, returning `WARMING_UP_EMPTY_FEED` predicate | Tool writes should populate `entities_count > 0` on success. Bug is in the tool, not the launcher. |
 | `curl /health` **200** but the `checks.context`/`progress` feeds are unhealthy | This is correct. `context` and `progress` populate via `tools/list` followed by the first tool call. | Wait a few seconds; run any tool via `tools/call`; re-curl `/health`. |
+| MCP client (e.g. Claude Code) shows different protocol state after migration | `transport="streamable-http"` vs `transport="http"` is a silent wire-protocol flip (Trap D). ak/cj/sb previously used `transport="streamable-http"`; the launcher normalizes to `transport="http"` per REQ-007, which may not produce the same `StreamableHTTPSessionManager` wire protocol clients currently tolerate. | `curl /health=200` is **necessary but not sufficient** — smoke-test against a real MCP client (`claude code mcp add ...`) BEFORE merging. Document expected vs actual tool/call behavior. If `streamable-http` semantics are required, extend `mcp_common.server.launcher.launch()` with a `transport: str = "http"` kwarg (deferred to a future plan unless multiple consumers need it). |
+| After migration, `/health` returns **200 even when degraded** | You replaced the consumer's existing custom `/health` (e.g. crackerjack's 503-on-degraded contract) with the mcp-common helper `register_http_health_route`, which returns 200 unconditionally (Trap E, verified at `mcp_common/health/__init__.py:899-908`). | **Do NOT replace a custom `/health` route with `register_http_health_route` if the consumer has a non-default contract.** Restore the previous custom route and PATCH it (don't replace it) to include the `launcher` field per REQ-005. Document the wire contract change if the 503-on-degraded semantics are intentionally being dropped. |
+| Tests now fail with unexpectedly-set env vars | Launcher loads `~/.config/secrets.env` via `setdefault` (Trap F). The merge is additive — no regression for env vars already set — but test fixtures in cj/sb (which previously had no `secrets.env`) may assume absence of certain vars. | The launcher behavior is correct; fix the test. If a test fixture assumes a var is unset, set it explicitly in the test's own setup (e.g. `monkeypatch.delenv("KEY", raising=False)` or pre-clean in conftest). Don't bypass the launcher's `secrets_path` for the entire test suite. |
+| Migration smoke test times out, `curl` shows connection refused after `sleep 3` | Complex components (vishnu-class: MahavishnuApp + FastMCPServer + Akosha round-trips) need **3+ minutes cold boot** (Trap H, verified at `mahavishnu.mcp.bootstrap.py:268-291`). The cookbook's `sleep 3` smoke-test pause is wrong for cold boot. | Plist `launch_with_healthcheck.sh --timeout 180` is **load-bearing** — keep it in the plist's `ProgramArguments`. Smoke-test scripts must `sleep 180+` for vishnu-class components on cold boot, not `sleep 3`. Simpler components (cj, sb, ak) cold-boot in seconds and `sleep 5` is fine. |
 | Launcher import fails: `ModuleNotFoundError: mcp_common.server.launcher` | mcp-common is below 0.28.0, or installed in a different venv | `pip show mcp-common` in the active venv. Per [[feedback-mcp-common-version-bump-is-user]], coordinate the bump with the user. |
 | SIGTERM takes >60s to exit (after the migration) | A caller is still setting its own `uvicorn_config` or the FastMCP instance has its own handler | The launcher is the only place that pins `timeout_graceful_shutdown=30` (REQ-007). Search the closure for stray `uvicorn_config=` overrides. |
-| Vanilla FastMCP/uvicorn exits with `returncode=-15` on SIGTERM, NOT `0` (discovered 2026-09-26 during REQ-014 smoke) | uvicorn completes graceful shutdown ("Application shutdown complete") but the Python process inherits the OS-level SIGTERM default disposition (returncode 128 + 15) | Install an explicit handler in the wrapper so REQ-014 holds for real-FastMCP migrations, not just the stub: `signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))` BEFORE `launch(...)`. launchd `KeepAlive.SuccessfulExit=false` is the standard plist setting, so the -15 exit doesn't trigger a restart loop, but incident-response scripts key on returncode=0 to distinguish clean shutdowns from signals. |
+| Vanilla FastMCP/uvicorn exits with `returncode=-15` on SIGTERM, NOT `0` (discovered 2026-09-26 during REQ-014 smoke) | uvicorn completes graceful shutdown ("Application shutdown complete") but the Python process inherits the OS-level SIGTERM default disposition (returncode 128 + 15) | Install an explicit handler in the wrapper so REQ-014 holds for real-FastMCP migrations, not just the stub: `signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))` BEFORE `launch(...)`. launchd `KeepAlive.SuccessfulExit=false` is the standard plist setting, so the -15 exit doesn't trigger a restart loop, but incident-response scripts key on returncode=0 to distinguish clean shutdowns from signals. **For exit-during-lifespan-teardown cases** (the SIGTERM lands while FastMCP / uvicorn is unwinding its own `__aexit__` / lifespan chain), prefer `os._exit(0)` over `sys.exit(0)` — `sys.exit` raises `SystemExit`, which propagates through the asyncio loop and can chain-exception on `finally` blocks that are themselves part of the shutdown chain. `mcp_common.cli.signals.SignalHandler._handle_shutdown` (`mcp_common/cli/signals.py:53-97`) uses `os._exit(0)` for exactly this reason. |
 
 ### Rollback to the bespoke launcher
 
@@ -574,7 +636,13 @@ If a migration must be reverted:
 - [[feedback-oneiric-cli-mcp-loader-gap]] — the bug oneiric's `mcp_start` originally had with missing `WorkflowTaskProcessor` wiring (dormant; fixed by REQ-009 in plan Phase 2.5c).
 - [[feedback-oneiric-mcp-health-feed-warmup]] — the 503-on-`cycles_total==0`-after-warm pattern that drove REQ-004's "pre-warm `settings` only, with `entities_count > 0`" decision.
 - [[feedback-mcp-common-version-bump-is-user]] — version bumps + PyPI publish are user-owned; this plan and cookbook document migration shape only.
+- [[feedback-mcp-launcher-cookbook-gaps-2026-09-26]] — the 9 cross-cutting traps (A-I) surfaced by Phase 4a/4b discovery investigations. Read this before treating any Example below as ground truth.
 - `docs/plans/2026-09-26-mcp-launcher-standardization.md` in mahavishnu — the parent plan; cross-references REQ-001..016 throughout this cookbook.
 - `mcp_common/server/launcher.py` — the helper itself (~150 LOC after tests).
 - `tests/server/test_launcher.py` — TDD test coverage for each helper (29 tests).
 - `mahavishnu/docs/mcp/server-migration-tracker.md` — per-repo action item table for all 20 standalone Bodai-managed MCP servers (planned per REQ-012, REQ-015).
+- Phase 4a/4b READ-ONLY design notes (one per consumer in the 5 Core — the verified surface for each migration):
+  - vishnu (mahavishnu): `mahavishnu/.claude/decisions/2026-09-26-mcp-launcher-migration.md`
+  - crackerjack: `crackerjack/.claude/decisions/2026-09-26-mcp-launcher-migration.md`
+  - akosha: `akosha/.claude/decisions/2026-09-26-launcher-mode-dispatch.md`
+  - session-buddy: `session-buddy/.claude/decisions/2026-09-26-launcher-server-subcommand.md`
