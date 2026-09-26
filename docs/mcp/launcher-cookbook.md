@@ -29,7 +29,7 @@ The launcher is fully generic — no oneiric coupling — but it gives every con
 | 1 | Load `~/.config/secrets.env` into `os.environ` (so launchd-managed processes that don't inherit shell init files still get API keys) | `launcher.load_secrets()` | REQ-002 |
 | 2 | Run FastMCP with `transport="http"` (so `host`/`port` aren't rejected as unexpected kwargs against the stdio default) | `launcher.run_with_uvicorn_config()` | REQ-007 |
 | 3 | Pass `uvicorn_config={"timeout_graceful_shutdown": 30}` (SIGTERM stops the server within the grace window) | `launcher.run_with_uvicorn_config()` | REQ-007, REQ-014 |
-| 4 | Pre-warm **only** the `settings` health feed with `entities_count > 0` (so `/health=200` on first probe; `context`/`progress` start unhealthy and populate via tool calls) | `launcher.warm_settings_feed()` | REQ-004 |
+| 4 | Pre-warm **every** consumer-shaped health feed with `entities_count=0` (so each feed starts at `cycles_total=1, healthy=true`; first tool calls overwrite via `feed.record_success(N)`). `aggregate_health()` returns 503 if ANY feed is cold (`is_healthy()` returns False when `cycles_total == 0`), which cascades into launchd restart-loops via `launch_with_healthcheck.sh` + `KeepAlive.Crashed=true`. The launcher's own `warm_settings_feed()` constructs `mcp_common.health.feed.HealthFeedState` which is the wrong class for consumers with their own `/health` aggregator — see Trap K. | consumer-shaped helper in the wrapper (build a dict of `HealthFeedState(name=n).record_success(0)` for every feed the consumer aggregates) | REQ-004 |
 | 5 | Variadic `build_server: Callable[..., Any]` signature (so oneiric's 6-kwarg `build_mcp_server` works without unpacking) | `launcher.launch()` | REQ-003 |
 | 6 | Expose `"launcher": "mcp_common.server.launcher@<version>"` in the `/health` body (incident triage: grep tells you which launcher build served the request) | consumer's `/health` route (PATCH the existing handler — see below) | REQ-005 |
 
@@ -211,8 +211,7 @@ def build_server():
         auth_config=mcp_auth_config,
         providers=providers,
         processor=processor,
-        # health_feeds left unset — the launcher pre-warmed `settings` only;
-        # `context` and `progress` start unhealthy and populate via tool calls.
+        health_feeds=health_feeds,  # pre-warmed dict from closure scope (all feeds warm)
     )
 
 
@@ -649,7 +648,7 @@ For a maintainer migrating a repo's MCP launch script to `mcp_common.server.laun
    - `main()` that calls `await launch(build_server=..., component_name=..., ...)`.
 4. **Update the launchd plist `ProgramArguments`** if the entry script changed path or invocation shape. Keep `--foreground` semantics where the existing plist supervised the wrapper directly.
 5. **Delete the inline secrets parser** if the old wrapper had one — `mcp_common.server.launcher.load_secrets()` covers it (Task 1.1).
-6. **Delete the inline feed warm helper** if it pre-warmed `context`/`progress` with `entities_count=0` — only `settings` should be pre-warmed (REQ-004). See [[feedback-oneiric-mcp-health-feed-warmup]] for the rationale.
+6. **Pre-warm every consumer-shaped feed** with `feed.record_success(entities_count=0)` so each feed starts at `cycles_total=1, healthy=true`. **Do NOT** leave `context`/`progress` cold — `aggregate_health()` (per-feed `is_healthy()` returns False when `cycles_total == 0`) returns 503 if ANY feed is cold, which cascades into `launch_with_healthcheck.sh` killing the process and launchd `KeepAlive.Crashed=true` restart-loops. The "ready to serve" baseline is overwritten by the first `record_success(N)` from a real tool call. See [[feedback-oneiric-mcp-health-feed-warmup]] for the original postmortem. REQ-004 governs `/health` public access; pre-warm scope is orthogonal.
 7. **Smoke-test the migration**:
 
     ```bash
@@ -699,14 +698,17 @@ asyncio.run(launch(..., settings_path=settings_yaml_path))
 from oneiric.mcp.health import HealthFeedState  # consumer's own class, NOT mcp_common's
 
 warm = {
-    "settings": HealthFeedState(
-        name="settings",
-        entities_count=1,
+    # Pre-warm EVERY feed the consumer's /health aggregates. Each starts at
+    # cycles_total=1, healthy=true. Subsequent tool calls overwrite via
+    # feed.record_success(N). Leaving context/progress cold forces the
+    # aggregate to 503 and crashes the launch_with_healthcheck wrapper.
+    name: HealthFeedState(
+        name=name,
+        entities_count=0,  # "ready to serve" — no real data yet
         cycles_total=1,
-        ingester_running=True,
         last_updated_timestamp=time.time(),
-    ),
-    # leave `context` and `progress` at zero per REQ-004 — they populate via tool calls
+    )
+    for name in ("settings", "context", "progress")
 }
 
 def build_server():
@@ -860,7 +862,7 @@ If a migration must be reverted:
 ## See also
 
 - [[feedback-oneiric-cli-mcp-loader-gap]] — the bug oneiric's `mcp_start` originally had with missing `WorkflowTaskProcessor` wiring (dormant; fixed by REQ-009 in plan Phase 2.5c).
-- [[feedback-oneiric-mcp-health-feed-warmup]] — the 503-on-`cycles_total==0`-after-warm pattern that drove REQ-004's "pre-warm `settings` only, with `entities_count > 0`" decision.
+- [[feedback-oneiric-mcp-health-feed-warmup]] — the 503-on-`cycles_total==0`-after-warm pattern that drove the original "pre-warm `settings` only" design. REQ-004 governs `/health` public access; pre-warm scope is orthogonal. The corrected wrapper pre-warms EVERY feed with `entities_count=0`, providing a "ready to serve" baseline that tool calls then overwrite.
 - [[feedback-mcp-common-version-bump-is-user]] — version bumps + PyPI publish are user-owned; this plan and cookbook document migration shape only.
 - [[feedback-mcp-launcher-cookbook-gaps-2026-09-26]] — the 9 cross-cutting traps (A-I) surfaced by Phase 4a/4b discovery investigations. Read this before treating any Example below as ground truth.
 - `docs/plans/2026-09-26-mcp-launcher-standardization.md` in mahavishnu — the parent plan; cross-references REQ-001..016 throughout this cookbook.
