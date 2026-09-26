@@ -149,7 +149,7 @@ def wait_for_http(url: str, timeout: float = 20.0) -> tuple[int, str]:
             body = ""
             try:
                 body = exc.read().decode("utf-8", errors="replace")
-            except Exception as read_exc:  # noqa: BLE001
+            except Exception as read_exc:
                 # HTTPError.read() can fail (e.g. chunked transfer error); the
                 # status code is what matters for the smoke probe. Keep going.
                 print(f"warning: could not read HTTP error body: {read_exc}")
@@ -236,7 +236,9 @@ def main() -> int:
             except json.JSONDecodeError:
                 parsed = body
 
-            joined = json.dumps(parsed) if isinstance(parsed, (dict, list)) else str(parsed)
+            joined = (
+                json.dumps(parsed) if isinstance(parsed, (dict, list)) else str(parsed)
+            )
 
             expected = f'"launcher": "mcp_common.server.launcher@{version}"'
             if expected not in joined:

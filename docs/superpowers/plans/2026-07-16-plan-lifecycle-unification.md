@@ -4,8 +4,7 @@ role: implementation
 date: 2026-07-16
 last_reviewed: 2026-07-16
 superseded_by: null
-blocks_on:
-  - docs/schemas/document-frontmatter-v1.md
+blocks_on: []
 topic: convergence-control-plane
 ---
 

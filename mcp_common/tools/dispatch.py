@@ -176,7 +176,7 @@ async def _apply_tool_profile_async(
 
     for item in groups:
         if callable(item):
-            await _maybe_await(item(server))  # ty: ignore[call-top-callable, invalid-argument-type]
+            await _maybe_await(item(server))  # ty: ignore[invalid-argument-type]
         elif isinstance(item, str):
             fn = registration_map.get(item)
             if fn is None:

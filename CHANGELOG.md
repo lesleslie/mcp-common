@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.29.0] - 2026-09-26
+
+### Documentation
+
+- mcp-common: Add Trap L (venv bootstrap) to launcher cookbook
+- mcp-common: Add Traps J + K + G clarification to launcher cookbook
+- mcp-common: Correct Trap K to reflect pre-warm-every-feed design
+- mcp-common: Refresh Trap L citations to actual landed commits
+- mcp-common: Trap L bootstrap uses site.addsitedir to handle editable-install .pth files
+- mcp-common: Trap L bootstrap uses sys.path.insert instead of os.execvp (symlink-aliasing fix)
+
 ## [0.28.0] - 2026-09-26
 
 ### Added
