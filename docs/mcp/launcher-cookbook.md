@@ -819,9 +819,8 @@ the venv root, the wrapper is already running in the venv (e.g.
 `uv run scripts/launch_mcp.py`) and the guard skips the prepend. When
 `sys.prefix` is Homebrew's cellar (`/usr/local/Cellar/python@3.14/...`), the
 prepend runs and `mcp_common` becomes importable. Verified live in
-`mahavishnu/scripts/launch_mcp.py` (commit `fdfad5ac`; the `site.addsitedir`
-follow-up is staged in the working tree but not yet committed at plan-write
-time) and `oneiric/scripts/launch_mcp.py` (commit `f9d9edb`).
+`mahavishnu/scripts/launch_mcp.py` (commits `fdfad5ac` then `3df26da6`) and
+`oneiric/scripts/launch_mcp.py` (commits `e62c667` then `f9d9edb`).
 
 **Path safety**: `_REPO_ROOT` is computed RELATIVE to the script's `__file__`
 location — no hardcoded `/Users/les/...` absolute paths (per
