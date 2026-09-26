@@ -154,17 +154,22 @@ def main() -> int:
 """Launch wrapper for the Oneiric FastMCP server (mcp-common launcher edition)."""
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
 # Venv bootstrap — see Trap L. When invoked from system python (e.g. via
-# launchd, which has a $PATH without the repo's .venv), re-exec into the
-# repo's venv python so `mcp_common` (a venv-only dep) is importable.
+# launchd, which has a $PATH without the repo's .venv), the wrapper's
+# `from mcp_common.server import launch` would fail because mcp_common
+# is a venv-only dep. Prepend the venv's site-packages to sys.path.
 _REPO_ROOT = Path(__file__).resolve().parent.parent
-_VENV_PYTHON = _REPO_ROOT / ".venv" / "bin" / "python"
-if Path(sys.executable).resolve() != _VENV_PYTHON.resolve():
-    os.execvp(str(_VENV_PYTHON), [str(_VENV_PYTHON), __file__, *sys.argv[1:]])
+_VENV_SITE_PACKAGES = _REPO_ROOT / ".venv" / "lib" / f"python{sys.version_info.major}.{sys.version_info.minor}" / "site-packages"
+try:
+    _VENV_SITE_PACKAGES.relative_to(Path(sys.prefix))
+    _IN_VENV = True
+except ValueError:
+    _IN_VENV = False
+if not _IN_VENV and _VENV_SITE_PACKAGES.is_dir():
+    sys.path.insert(0, str(_VENV_SITE_PACKAGES))
 
 import argparse
 import asyncio
@@ -305,17 +310,22 @@ def main() -> int:
 """Launch wrapper for the Mahavishnu MCP server (mcp-common launcher edition)."""
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
 # Venv bootstrap — see Trap L. When invoked from system python (e.g. via
-# launchd, which has a $PATH without the repo's .venv), re-exec into the
-# repo's venv python so `mcp_common` (a venv-only dep) is importable.
+# launchd, which has a $PATH without the repo's .venv), the wrapper's
+# `from mcp_common.server import launch` would fail because mcp_common
+# is a venv-only dep. Prepend the venv's site-packages to sys.path.
 _REPO_ROOT = Path(__file__).resolve().parent.parent
-_VENV_PYTHON = _REPO_ROOT / ".venv" / "bin" / "python"
-if Path(sys.executable).resolve() != _VENV_PYTHON.resolve():
-    os.execvp(str(_VENV_PYTHON), [str(_VENV_PYTHON), __file__, *sys.argv[1:]])
+_VENV_SITE_PACKAGES = _REPO_ROOT / ".venv" / "lib" / f"python{sys.version_info.major}.{sys.version_info.minor}" / "site-packages"
+try:
+    _VENV_SITE_PACKAGES.relative_to(Path(sys.prefix))
+    _IN_VENV = True
+except ValueError:
+    _IN_VENV = False
+if not _IN_VENV and _VENV_SITE_PACKAGES.is_dir():
+    sys.path.insert(0, str(_VENV_SITE_PACKAGES))
 
 import asyncio
 import signal
@@ -532,17 +542,22 @@ def _run_mcp_server(mcp_app, mcp_config, http_mode) -> None:
 # crackerjack/scripts/launch_mcp.py (planned per Phase 4a Task 4a.2)
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
 # Venv bootstrap — see Trap L. When invoked from system python (e.g. via
-# launchd, which has a $PATH without the repo's .venv), re-exec into the
-# repo's venv python so `mcp_common` (a venv-only dep) is importable.
+# launchd, which has a $PATH without the repo's .venv), the wrapper's
+# `from mcp_common.server import launch` would fail because mcp_common
+# is a venv-only dep. Prepend the venv's site-packages to sys.path.
 _REPO_ROOT = Path(__file__).resolve().parent.parent
-_VENV_PYTHON = _REPO_ROOT / ".venv" / "bin" / "python"
-if Path(sys.executable).resolve() != _VENV_PYTHON.resolve():
-    os.execvp(str(_VENV_PYTHON), [str(_VENV_PYTHON), __file__, *sys.argv[1:]])
+_VENV_SITE_PACKAGES = _REPO_ROOT / ".venv" / "lib" / f"python{sys.version_info.major}.{sys.version_info.minor}" / "site-packages"
+try:
+    _VENV_SITE_PACKAGES.relative_to(Path(sys.prefix))
+    _IN_VENV = True
+except ValueError:
+    _IN_VENV = False
+if not _IN_VENV and _VENV_SITE_PACKAGES.is_dir():
+    sys.path.insert(0, str(_VENV_SITE_PACKAGES))
 
 import asyncio
 import signal
@@ -729,8 +744,19 @@ system Python, then `os.execvp`'d into the venv Python before importing
 `mcp_common`. The new launcher-based wrappers lost this hop when they replaced
 the `os.execvp` call with the `launch()` call.
 
-**Fix** — add a self-bootstrapping `os.execvp` block at the top of every
-wrapper, BEFORE any non-stdlib imports:
+**Why `os.execvp` is fragile (the bug behind this patch)**: Homebrew Python
+installs link `/usr/local/bin/python3` AND `<repo>/.venv/bin/python` to the same
+cellar binary. When `Path(sys.executable).resolve() != _VENV_PYTHON.resolve()`
+runs in that environment, BOTH paths resolve to the same target, the guard
+silently reports "already in venv", the `os.execvp` is skipped, and `mcp_common`
+is still not importable. The `os.execvp` shape was therefore broken on every
+Homebrew Python install — only `uv run scripts/launch_mcp.py` (which puts the
+venv python on `$PATH` first) happened to work, masking the bug.
+
+**Fix** — prepend the venv's `site-packages` to `sys.path` at the top of every
+wrapper, BEFORE any non-stdlib imports. Guard on `sys.prefix` (the venv root,
+which IS distinct between venv and Homebrew system python) instead of
+`sys.executable`:
 
 ```python
 #!/usr/bin/env python3
@@ -738,19 +764,29 @@ wrapper, BEFORE any non-stdlib imports:
 
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
-_VENV_PYTHON = _REPO_ROOT / ".venv" / "bin" / "python"
-if Path(sys.executable).resolve() != _VENV_PYTHON.resolve():
-    os.execvp(str(_VENV_PYTHON), [str(_VENV_PYTHON), __file__, *sys.argv[1:]])
+_VENV_SITE_PACKAGES = _REPO_ROOT / ".venv" / "lib" / f"python{sys.version_info.major}.{sys.version_info.minor}" / "site-packages"
+try:
+    _VENV_SITE_PACKAGES.relative_to(Path(sys.prefix))
+    _IN_VENV = True
+except ValueError:
+    _IN_VENV = False
+if not _IN_VENV and _VENV_SITE_PACKAGES.is_dir():
+    sys.path.insert(0, str(_VENV_SITE_PACKAGES))
 ```
 
-**Idempotency**: the guard `Path(sys.executable).resolve() != _VENV_PYTHON.resolve()`
-ensures no infinite-loop when invoked from the venv already (e.g.
-`uv run scripts/launch_mcp.py`).
+**Idempotency**: the guard checks `sys.prefix` (the venv root), NOT
+`sys.executable` (which would alias to the same Homebrew cellar binary as
+system python and falsely report "already in venv"). When `sys.prefix` is inside
+the venv root, the wrapper is already running in the venv (e.g.
+`uv run scripts/launch_mcp.py`) and the guard skips the prepend. When
+`sys.prefix` is Homebrew's cellar (`/usr/local/Cellar/python@3.14/...`), the
+prepend runs and `mcp_common` becomes importable. Verified live in
+`mahavishnu/scripts/launch_mcp.py` (commit `fdfad5ac`) and
+`oneiric/scripts/launch_mcp.py` (commit `e62c667`).
 
 **Path safety**: `_REPO_ROOT` is computed RELATIVE to the script's `__file__`
 location — no hardcoded `/Users/les/...` absolute paths (per
