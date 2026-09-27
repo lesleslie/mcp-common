@@ -219,7 +219,7 @@ async def _baseline_discover_tools(
     """
     try:
         registered_names = {t.name for t in await server.list_tools()}
-    except (RuntimeError, AttributeError, ValueError, TypeError):
+    except RuntimeError, AttributeError, ValueError, TypeError:
         logger.exception("discover_tools: server.list_tools failed")
         registered_names = set()
 
