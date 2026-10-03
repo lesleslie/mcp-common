@@ -7,7 +7,7 @@ four local schemas (akosha, mahavishnu, session-buddy, crackerjack) no
 longer re-define the same logic — they re-export from this module.
 
 Refs:
-- docs/superpowers/specs/2026-09-14-dhara-mcp-decomposition-design.md §4.11
+- docs/specs/2026-09-14-dhara-mcp-decomposition-design.md §4.11
 - docs/audits/2026-09-15-decomposition-final-review.md §2.1 W4
 """
 

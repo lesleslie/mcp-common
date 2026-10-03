@@ -263,4 +263,4 @@ ______________________________________________________________________
 - iTerm2 AppleScript Documentation: https://iterm2.com/documentation-scripting.html
 - Swift Implementation: mdinject (AppleScriptBridge)
 - Python Implementation: Mahavishnu (`mahavishnu/terminal/adapters/iterm2.py`)
-- Design Document: `docs/superpowers/specs/2026-05-23-unified-iterm2-applescript-design.md`
+- Design Document: `docs/specs/2026-05-23-unified-iterm2-applescript-design.md`

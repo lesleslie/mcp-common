@@ -6,7 +6,7 @@ this module to enumerate agents/skills without depending on the source
 component directly.
 
 Refs:
-- docs/superpowers/specs/2026-09-14-dhara-mcp-decomposition-design.md §4.11
+- docs/specs/2026-09-14-dhara-mcp-decomposition-design.md §4.11
 - docs/audits/2026-09-15-decomposition-final-review.md §2.1 W4
 """
 

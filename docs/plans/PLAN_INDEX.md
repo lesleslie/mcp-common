@@ -50,7 +50,7 @@ and reproduced here for index readability.
 | Bodai-wide observability surface | `docs/plans/2026-07-11-phase-6-bodai-observability.md` |
 | Repo-local decisions index | `.claude/decisions/README.md` |
 | Follow-up tracker index | `docs/followups/README.md` |
-| Source plan defining this index | `docs/superpowers/plans/2026-07-16-plan-lifecycle-unification.md` |
+| Source plan defining this index | `docs/plans/2026-07-16-plan-lifecycle-unification.md` |
 
 ## Review Entry Points
 
@@ -89,17 +89,17 @@ One table per store. Entries are sorted by `date` DESC, with ties broken by path
 |---|---|---|---|---|---|
 | _no entries with valid frontmatter_ | | | | | |
 
-### Superpowers Specs (`docs/superpowers/specs/`)
+### Superpowers Specs (`docs/specs/`)
 
 | Path | Date | Status | Role | Topic | Title |
 |---|---|---|---|---|---|
 | _no entries with valid frontmatter_ | | | | | |
 
-### Superpowers Plans (`docs/superpowers/plans/`)
+### Superpowers Plans (`docs/plans/`)
 
 | Path | Date | Status | Role | Topic | Title |
 |---|---|---|---|---|---|
-| [`docs/superpowers/plans/2026-07-16-plan-lifecycle-unification.md`](../superpowers/plans/2026-07-16-plan-lifecycle-unification.md) | 2026-07-16 | `draft` | `implementation` | `convergence-control-plane` | Plan Lifecycle Unification — Frontmatter Standardization Across Documentation Stores |
+| [`docs/plans/2026-07-16-plan-lifecycle-unification.md`](../plans/2026-07-16-plan-lifecycle-unification.md) | 2026-07-16 | `draft` | `implementation` | `convergence-control-plane` | Plan Lifecycle Unification — Frontmatter Standardization Across Documentation Stores |
 
 ### Repo-local Decisions (`.claude/decisions/`)
 

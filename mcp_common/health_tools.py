@@ -6,7 +6,7 @@ exposes helpers that tools call to register their feeds and to format
 the aggregate health response.
 
 Refs:
-- docs/superpowers/specs/2026-09-14-dhara-mcp-decomposition-design.md §4.8
+- docs/specs/2026-09-14-dhara-mcp-decomposition-design.md §4.8
 - .claude/decisions/mcp-backend-wiring-discipline.md
 - docs/audits/2026-09-15-decomposition-final-review.md §2.1 W4
 """

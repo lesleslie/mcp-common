@@ -4,7 +4,7 @@ date: 2026-09-07
 status: implemented
 audience: mcp-common contributors, sibling-server maintainers
 related:
-  - https://github.com/lesleslie/mahavishnu/blob/main/docs/superpowers/specs/2026-09-06-mcp-common-auth-primitives-design.md (canonical spec)
+  - https://github.com/lesleslie/mahavishnu/blob/main/docs/specs/2026-09-06-mcp-common-auth-primitives-design.md (canonical spec)
 ---
 
 # mcp-common Auth Design
@@ -13,7 +13,7 @@ related:
 
 `mcp_common/auth/` provides authentication primitives for Bodai MCP servers. It
 implements the design documented at
-`mahavishnu/docs/superpowers/specs/2026-09-06-mcp-common-auth-primitives-design.md`.
+`mahavishnu/docs/specs/2026-09-06-mcp-common-auth-primitives-design.md`.
 
 The package is **internal** — consumers should import from `mcp_common.auth.*`
 directly (deep imports). Public-API graduation (re-export from `mcp_common/__init__.py`)
