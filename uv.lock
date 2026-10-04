@@ -2180,7 +2180,7 @@ wheels = [
 
 [[package]]
 name = "mcp-common"
-version = "0.30.2"
+version = "0.30.3"
 source = { editable = "." }
 dependencies = [
     { name = "cryptography" },
@@ -2666,7 +2666,7 @@ wheels = [
 
 [[package]]
 name = "oneiric"
-version = "0.26.3"
+version = "0.26.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiobreaker" },
@@ -2688,9 +2688,9 @@ dependencies = [
     { name = "typer" },
     { name = "watchfiles" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/16/3a/7143c15cf2bc58032115e0b45b4793a7c3879e21fbb70d49d2464403ff89/oneiric-0.26.3.tar.gz", hash = "sha256:53dd8c2545075fe919044b8923b6f08d317b87a4a66a0121141894d906d4710a", size = 1991974, upload-time = "2026-10-03T06:09:53.081Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ef/17/47649d0e836813f8dce1e3e830bd155161b7a09d59d61bd15a79d459027e/oneiric-0.26.4.tar.gz", hash = "sha256:eba6436385b01690f28d1c679bbb16aa39250c48a61653353b51baeb028f2b92", size = 1760770, upload-time = "2026-10-04T01:04:34.033Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d1/f3/831e79cd6e690df650634944eedb5bc93d56f0725c2d9733345920b1416c/oneiric-0.26.3-py3-none-any.whl", hash = "sha256:62d37c68c72e0341f91da78af34c3e2ec205688be0b4bf8b59ac70dd070ae70d", size = 434390, upload-time = "2026-10-03T06:09:51.033Z" },
+    { url = "https://files.pythonhosted.org/packages/05/cc/18a0d7b58afa861ad1640ddf2322d0bdc866c6009d0c173944aa968b41c1/oneiric-0.26.4-py3-none-any.whl", hash = "sha256:f3ee784f9cd413477f5cfa072b085ae8794b5cdc0b07ef5b45618cfcad2557c3", size = 434357, upload-time = "2026-10-04T01:04:32.211Z" },
 ]
 
 [[package]]

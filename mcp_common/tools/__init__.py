@@ -16,13 +16,19 @@ Usage:
 from __future__ import annotations
 
 from mcp_common.tools.descriptions import trim_description
-from mcp_common.tools.dispatch import ALL_TOOLS, InvalidProfileError, apply_tool_profile
+from mcp_common.tools.dispatch import (
+    ALL_TOOLS,
+    InvalidProfileError,
+    RegisterFn,
+    apply_tool_profile,
+)
 from mcp_common.tools.profiles import MANDATORY_TOOLS, ToolProfile
 
 __all__ = [
     "ALL_TOOLS",
     "MANDATORY_TOOLS",
     "InvalidProfileError",
+    "RegisterFn",
     "ToolProfile",
     "apply_tool_profile",
     "trim_description",

@@ -39,8 +39,14 @@ logger = get_logger(__name__)
 # Expressed as a Protocol (not a TypeAlias on Callable) so ty tracks the
 # return type through the call; inline ``Callable[[FastMCP], ... | None]``
 # causes ty to widen the return to ``object`` at the call site.
-class _RegisterFn(Protocol):
-    def __call__(self, server: FastMCP) -> Awaitable[None] | None: ...
+#
+# Public API: ``registration_map`` is part of the helper's signature, so
+# this Protocol is part of the contract callers must satisfy. ``server``
+# is positional-only (the ``/``) so any callable whose first positional
+# parameter is a FastMCP satisfies the Protocol regardless of the
+# parameter name (``mcp``, ``app``, ``mcp_server`` all qualify).
+class RegisterFn(Protocol):
+    def __call__(self, server: FastMCP, /) -> Awaitable[None] | None: ...
 
 
 class ALL_TOOLS:
@@ -128,9 +134,9 @@ async def _default_discovery(server: FastMCP, filter_query: str | None) -> list[
 async def _select_profile_groups(
     server: FastMCP,
     profile: ToolProfile,
-    registrations: dict[ToolProfile, list[str | _RegisterFn] | type[ALL_TOOLS]],
-    register_all_fn: _RegisterFn | None,
-) -> list[str | _RegisterFn]:
+    registrations: dict[ToolProfile, list[str | RegisterFn] | type[ALL_TOOLS]],
+    register_all_fn: RegisterFn | None,
+) -> list[str | RegisterFn]:
     """Resolve the list of (callable | group-name) registrations for the active profile.
 
     FULL + ALL_TOOLS short-circuits to ``register_all_fn``; FULL with a list
@@ -161,8 +167,8 @@ async def _apply_tool_profile_async(
     *,
     profile: ToolProfile,
     registrations: dict[ToolProfile, list[str | Callable] | type[ALL_TOOLS]],
-    registration_map: dict[str, _RegisterFn],
-    register_all_fn: _RegisterFn | None,
+    registration_map: dict[str, RegisterFn],
+    register_all_fn: RegisterFn | None,
     mandatory_groups: set[str],
     essential_tool_names: set[str],
     discovery_fn: Callable[[FastMCP, str | None], Awaitable[list[dict]]] | None,
@@ -179,7 +185,7 @@ async def _apply_tool_profile_async(
     Set `essential_tool_names=set()` to opt out of the subset check.
     """
     # Step 1: Per-profile registration
-    groups: list[str | _RegisterFn] = await _select_profile_groups(
+    groups: list[str | RegisterFn] = await _select_profile_groups(
         server, profile, registrations, register_all_fn
     )
 
@@ -193,11 +199,11 @@ async def _apply_tool_profile_async(
                 )
             await _maybe_await(fn(server))
         else:
-            # After isinstance(str) is exhausted, only _RegisterFn remains
+            # After isinstance(str) is exhausted, only RegisterFn remains
             # in the union. Bind a local so ty resolves the Protocol call
             # (narrowing via ``callable(item)`` produces a degenerate
             # ``str & Top[callable]`` intersection ty refuses to call).
-            register_fn: _RegisterFn = cast(_RegisterFn, item)
+            register_fn: RegisterFn = cast(RegisterFn, item)
             await _maybe_await(register_fn(server))
 
     # Step 2a: MANDATORY groups (registration_map keys registered at every profile).
@@ -265,8 +271,8 @@ def apply_tool_profile(
     *,
     profile_env_var: str,
     registrations: dict[ToolProfile, list[str | Callable] | type[ALL_TOOLS]],
-    registration_map: dict[str, _RegisterFn],
-    register_all_fn: _RegisterFn | None = None,
+    registration_map: dict[str, RegisterFn],
+    register_all_fn: RegisterFn | None = None,
     mandatory_groups: set[str] = MANDATORY_GROUPS,
     essential_tool_names: set[str] = MANDATORY_TOOLS,
     mandatory_tools: set[str] | None = None,
@@ -349,8 +355,8 @@ async def _apply_tool_profile(
     *,
     profile_env_var: str,
     registrations: dict[ToolProfile, list[str | Callable] | type[ALL_TOOLS]],
-    registration_map: dict[str, _RegisterFn],
-    register_all_fn: _RegisterFn | None = None,
+    registration_map: dict[str, RegisterFn],
+    register_all_fn: RegisterFn | None = None,
     mandatory_groups: set[str] = MANDATORY_GROUPS,
     essential_tool_names: set[str] = MANDATORY_TOOLS,
     mandatory_tools: set[str] | None = None,
