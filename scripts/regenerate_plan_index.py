@@ -81,7 +81,6 @@ STORE_LABELS: dict[str, str] = {
     "docs/adr/": "Architecture Decision Records (`docs/adr/`)",
     "docs/plans/": "Plans & Specifications (`docs/plans/`)",
     "docs/specs/": "Superpowers Specs (`docs/specs/`)",
-    "docs/plans/": "Superpowers Plans (`docs/plans/`)",
     ".claude/decisions/": "Repo-local Decisions (`.claude/decisions/`)",
     "docs/followups/": "Follow-up Notes (`docs/followups/`)",
 }
@@ -239,9 +238,9 @@ def _entry_from_file(
         rel=rel,
         store=store,
         date=date,
-        status=status,
-        role=role,
-        topic=topic,
+        status=status,  # ty: ignore[invalid-argument-type]
+        role=role,  # ty: ignore[invalid-argument-type]
+        topic=topic,  # ty: ignore[invalid-argument-type]
         title=title,
     )
 

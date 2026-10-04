@@ -1,15 +1,27 @@
-# Mahavishnu configuration
+# Mahavishnu configuration (mcp-common fallback)
+#
+# This file is the mcp-common FALLBACK for components that don't ship
+# their own settings. Mahavishnu's own settings/mahavishnu.yaml takes
+# precedence — see CLAUDE.md § "Oneiric layered config".
+#
+# The `adapters:` block that used to live here (prefect/llamaindex/agno
+# all set to false) was removed 2026-09-27 because (a) every Core
+# component ships its own settings, so this fallback was unreachable,
+# and (b) all-false defaults would silently disable any future
+# consumer that relied on mcp-common for fallback config.
+#
+# Layered config precedence:
+#   1. Environment variables (MAHAVISHNU_*)
+#   2. ~/.config/mahavishnu/local.yaml (XDG overlay)
+#   3. settings/mahavishnu.yaml (this repo's per-component defaults)
+#   4. THIS FILE (mcp-common fallback)
+#   5. Code defaults
+
 server_name: "Mahavishnu Orchestrator"
 cache_root: .oneiric_cache
 health_ttl_seconds: 60.0
 log_level: INFO
 repos_path: settings/repos.yaml
-
-# Disable adapters for now
-adapters:
-  prefect: false
-  llamaindex: false
-  agno: false
 
 qc:
   enabled: false
