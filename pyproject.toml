@@ -32,7 +32,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "oneiric>=0.26.3",
+    "oneiric>=0.26.4",
     "pydantic>=2.13.5",
     "pydantic-settings>=2.15.0",
     "psutil>=7.2.2",
@@ -43,7 +43,7 @@ dependencies = [
     "cryptography>=50.0.2",
     "websockets>=17.2",
     "httpx2>=2.13.1",
-    "fastmcp>=4.0.10",
+    "fastmcp>=4.0.11",
     # Phase 4 (2026-09-15): health aggregator metrics emission
     # (mcp_common.health.metrics.update_health_metrics). prometheus_client
     # is the canonical Prometheus exposition library; every Bodai MCP
@@ -283,7 +283,7 @@ max_complexity = 15
 # and openai deps directly in their own dependency-groups.
 [dependency-groups]
 dev = [
-    "crackerjack>=0.84.3",
+    "crackerjack>=0.85.0",
     "pytest-benchmark>=5.3.0",
     "respx>=0.23.1",
     "uv-bump>=0.6.0",
