@@ -1,0 +1,380 @@
+[
+  {
+    "complexity": 0,
+    "file_name": "health.py",
+    "function_name": "HealthCheckResponse::is_healthy",
+    "path": "health.py"
+  },
+  {
+    "complexity": 0,
+    "file_name": "health.py",
+    "function_name": "HealthCheckResponse::is_ready",
+    "path": "health.py"
+  },
+  {
+    "complexity": 0,
+    "file_name": "health.py",
+    "function_name": "HealthStatus::__str__",
+    "path": "health.py"
+  },
+  {
+    "complexity": 1,
+    "file_name": "health.py",
+    "function_name": "HealthCheckResponse::create",
+    "path": "health.py"
+  },
+  {
+    "complexity": 1,
+    "file_name": "health.py",
+    "function_name": "HealthCheckResponse::to_dict",
+    "path": "health.py"
+  },
+  {
+    "complexity": 2,
+    "file_name": "health.py",
+    "function_name": "HealthStatus::__gt__",
+    "path": "health.py"
+  },
+  {
+    "complexity": 2,
+    "file_name": "health.py",
+    "function_name": "HealthStatus::__lt__",
+    "path": "health.py"
+  },
+  {
+    "complexity": 3,
+    "file_name": "health.py",
+    "function_name": "ComponentHealth::to_dict",
+    "path": "health.py"
+  },
+  {
+    "complexity": 0,
+    "file_name": "exceptions.py",
+    "function_name": "APIKeyFormatError::__init__",
+    "path": "exceptions.py"
+  },
+  {
+    "complexity": 0,
+    "file_name": "exceptions.py",
+    "function_name": "APIKeyLengthError::__init__",
+    "path": "exceptions.py"
+  },
+  {
+    "complexity": 0,
+    "file_name": "exceptions.py",
+    "function_name": "APIKeyMissingError::__init__",
+    "path": "exceptions.py"
+  },
+  {
+    "complexity": 0,
+    "file_name": "exceptions.py",
+    "function_name": "DependencyMissingError::__init__",
+    "path": "exceptions.py"
+  },
+  {
+    "complexity": 0,
+    "file_name": "exceptions.py",
+    "function_name": "ServerConfigurationError::__init__",
+    "path": "exceptions.py"
+  },
+  {
+    "complexity": 0,
+    "file_name": "exceptions.py",
+    "function_name": "ServerInitializationError::__init__",
+    "path": "exceptions.py"
+  },
+  {
+    "complexity": 0,
+    "file_name": "weather_server.py",
+    "function_name": "main",
+    "path": "weather_server.py"
+  },
+  {
+    "complexity": 1,
+    "file_name": "weather_server.py",
+    "function_name": "get_current_weather",
+    "path": "weather_server.py"
+  },
+  {
+    "complexity": 5,
+    "file_name": "weather_server.py",
+    "function_name": "get_forecast",
+    "path": "weather_server.py"
+  },
+  {
+    "complexity": 0,
+    "file_name": "panels.py",
+    "function_name": "ServerPanels::separator",
+    "path": "panels.py"
+  },
+  {
+    "complexity": 0,
+    "file_name": "panels.py",
+    "function_name": "ServerPanels::simple_message",
+    "path": "panels.py"
+  },
+  {
+    "complexity": 0,
+    "file_name": "panels.py",
+    "function_name": "ServerPanels::warning_panel",
+    "path": "panels.py"
+  },
+  {
+    "complexity": 1,
+    "file_name": "panels.py",
+    "function_name": "ServerPanels::config_table",
+    "path": "panels.py"
+  },
+  {
+    "complexity": 1,
+    "file_name": "panels.py",
+    "function_name": "ServerPanels::feature_list",
+    "path": "panels.py"
+  },
+  {
+    "complexity": 1,
+    "file_name": "panels.py",
+    "function_name": "ServerPanels::warning",
+    "path": "panels.py"
+  },
+  {
+    "complexity": 2,
+    "file_name": "panels.py",
+    "function_name": "ServerPanels::error",
+    "path": "panels.py"
+  },
+  {
+    "complexity": 2,
+    "file_name": "panels.py",
+    "function_name": "ServerPanels::simple_table",
+    "path": "panels.py"
+  },
+  {
+    "complexity": 3,
+    "file_name": "panels.py",
+    "function_name": "ServerPanels::endpoint_panel",
+    "path": "panels.py"
+  },
+  {
+    "complexity": 3,
+    "file_name": "panels.py",
+    "function_name": "ServerPanels::info",
+    "path": "panels.py"
+  },
+  {
+    "complexity": 3,
+    "file_name": "panels.py",
+    "function_name": "ServerPanels::process_list",
+    "path": "panels.py"
+  },
+  {
+    "complexity": 4,
+    "file_name": "panels.py",
+    "function_name": "ServerPanels::status_panel",
+    "path": "panels.py"
+  },
+  {
+    "complexity": 6,
+    "file_name": "panels.py",
+    "function_name": "ServerPanels::startup_success",
+    "path": "panels.py"
+  },
+  {
+    "complexity": 6,
+    "file_name": "panels.py",
+    "function_name": "ServerPanels::status_table",
+    "path": "panels.py"
+  },
+  {
+    "complexity": 12,
+    "file_name": "panels.py",
+    "function_name": "ServerPanels::backups_table",
+    "path": "panels.py"
+  },
+  {
+    "complexity": 14,
+    "file_name": "panels.py",
+    "function_name": "ServerPanels::server_status_table",
+    "path": "panels.py"
+  },
+  {
+    "complexity": 1,
+    "file_name": "validation_mixin.py",
+    "function_name": "ValidationMixin::validate_credentials",
+    "path": "validation_mixin.py"
+  },
+  {
+    "complexity": 5,
+    "file_name": "validation_mixin.py",
+    "function_name": "ValidationMixin::_validate_password_strength",
+    "path": "validation_mixin.py"
+  },
+  {
+    "complexity": 5,
+    "file_name": "validation_mixin.py",
+    "function_name": "ValidationMixin::validate_min_length",
+    "path": "validation_mixin.py"
+  },
+  {
+    "complexity": 6,
+    "file_name": "validation_mixin.py",
+    "function_name": "ValidationMixin::_validate_password",
+    "path": "validation_mixin.py"
+  },
+  {
+    "complexity": 6,
+    "file_name": "validation_mixin.py",
+    "function_name": "ValidationMixin::_validate_username",
+    "path": "validation_mixin.py"
+  },
+  {
+    "complexity": 6,
+    "file_name": "validation_mixin.py",
+    "function_name": "ValidationMixin::validate_required_field",
+    "path": "validation_mixin.py"
+  },
+  {
+    "complexity": 7,
+    "file_name": "validation_mixin.py",
+    "function_name": "ValidationMixin::validate_one_of_required",
+    "path": "validation_mixin.py"
+  },
+  {
+    "complexity": 13,
+    "file_name": "validation_mixin.py",
+    "function_name": "ValidationMixin::validate_url_parts",
+    "path": "validation_mixin.py"
+  },
+  {
+    "complexity": 2,
+    "file_name": "base.py",
+    "function_name": "MCPBaseSettings::get_api_key_secure",
+    "path": "base.py"
+  },
+  {
+    "complexity": 2,
+    "file_name": "base.py",
+    "function_name": "MCPBaseSettings::validate_server_name",
+    "path": "base.py"
+  },
+  {
+    "complexity": 4,
+    "file_name": "base.py",
+    "function_name": "MCPBaseSettings::get_data_dir",
+    "path": "base.py"
+  },
+  {
+    "complexity": 4,
+    "file_name": "base.py",
+    "function_name": "MCPServerSettings::validate_base_url",
+    "path": "base.py"
+  },
+  {
+    "complexity": 6,
+    "file_name": "base.py",
+    "function_name": "MCPBaseSettings::get_masked_key",
+    "path": "base.py"
+  },
+  {
+    "complexity": 8,
+    "file_name": "base.py",
+    "function_name": "MCPBaseSettings::get_api_key",
+    "path": "base.py"
+  },
+  {
+    "complexity": 13,
+    "file_name": "base.py",
+    "function_name": "MCPBaseSettings::validate_api_keys_at_startup",
+    "path": "base.py"
+  },
+  {
+    "complexity": 0,
+    "file_name": "api_keys.py",
+    "function_name": "APIKeyPattern::matches",
+    "path": "api_keys.py"
+  },
+  {
+    "complexity": 0,
+    "file_name": "api_keys.py",
+    "function_name": "create_api_key_validator",
+    "path": "api_keys.py"
+  },
+  {
+    "complexity": 1,
+    "file_name": "api_keys.py",
+    "function_name": "APIKeyValidator::validate",
+    "path": "api_keys.py"
+  },
+  {
+    "complexity": 1,
+    "file_name": "api_keys.py",
+    "function_name": "validate_api_key_format",
+    "path": "api_keys.py"
+  },
+  {
+    "complexity": 2,
+    "file_name": "api_keys.py",
+    "function_name": "APIKeyValidator::__init__",
+    "path": "api_keys.py"
+  },
+  {
+    "complexity": 3,
+    "file_name": "api_keys.py",
+    "function_name": "APIKeyValidator::mask_key",
+    "path": "api_keys.py"
+  },
+  {
+    "complexity": 7,
+    "file_name": "api_keys.py",
+    "function_name": "APIKeyValidator::_validate_key_missing",
+    "path": "api_keys.py"
+  },
+  {
+    "complexity": 7,
+    "file_name": "api_keys.py",
+    "function_name": "APIKeyValidator::_validate_pattern_match",
+    "path": "api_keys.py"
+  },
+  {
+    "complexity": 8,
+    "file_name": "api_keys.py",
+    "function_name": "validate_api_key_startup",
+    "path": "api_keys.py"
+  },
+  {
+    "complexity": 3,
+    "file_name": "sanitization.py",
+    "function_name": "sanitize_output",
+    "path": "sanitization.py"
+  },
+  {
+    "complexity": 4,
+    "file_name": "sanitization.py",
+    "function_name": "sanitize_dict_for_logging",
+    "path": "sanitization.py"
+  },
+  {
+    "complexity": 6,
+    "file_name": "sanitization.py",
+    "function_name": "mask_sensitive_data",
+    "path": "sanitization.py"
+  },
+  {
+    "complexity": 7,
+    "file_name": "sanitization.py",
+    "function_name": "sanitize_input",
+    "path": "sanitization.py"
+  },
+  {
+    "complexity": 9,
+    "file_name": "sanitization.py",
+    "function_name": "_sanitize_string",
+    "path": "sanitization.py"
+  },
+  {
+    "complexity": 9,
+    "file_name": "sanitization.py",
+    "function_name": "sanitize_path",
+    "path": "sanitization.py"
+  }
+]
