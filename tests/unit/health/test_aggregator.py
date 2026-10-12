@@ -300,3 +300,89 @@ def test_aggregate_decay_disabled_never_escalates_to_degraded() -> None:
     assert snap["checks"]["local_traces"]["healthy"] is True
     # No DEGRADED-elevated reason codes surface.
     assert ReasonCode.ERROR_WITHIN_HALFLIFE not in snap["checks"]["local_traces"]["reason_codes"]
+
+
+# ---------------------------------------------------------------------------
+# Plan 2 Phase E2 Task 5 — full HealthFeedState per feed on the wire
+# ---------------------------------------------------------------------------
+#
+# Per the Phase E2 plan §6.5, the canonical /health envelope must surface
+# four mandatory fields per feed (the same four that
+# ``mcp-backend-wiring-discipline.md §3`` mandates for every registered
+# tool's data feed): ``entities_count``, ``last_updated_timestamp``,
+# ``cycles_total``, ``errors_total``. The aggregator is the canonical
+# emitter, so it must populate them from the input ``HealthFeedState``.
+#
+# This test pins the contract at the unit level; the
+# ``tests/integration/test_health_feed_state_aggregated.py`` in the
+# oneiric repo pins it end-to-end across the 3 component /health routes.
+# ---------------------------------------------------------------------------
+
+
+def test_aggregator_includes_full_healthfeedstate_per_feed() -> None:
+    """Each ``checks[feed_name]`` exposes the 4 plan-§6.5 fields verbatim.
+
+    The 3 legacy fields (``status`` / ``healthy`` / ``reason_codes``) are
+    preserved; the 4 plan-expected fields are added with values
+    copied directly from the input ``HealthFeedState``. A future refactor
+    that drops one of the 4 fields breaks the wiring-discipline contract.
+    """
+    now = time.time()
+    states = {
+        "cache": HealthFeedState(
+            entities_count=42,
+            cycles_total=7,
+            errors_total=0,
+            last_updated_timestamp=now,
+        ),
+        "warm": HealthFeedState(
+            entities_count=3,
+            cycles_total=2,
+            errors_total=1,
+            last_updated_timestamp=now - 10.0,
+        ),
+    }
+
+    snap = aggregate_feed_states(states)
+
+    plan_expected_fields = {
+        "entities_count",
+        "last_updated_timestamp",
+        "cycles_total",
+        "errors_total",
+    }
+    for feed_name, state in states.items():
+        check = snap["checks"][feed_name]
+        # 4 plan-expected fields present with values from the input state.
+        for field in plan_expected_fields:
+            assert field in check, (
+                f"aggregator dropped {field} from {feed_name} check "
+                f"(Plan 2 Phase E2 §6.5 / mcp-backend-wiring-discipline §3)"
+            )
+            assert check[field] == getattr(state, field), (
+                f"aggregator {field} mismatch on {feed_name}: "
+                f"check has {check[field]!r}, state has {getattr(state, field)!r}"
+            )
+        # Legacy 3 fields still present.
+        assert "status" in check
+        assert "healthy" in check
+        assert "reason_codes" in check
+
+
+def test_aggregator_default_healthfeedstate_fields_serialize_as_none_zero() -> None:
+    """Default-valued ``HealthFeedState`` fields round-trip cleanly.
+
+    A ``HealthFeedState()`` with no producer activity yet (``entities_count=0``,
+    ``last_updated_timestamp=None``) must surface the same values through
+    the aggregator. Catches a future regression that loses the
+    ``None`` ↔ ``0`` distinction (operators rely on the difference to
+    spot producers that have not yet completed a cycle).
+    """
+    state = HealthFeedState()  # all defaults
+    snap = aggregate_feed_states({"never_cycled": state})
+
+    check = snap["checks"]["never_cycled"]
+    assert check["entities_count"] == 0
+    assert check["cycles_total"] == 0
+    assert check["errors_total"] == 0
+    assert check["last_updated_timestamp"] is None

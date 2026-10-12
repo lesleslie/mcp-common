@@ -23,11 +23,29 @@ from mcp_common.health.feed import (
 
 
 class FeedSnapshot(TypedDict):
-    """Per-feed verdict inside :data:`HealthSnapshot.checks`."""
+    """Per-feed verdict inside :data:`HealthSnapshot.checks`.
+
+    The 3 ``status``/``healthy``/``reason_codes`` fields are the legacy
+    aggregator verdict (kept for backward compatibility — pre-Plan-2
+    consumers reading ``snap["checks"][name]["status"]`` keep working).
+
+    The 4 plan-§6.5 fields (``entities_count``, ``last_updated_timestamp``,
+    ``cycles_total``, ``errors_total``) are the same 4 that
+    ``mcp-backend-wiring-discipline.md §3`` mandates for every
+    registered tool's data feed. They are copied verbatim from the
+    input :class:`~mcp_common.health.feed.HealthFeedState` so the
+    aggregator output is the canonical wire shape for ``/health``
+    consumers across the 3 Bodai components.
+    """
 
     status: StatusValue
     healthy: bool
     reason_codes: list[ReasonCode]
+    # Plan 2 Phase E2 §6.5: full HealthFeedState per feed on the wire.
+    entities_count: int
+    last_updated_timestamp: float | None
+    cycles_total: int
+    errors_total: int
 
 
 class HealthSnapshot(TypedDict):
@@ -89,6 +107,14 @@ def aggregate_feed_states(
             "status": status,
             "healthy": healthy,
             "reason_codes": codes.copy(),
+            # Plan 2 Phase E2 §6.5: copy the 4 plan-mandated fields from
+            # the input HealthFeedState so /health consumers see the
+            # full data feed shape (entities_count / last_updated_timestamp
+            # / cycles_total / errors_total) without a second read.
+            "entities_count": state.entities_count,
+            "last_updated_timestamp": state.last_updated_timestamp,
+            "cycles_total": state.cycles_total,
+            "errors_total": state.errors_total,
         }
 
         if status > worst_status:
