@@ -1,6 +1,6 @@
 # Plan Index
 
-_Regenerated 2026-10-04 by `crackerjack.tools.plan_index_sync` (fast-hook)._
+_Regenerated 2026-10-14 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 
 ### Docs: adr
 
@@ -14,17 +14,17 @@ _Regenerated 2026-10-04 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 |---|---|---|---|---|---|
 | [`docs/plans/2026-07-16-plan-lifecycle-unification.md`](2026-07-16-plan-lifecycle-unification.md) | 2026-07-16 | `draft` | `implementation` | `convergence-control-plane` | Plan Lifecycle Unification — Frontmatter Standardization Across Documentation Stores |
 
-### Docs: superpowers/specs
+### Docs: specs
 
 | Path | Date | Status | Role | Topic | Title |
 |---|---|---|---|---|---|
 | _no entries with valid frontmatter_ | | | | | |
 
-### Docs: superpowers/plans
+### Docs: plans
 
 | Path | Date | Status | Role | Topic | Title |
 |---|---|---|---|---|---|
-| _no entries with valid frontmatter_ | | | | | |
+| [`docs/plans/2026-07-16-plan-lifecycle-unification.md`](2026-07-16-plan-lifecycle-unification.md) | 2026-07-16 | `draft` | `implementation` | `convergence-control-plane` | Plan Lifecycle Unification — Frontmatter Standardization Across Documentation Stores |
 
 ### .claude/decisions
 
@@ -44,8 +44,8 @@ _Regenerated 2026-10-04 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 | Role \\ Lifecycle | draft | active | partial | shipped | complete | Total |
 |---|---|---|---|---|---|---|
 | `canonical` | · | 2 | · | · | · | **2** |
-| `implementation` | 1 | · | · | · | · | **1** |
+| `implementation` | 2 | · | · | · | · | **2** |
 | `umbrella` | · | · | · | · | · | **0** |
 | `historical` | · | · | · | · | · | **0** |
 | `superseded` | · | · | · | · | · | **0** |
-| **Total** | **1** | **2** | **·** | **·** | **·** | **3** |
+| **Total** | **2** | **2** | **·** | **·** | **·** | **4** |

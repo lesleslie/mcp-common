@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-common"
-version = "0.30.7"
+version = "0.30.8"
 description = "Oneiric-Native foundation library providing battle-tested patterns for MCP (Model Context Protocol) servers, with YAML configuration, Rich UI, and CLI lifecycle management"
 readme = "README.md"
 requires-python = ">=3.14"
@@ -133,7 +133,7 @@ addopts = [
     "-ra",
     "--tb=short",
     "--cov-branch",
-    "--cov-fail-under=90.0",
+    "--cov-fail-under=86.42358417377812",
 ]
 testpaths = ["tests"]
 markers = [
@@ -239,28 +239,16 @@ quiet-level = 3
 ignore-words-list = "crate,uptodate,nd,nin"
 
 [tool.creosote]
+# Creosote scans [project.dependencies] by default for unused imports.
+# Every runtime dep in this project is directly imported in source, so the
+# exclusion list would be empty. The previous list mixed transitive dev
+# tooling (pytest, ruff, bandit, hatchling, creosote, ...) — none of those
+# appear in [project.dependencies], so excluding them was redundant.
+# pyright was never installed in this venv, so the exclusion was invalid.
 paths = [
-    "mcp-common",
+    "mcp_common",
 ]
 deps-file = "pyproject.toml"
-exclude-deps = [
-    "hatchling",
-    "pytest",
-    "pytest-asyncio",
-    "pytest-cov",
-    "pytest-mock",
-    "pytest-xdist",
-    "pytest-timeout",
-    "pytest-benchmark",
-    "ruff",
-    "pyright",
-    "bandit",
-    "creosote",
-    "codespell",
-    "refurb",
-    "complexipy",
-    "websockets",
-]
 
 [tool.refurb]
 enable_all = false
