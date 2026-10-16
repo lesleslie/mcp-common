@@ -12,7 +12,7 @@ Foundation library for MCP servers
 ## Start Here
 
 - Use current root docs for maintained operator and developer guidance.
-- Use [archive/README.md](archive/README.md) for historical, non-authoritative material.
+
 
 ## Maintenance Rules
 
