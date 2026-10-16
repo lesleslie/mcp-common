@@ -67,6 +67,8 @@ htmlcov/
 .tox/
 .nox/
 coverage.xml
+coverage*.json
+test_*.py
 *.cover
 .hypothesis/
 
@@ -103,7 +105,6 @@ site/
 /.mcp.json
 /.crackerjack/
 /coverage.json
-docs/archive/test-artifacts/coverage*.json
 /.complexipy_cache/
 /.jbeval/
 /NOTES.md
@@ -195,6 +196,7 @@ wheels/
 .archives/
 .backup/
 .backups/
+docs/archive/
 
 # Git worktrees
 .worktrees/
