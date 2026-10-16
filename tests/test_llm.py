@@ -382,7 +382,7 @@ class TestLLMSettings:
         settings = LLMSettings()
         assert settings.providers == {}
         assert settings.default_provider == "minimax"
-        assert settings.fallback_chain == ["minimax", "llama_server", "ollama"]
+        assert settings.fallback_chain == ["minimax", "llama_server"]
 
     def test_extra_fields_forbidden(self) -> None:
         with pytest.raises(ValidationError):

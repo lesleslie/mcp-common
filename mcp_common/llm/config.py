@@ -64,7 +64,7 @@ class LLMSettings(BaseModel):
 
     providers: dict[str, dict[str, Any]] = {}
     default_provider: str = "minimax"
-    fallback_chain: list[str] = ["minimax", "llama_server", "ollama"]
+    fallback_chain: list[str] = ["minimax", "llama_server"]
 
     model_config = {"extra": "forbid"}
 
