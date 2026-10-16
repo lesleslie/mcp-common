@@ -58,7 +58,6 @@ ASSIGNMENTS: dict[str, tuple[str, str, str]] = {
     "docs/reference/service-dependencies.md": ("active", "canonical", "lifecycle"),
     # docs/schemas/ — source of truth, always active canonical lifecycle.
     "docs/schemas/document-frontmatter-v1.md": ("active", "canonical", "lifecycle"),
-    "docs/schemas/topic-vocabulary-v1.md": ("active", "canonical", "lifecycle"),
     # mcp/contracts/ — shared contract spec.
     "mcp/contracts/code_graph_tools.md": ("active", "canonical", "mcp-design"),
     # examples/README.md — examples directory entry.
