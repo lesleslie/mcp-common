@@ -12,7 +12,7 @@ _Regenerated 2026-10-16 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 
 | Path | Date | Status | Role | Topic | Title |
 |---|---|---|---|---|---|
-| [`docs/plans/2026-07-16-plan-lifecycle-unification.md`](2026-07-16-plan-lifecycle-unification.md) | 2026-07-16 | `draft` | `implementation` | `convergence-control-plane` | Plan Lifecycle Unification — Frontmatter Standardization Across Documentation Stores |
+| _no entries with valid frontmatter_ | | | | | |
 
 ### Docs: specs
 
@@ -24,12 +24,13 @@ _Regenerated 2026-10-16 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 
 | Path | Date | Status | Role | Topic | Title |
 |---|---|---|---|---|---|
-| [`docs/plans/2026-07-16-plan-lifecycle-unification.md`](2026-07-16-plan-lifecycle-unification.md) | 2026-07-16 | `draft` | `implementation` | `convergence-control-plane` | Plan Lifecycle Unification — Frontmatter Standardization Across Documentation Stores |
+| _no entries with valid frontmatter_ | | | | | |
 
 ### .claude/decisions
 
 | Path | Date | Status | Role | Topic | Title |
 |---|---|---|---|---|---|
+| [`.claude/decisions/README.md`](../../.claude/decisions/README.md) | 2026-07-21 | `active` | `canonical` | `decision-index` | Decisions Index |
 | [`.claude/decisions/deployability-discipline.md`](../../.claude/decisions/deployability-discipline.md) | 2026-09-26 | `active` | `canonical` | `deployability-discipline` | deployability discipline |
 
 ### Docs: followups
@@ -40,12 +41,11 @@ _Regenerated 2026-10-16 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 
 ## Lifecycle × Role Distribution
 
-| Role \ Lifecycle | draft | active | partial | shipped | complete | Total |
+| Role \\ Lifecycle | draft | active | partial | shipped | complete | Total |
 |---|---|---|---|---|---|---|
-| `canonical` | · | 1 | · | · | · | **1** |
-| `implementation` | 2 | · | · | · | · | **2** |
+| `canonical` | · | 2 | · | · | · | **2** |
+| `implementation` | · | · | · | · | · | **0** |
 | `umbrella` | · | · | · | · | · | **0** |
 | `historical` | · | · | · | · | · | **0** |
 | `superseded` | · | · | · | · | · | **0** |
-| **Total** | **2** | **1** | **·** | **·** | **·** | **3** |
-
+| **Total** | **·** | **2** | **·** | **·** | **·** | **2** |

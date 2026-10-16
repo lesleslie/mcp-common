@@ -541,8 +541,6 @@ ______________________________________________________________________
 ## Documentation
 
 - **[examples/README.md](./examples/README.md)** - **START HERE** - Example servers and usage patterns
-- **[ONEIRIC_CLI_FACTORY_IMPLEMENTATION.md](./docs/ONEIRIC_CLI_FACTORY_IMPLEMENTATION.md)** - CLI factory implementation guide
-- **[ONEIRIC_CLI_FACTORY_PLAN.md](./docs/ONEIRIC_CLI_FACTORY_PLAN.md)** - CLI factory design plan
 - **[ONEIRIC_CLI_FACTORY_SPEC_REVIEW.md](./docs/ONEIRIC_CLI_FACTORY_SPEC_REVIEW.md)** - CLI factory spec review
 - **[ONEIRIC_CLI_AUDIT_RESPONSE.md](./docs/ONEIRIC_CLI_AUDIT_RESPONSE.md)** - Audit response with cross-references
 

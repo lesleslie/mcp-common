@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.31.0] - 2026-10-16
+
+### Added
+
+- mcp-common: Add agents_tools factory for list_agents/get_agent
+- mcp-common: Add skills_tools factory for list_skills/get_skill
+
+### Fixed
+
+- /Users/les/Projects/mcp-common/docs: Remove stale archive reference
+- mcp-common: Drop ollama from LLMSettings.fallback_chain default
+- Restore topic vocabulary at docs/schemas/topic-vocabulary-v1.md
+
+### Internal
+
+- mcp-common: Drop dead topic-vocabulary dict entry
+- mcp-common: Untrack docs/archive/, evict test-artifacts, broaden gitignore for test_*.py, keep historical on disk in docs/.archive/
+- Regenerate PLAN_INDEX.md via plan_index_sync (git-aware)
+
 ## [0.30.8] - 2026-10-14
 
 ### Added

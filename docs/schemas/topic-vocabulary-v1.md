@@ -77,8 +77,3 @@ can be merged.
 - Slug **must not be a reserved word**. The reserved words are:
   `draft`, `active`, `partial`, `shipped`, `complete`, `canonical`,
   `implementation`, `umbrella`, `historical`, `superseded`.
-
-## Cross-Reference
-
-See [document-frontmatter-v1.md](document-frontmatter-v1.md) for the frontmatter
-contract that consumes this vocabulary.

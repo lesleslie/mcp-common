@@ -105,11 +105,13 @@ preserves the stripped body across signing. The
 ``"body"`` so the installer writes a fully-functional agent file
 (Phase 3 B-6 critical contract).
 """
+
 from __future__ import annotations
 
 import hashlib
 import logging
-from typing import Any, Callable, Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
+from typing import Any
 
 from mcp_common.canonical_schemas._validators import allowlisted_name
 from mcp_common.canonical_schemas.agent import AgentCanonicalSchema
@@ -190,6 +192,160 @@ def _build_unsigned_metadata(
     )
 
 
+def _validate_server_key(server_key: str) -> None:
+    """Raise ``ValueError`` if ``server_key`` fails the B-4 allowlist."""
+    if not allowlisted_name(server_key):
+        raise ValueError(
+            f"server_key {server_key!r} violates B-4 allowlist "
+            r"'^[a-z0-9][a-z0-9._-]{0,62}$' "
+            "(forbidden: '/', uppercase, leading '.', length > 63)"
+        )
+
+
+def _validate_agent_catalog(catalog: Sequence[CatalogEntry]) -> dict[str, CatalogEntry]:
+    """Eagerly validate the agent catalog, returning ``name -> entry``.
+
+    Surface catalog errors at factory time so they fail at import,
+    not at the first request. The body is still loaded on demand.
+    """
+    name_to_entry: dict[str, CatalogEntry] = {}
+    for entry in catalog:
+        name = entry.get("name")
+        if not isinstance(name, str) or not name:
+            raise ValueError(
+                f"catalog entry missing 'name' field (or wrong type): {entry!r}"
+            )
+        if not allowlisted_name(name):
+            raise ValueError(
+                f"catalog entry name {name!r} violates B-4 allowlist "
+                r"'^[a-z0-9][a-z0-9._-]{0,62}$'"
+            )
+        if name in name_to_entry:
+            raise ValueError(f"duplicate catalog entry name: {name!r}")
+        name_to_entry[name] = entry
+    return name_to_entry
+
+
+async def _list_agents_impl(
+    *,
+    server_key: str,
+    name_to_entry: dict[str, CatalogEntry],
+    body_loader: Callable[[str], str],
+    on_call: Callable[[], None] | None,
+) -> list[dict[str, Any]]:
+    """Body of the ``list_agents`` tool (B-6 + B-7 contract).
+
+    Per Phase 3 §11 B-6: ``system_prompt`` IS populated so the
+    picker can preview the body without a second ``get_agent``
+    round-trip. The ``signature`` and ``server_pubkey_id`` fields
+    are ``None`` here — they are filled by ``get_agent`` since the
+    signature is over the canonical payload WITHOUT the signing
+    fields themselves.
+
+    Per B-7: ``on_call`` is invoked to bump ``cycles_total`` so
+    the four mandatory feed signals stay accurate.
+    """
+    if on_call is not None:
+        on_call()
+    result: list[dict[str, Any]] = []
+    for entry in name_to_entry.values():
+        metadata = _build_unsigned_metadata(
+            entry,
+            server_key=server_key,
+            body_loader=body_loader,
+        )
+        result.append(metadata.model_dump(mode="json"))
+    return result
+
+
+async def _get_agent_impl(
+    name: str,
+    *,
+    server_key: str,
+    name_to_entry: dict[str, CatalogEntry],
+    body_loader: Callable[[str], str],
+    sign: Callable[[AgentCanonicalSchema], AgentCanonicalSchema],
+    on_call: Callable[[], None] | None,
+) -> dict[str, Any]:
+    """Body of the ``get_agent`` tool.
+
+    Returns
+    ``{"success": True, "metadata": <signed>, "body": <body>}``
+    on success. Returns
+    ``{"success": False, "error": "..."}`` on:
+
+    - name allowlist violation (B-4) — uniform envelope
+      so callers don't have to handle a different error
+      class than the Pydantic ValidationError.
+    - name not found in this server's catalog
+    - body_loader raised (e.g. file missing)
+    - Pydantic metadata validation failed
+    - ``sign()`` raised (e.g. signer not initialized)
+
+    The body returned in the success case is the
+    ``system_prompt`` from the signed metadata — guaranteed
+    equal to the B-6 content_hash input (the schema's
+    body-integrity model_validator asserts this on
+    construction).
+    """
+    if on_call is not None:
+        on_call()
+
+    # B-4: enforce the allowlist at the API boundary, before
+    # constructing the metadata. Uniform error envelope
+    # shape across all four rejection modes.
+    if not allowlisted_name(name):
+        return {
+            "success": False,
+            "error": (
+                f"name {name!r} violates path-traversal allowlist "
+                "(B-4): must match ^[a-z0-9][a-z0-9._-]{0,62}$ "
+                "with no '..' substring"
+            ),
+        }
+
+    entry = name_to_entry.get(name)
+    if entry is None:
+        return {
+            "success": False,
+            "error": f"agent {name!r} not found on this server",
+        }
+
+    try:
+        unsigned = _build_unsigned_metadata(
+            entry,
+            server_key=server_key,
+            body_loader=body_loader,
+        )
+    except FileNotFoundError as exc:
+        return {"success": False, "error": str(exc)}
+    except ValueError as exc:
+        # Pydantic ValidationError raises ValueError too
+        # (the field_validators raise ValueError); a bad
+        # catalog entry surfaces here with a clear error.
+        return {"success": False, "error": f"metadata validation failed: {exc}"}
+
+    try:
+        signed = sign(unsigned)
+    except Exception as exc:  # noqa: BLE001  # the server's policy decides what to raise
+        return {
+            "success": False,
+            "error": f"signing failed: {exc!r}",
+        }
+
+    if not isinstance(signed, AgentCanonicalSchema):
+        return {
+            "success": False,
+            "error": "sign() must return an AgentCanonicalSchema",
+        }
+
+    return {
+        "success": True,
+        "metadata": signed.model_dump(mode="json"),
+        "body": signed.system_prompt,
+    }
+
+
 def build_register_agents_tools(
     *,
     server_key: str,
@@ -254,30 +410,8 @@ def build_register_agents_tools(
         allowlist, if any catalog entry has a missing/invalid
         ``name``, or if duplicate names appear in the catalog.
     """
-    if not allowlisted_name(server_key):
-        raise ValueError(
-            f"server_key {server_key!r} violates B-4 allowlist "
-            r"'^[a-z0-9][a-z0-9._-]{0,62}$' "
-            "(forbidden: '/', uppercase, leading '.', length > 63)"
-        )
-
-    # Eager validation: surface catalog errors at factory time, not
-    # at the first request. The body is still loaded on demand (L-6).
-    name_to_entry: dict[str, CatalogEntry] = {}
-    for entry in catalog:
-        name = entry.get("name")
-        if not isinstance(name, str) or not name:
-            raise ValueError(
-                f"catalog entry missing 'name' field (or wrong type): {entry!r}"
-            )
-        if not allowlisted_name(name):
-            raise ValueError(
-                f"catalog entry name {name!r} violates B-4 allowlist "
-                r"'^[a-z0-9][a-z0-9._-]{0,62}$'"
-            )
-        if name in name_to_entry:
-            raise ValueError(f"duplicate catalog entry name: {name!r}")
-        name_to_entry[name] = entry
+    _validate_server_key(server_key)
+    name_to_entry = _validate_agent_catalog(catalog)
 
     list_tool_name = f"{tool_name_prefix}list_agents"
     get_tool_name = f"{tool_name_prefix}get_agent"
@@ -287,111 +421,23 @@ def build_register_agents_tools(
 
         @app.tool(name=list_tool_name)
         async def list_agents() -> list[dict[str, Any]]:
-            """Return metadata for every agent this server publishes.
-
-            Per Phase 3 §11 B-6: ``system_prompt`` IS populated so
-            the picker can preview the body without a second
-            ``get_agent`` round-trip. The ``signature`` and
-            ``server_pubkey_id`` fields are ``None`` here — they
-            are filled by ``get_agent`` since the signature is
-            over the canonical payload WITHOUT the signing fields
-            themselves.
-
-            Per B-7: ``on_call`` is invoked to bump
-            ``cycles_total`` so the four mandatory feed signals
-            stay accurate.
-            """
-            if on_call is not None:
-                on_call()
-            result: list[dict[str, Any]] = []
-            for entry in name_to_entry.values():
-                metadata = _build_unsigned_metadata(
-                    entry,
-                    server_key=server_key,
-                    body_loader=body_loader,
-                )
-                result.append(metadata.model_dump(mode="json"))
-            return result
+            return await _list_agents_impl(
+                server_key=server_key,
+                name_to_entry=name_to_entry,
+                body_loader=body_loader,
+                on_call=on_call,
+            )
 
         @app.tool(name=get_tool_name)
         async def get_agent(name: str) -> dict[str, Any]:
-            """Return the signed metadata + body for one agent.
-
-            Returns
-            ``{"success": True, "metadata": <signed>, "body": <body>}``
-            on success. Returns
-            ``{"success": False, "error": "..."}`` on:
-
-            - name allowlist violation (B-4) — uniform envelope
-              so callers don't have to handle a different error
-              class than the Pydantic ValidationError.
-            - name not found in this server's catalog
-            - body_loader raised (e.g. file missing)
-            - Pydantic metadata validation failed
-            - ``sign()`` raised (e.g. signer not initialized)
-
-            The body returned in the success case is the
-            ``system_prompt`` from the signed metadata — guaranteed
-            equal to the B-6 content_hash input (the schema's
-            body-integrity model_validator asserts this on
-            construction).
-            """
-            if on_call is not None:
-                on_call()
-
-            # B-4: enforce the allowlist at the API boundary, before
-            # constructing the metadata. Uniform error envelope
-            # shape across all four rejection modes.
-            if not allowlisted_name(name):
-                return {
-                    "success": False,
-                    "error": (
-                        f"name {name!r} violates path-traversal allowlist "
-                        "(B-4): must match ^[a-z0-9][a-z0-9._-]{0,62}$ "
-                        "with no '..' substring"
-                    ),
-                }
-
-            entry = name_to_entry.get(name)
-            if entry is None:
-                return {
-                    "success": False,
-                    "error": f"agent {name!r} not found on this server",
-                }
-
-            try:
-                unsigned = _build_unsigned_metadata(
-                    entry,
-                    server_key=server_key,
-                    body_loader=body_loader,
-                )
-            except FileNotFoundError as exc:
-                return {"success": False, "error": str(exc)}
-            except ValueError as exc:
-                # Pydantic ValidationError raises ValueError too
-                # (the field_validators raise ValueError); a bad
-                # catalog entry surfaces here with a clear error.
-                return {"success": False, "error": f"metadata validation failed: {exc}"}
-
-            try:
-                signed = sign(unsigned)
-            except Exception as exc:  # noqa: BLE001  # the server's policy decides what to raise
-                return {
-                    "success": False,
-                    "error": f"signing failed: {exc!r}",
-                }
-
-            if not isinstance(signed, AgentCanonicalSchema):
-                return {
-                    "success": False,
-                    "error": "sign() must return an AgentCanonicalSchema",
-                }
-
-            return {
-                "success": True,
-                "metadata": signed.model_dump(mode="json"),
-                "body": signed.system_prompt,
-            }
+            return await _get_agent_impl(
+                name,
+                server_key=server_key,
+                name_to_entry=name_to_entry,
+                body_loader=body_loader,
+                sign=sign,
+                on_call=on_call,
+            )
 
     return register
 

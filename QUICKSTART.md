@@ -536,12 +536,6 @@ See mcp-common in action:
 - **[Session-Buddy](https://github.com/lesleslie/session-buddy)** - Session manager
 - **[Crackerjack](https://github.com/lesleslie/crackerjack)** - Quality inspector
 
-### Advanced Topics
-
-- **[CLI Factory Guide](docs/ONEIRIC_CLI_FACTORY_IMPLEMENTATION.md)** - Lifecycle management
-- **[Security Implementation](docs/SECURITY_IMPLEMENTATION.md)** - Security features
-- **[Server Integration](docs/SERVER_INTEGRATION.md)** - Integration patterns
-
 ## Quick Reference
 
 | Feature | Import | Usage |
