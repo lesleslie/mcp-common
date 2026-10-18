@@ -1,6 +1,6 @@
 """MCP Common LLM - Shared LLM provider infrastructure for the Bodai ecosystem.
 
-Provides a unified interface for MiniMax, llama-server, and Ollama providers
+Provides a unified interface for MiniMax and llama-server providers
 with YAML-driven configuration, fallback chains, and circuit breakers.
 
 Usage:

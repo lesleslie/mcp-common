@@ -116,7 +116,7 @@ class LLMSettings(BaseModel):
             providers=providers,
             default_provider=data.get("default_provider", "minimax"),
             fallback_chain=data.get(
-                "fallback_chain", ["minimax", "llama_server", "ollama"]
+                "fallback_chain", ["minimax", "llama_server"]
             ),
         )
 

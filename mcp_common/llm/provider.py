@@ -1,4 +1,4 @@
-"""OpenAI-compatible LLM provider for MiniMax, llama-server, Ollama."""
+"""OpenAI-compatible LLM provider for MiniMax and llama-server."""
 
 from __future__ import annotations
 
@@ -47,7 +47,7 @@ class OpenAICompatibleProvider:
                 timeout=config.timeout_seconds,
             )
         else:
-            # Local no-auth provider (e.g. ollama, llama-server) —
+            # Local no-auth provider (llama-server) —
             # send empty Authorization header so the SDK doesn't inject "Bearer no-auth"
             self._client = openai.AsyncOpenAI(
                 api_key="no-auth",
