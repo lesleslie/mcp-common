@@ -194,8 +194,8 @@ class TestProviderConfigExtensions:
         cfg = ProviderConfig(name="test")
         assert cfg.require_auth is True
 
-    def test_require_auth_can_be_false_for_ollama(self) -> None:
-        cfg = ProviderConfig(name="ollama", require_auth=False)
+    def test_require_auth_can_be_false_for_llama_server(self) -> None:
+        cfg = ProviderConfig(name="llama_server", require_auth=False)
         assert cfg.require_auth is False
 
     def test_api_key_env_field_exists(self) -> None:
@@ -203,7 +203,7 @@ class TestProviderConfigExtensions:
         assert cfg.api_key_env == "MINIMAX_API_KEY"
 
     def test_api_key_env_nullable(self) -> None:
-        cfg = ProviderConfig(name="ollama", api_key_env=None)
+        cfg = ProviderConfig(name="llama_server", api_key_env=None)
         assert cfg.api_key_env is None
 
 
@@ -234,7 +234,7 @@ class TestProviderConfig:
             timeout=60,
             max_retries=3,
             task_routing={"code_generation": "glm-4.7"},
-            fallback={"reasoning": "ollama"},
+            fallback={"reasoning": "llama_server"},
         )
         assert config.name == "zai"
         assert config.enabled is True
@@ -245,7 +245,7 @@ class TestProviderConfig:
         assert config.timeout == 60
         assert config.max_retries == 3
         assert config.task_routing == {"code_generation": "glm-4.7"}
-        assert config.fallback == {"reasoning": "ollama"}
+        assert config.fallback == {"reasoning": "llama_server"}
 
     def test_extra_fields_forbidden(self) -> None:
         with pytest.raises(ValidationError):
@@ -329,7 +329,7 @@ class TestLLMSettingsValidation:
     def test_llama_server_provider_recognized_in_fallback_chain(self, tmp_path) -> None:
         yaml_content = """
 default_provider: minimax
-fallback_chain: [minimax, llama_server, ollama]
+fallback_chain: [minimax, llama_server]
 minimax:
   enabled: true
   base_url: "https://api.minimax.io/v1"
@@ -340,11 +340,6 @@ llama_server:
   base_url: "http://localhost:8081/v1"
   require_auth: false
   timeout_seconds: 60
-ollama:
-  enabled: true
-  base_url: "http://localhost:11434/v1"
-  require_auth: false
-  timeout_seconds: 120
 """
         p = tmp_path / "models.yaml"
         p.write_text(yaml_content)
@@ -355,15 +350,15 @@ ollama:
         monkeypatch.delenv("MINIMAX_API_KEY", raising=False)
         yaml_content = """
 default_provider: minimax
-fallback_chain: [minimax, ollama]
+fallback_chain: [minimax, llama_server]
 minimax:
   enabled: true
   base_url: "https://api.minimax.io/v1"
   api_key_env: "MINIMAX_API_KEY"
   require_auth: true
-ollama:
+llama_server:
   enabled: true
-  base_url: "http://localhost:11434/v1"
+  base_url: "http://localhost:8081/v1"
   require_auth: false
 """
         p = tmp_path / "models.yaml"
@@ -372,7 +367,7 @@ ollama:
         # minimax should be excluded from enabled providers (fail-closed)
         enabled_names = [p.name for p in settings.get_enabled_providers()]
         assert "minimax" not in enabled_names
-        assert "ollama" in enabled_names  # local tier still available
+        assert "llama_server" in enabled_names  # local tier still available
 
 
 class TestLLMSettings:
@@ -402,7 +397,7 @@ class TestLLMSettings:
     def test_from_yaml_with_providers(self, tmp_path: Path) -> None:
         content = {
             "default_provider": "minimax",
-            "fallback_chain": ["minimax", "ollama"],
+            "fallback_chain": ["minimax", "llama_server"],
             "minimax": {
                 "enabled": True,
                 "base_url": "https://api.minimax.io/v1",
@@ -413,9 +408,9 @@ class TestLLMSettings:
                 "max_retries": 2,
                 "task_routing": {"code_generation": "MiniMax-M2.7"},
             },
-            "ollama": {
+            "llama_server": {
                 "enabled": True,
-                "base_url": "http://localhost:11434",
+                "base_url": "http://localhost:8081",
                 "api_key": "",
                 "require_auth": False,
                 "priority": 2,
@@ -426,9 +421,9 @@ class TestLLMSettings:
 
         settings = LLMSettings.from_yaml(path)
         assert settings.default_provider == "minimax"
-        assert settings.fallback_chain == ["minimax", "ollama"]
+        assert settings.fallback_chain == ["minimax", "llama_server"]
         assert "minimax" in settings.providers
-        assert "ollama" in settings.providers
+        assert "llama_server" in settings.providers
 
     def test_from_yaml_with_new_providers_schema(self, tmp_path: Path) -> None:
         content = {
@@ -853,8 +848,8 @@ class TestOpenAICompatibleProvider:
         mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
         config = ProviderConfig(
-            name="ollama",
-            base_url="http://localhost:11434",
+            name="llama_server",
+            base_url="http://localhost:8081",
             require_auth=False,
             task_routing={"code_generation": "qwen2.5-coder:7b"},
         )
@@ -914,8 +909,8 @@ class TestOpenAICompatibleProvider:
         mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
         config = ProviderConfig(
-            name="ollama",
-            base_url="http://localhost:11434",
+            name="llama_server",
+            base_url="http://localhost:8081",
             require_auth=False,
             task_routing={"code_generation": "qwen2.5-coder:7b"},
         )
@@ -1276,16 +1271,16 @@ class TestFallbackChain:
     def test_from_settings(self, tmp_path: Path) -> None:
         content = {
             "default_provider": "minimax",
-            "fallback_chain": ["minimax", "ollama"],
+            "fallback_chain": ["minimax", "llama_server"],
             "minimax": {
                 "enabled": True,
                 "base_url": "https://api.minimax.io/v1",
                 "api_key": "sk-test",
                 "priority": 1,
             },
-            "ollama": {
+            "llama_server": {
                 "enabled": True,
-                "base_url": "http://localhost:11434",
+                "base_url": "http://localhost:8081",
                 "api_key": "",
                 "require_auth": False,
                 "priority": 2,
@@ -1314,7 +1309,7 @@ class TestFallbackChain:
 
             chain = FC.from_settings(settings)
             provider_names = [p.name for p in chain._providers]
-            assert set(provider_names) == {"minimax", "ollama"}
+            assert set(provider_names) == {"minimax", "llama_server"}
 
     def test_from_settings_skips_disabled_providers(self, tmp_path: Path) -> None:
         content = {

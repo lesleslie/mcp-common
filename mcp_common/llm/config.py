@@ -115,16 +115,14 @@ class LLMSettings(BaseModel):
         return cls(
             providers=providers,
             default_provider=data.get("default_provider", "minimax"),
-            fallback_chain=data.get(
-                "fallback_chain", ["minimax", "llama_server"]
-            ),
+            fallback_chain=data.get("fallback_chain", ["minimax", "llama_server"]),
         )
 
     def get_provider(self, name: str) -> ProviderConfig | None:
         """Get a resolved provider configuration by name.
 
         Args:
-            name: Provider name (e.g., "minimax", "ollama").
+            name: Provider name (e.g., "minimax", "llama_server").
 
         Returns:
             ProviderConfig if found and enabled, None otherwise.

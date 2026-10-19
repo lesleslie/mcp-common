@@ -77,8 +77,8 @@ class TestOpenAICompatibleProviderNoAuth:
         from mcp_common.llm.provider import OpenAICompatibleProvider
 
         config = ProviderConfig(
-            name="ollama",
-            base_url="http://localhost:11434/v1",
+            name="llama_server",
+            base_url="http://localhost:8081/v1",
             require_auth=False,
         )
         mock_openai = _mock_openai_module()
@@ -86,10 +86,10 @@ class TestOpenAICompatibleProviderNoAuth:
         with patch.dict(sys.modules, {"openai": mock_openai}):
             provider = OpenAICompatibleProvider(config)
 
-        assert provider.name == "ollama"
+        assert provider.name == "llama_server"
         mock_openai.AsyncOpenAI.assert_called_once_with(
             api_key="no-auth",
-            base_url="http://localhost:11434/v1",
+            base_url="http://localhost:8081/v1",
             default_headers={"Authorization": ""},
             max_retries=0,
             timeout=30,
