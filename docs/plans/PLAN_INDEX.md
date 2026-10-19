@@ -1,6 +1,6 @@
 # Plan Index
 
-_Regenerated 2026-10-16 by `crackerjack.tools.plan_index_sync` (fast-hook)._
+_Regenerated 2026-10-19 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 
 ### Docs: adr
 
@@ -30,7 +30,6 @@ _Regenerated 2026-10-16 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 
 | Path | Date | Status | Role | Topic | Title |
 |---|---|---|---|---|---|
-| [`.claude/decisions/README.md`](../../.claude/decisions/README.md) | 2026-07-21 | `active` | `canonical` | `decision-index` | Decisions Index |
 | [`.claude/decisions/deployability-discipline.md`](../../.claude/decisions/deployability-discipline.md) | 2026-09-26 | `active` | `canonical` | `deployability-discipline` | deployability discipline |
 
 ### Docs: followups
@@ -43,9 +42,9 @@ _Regenerated 2026-10-16 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 
 | Role \\ Lifecycle | draft | active | partial | shipped | complete | Total |
 |---|---|---|---|---|---|---|
-| `canonical` | · | 2 | · | · | · | **2** |
+| `canonical` | · | 1 | · | · | · | **1** |
 | `implementation` | · | · | · | · | · | **0** |
 | `umbrella` | · | · | · | · | · | **0** |
 | `historical` | · | · | · | · | · | **0** |
 | `superseded` | · | · | · | · | · | **0** |
-| **Total** | **·** | **2** | **·** | **·** | **·** | **2** |
+| **Total** | **·** | **1** | **·** | **·** | **·** | **1** |

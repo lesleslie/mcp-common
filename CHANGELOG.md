@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.31.1] - 2026-10-19
+
+### Internal
+
+- Mcp-common slice — finish fallback_chain cleanup (plan 5, REQ-OLLAMA-004)
+- ollama: PR #0 — fallback_chain default + docstrings
+
 ## [0.31.0] - 2026-10-16
 
 ### Added
@@ -21,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Internal
 
 - mcp-common: Drop dead topic-vocabulary dict entry
-- mcp-common: Untrack docs/archive/, evict test-artifacts, broaden gitignore for test_*.py, keep historical on disk in docs/.archive/
+- mcp-common: Untrack docs/archive/, evict test-artifacts, broaden gitignore for test\_\*.py, keep historical on disk in docs/.archive/
 - Regenerate PLAN_INDEX.md via plan_index_sync (git-aware)
 
 ## [0.30.8] - 2026-10-14

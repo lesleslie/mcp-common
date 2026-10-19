@@ -4,7 +4,7 @@ date: 2026-09-07
 status: implemented
 audience: mcp-common contributors, sibling-server maintainers
 related:
-  - https://github.com/lesleslie/mahavishnu/blob/main/docs/plans/2026-09-07-mcp-common-auth-primitives.md (canonical plan)
+  - https://github.com/lesleslie/mcp-common/blob/main/mcp_common/auth/__init__.py (implementation)
 ---
 
 # mcp-common Auth Design
