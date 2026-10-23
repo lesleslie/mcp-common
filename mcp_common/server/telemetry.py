@@ -42,14 +42,27 @@ type CallNext = Callable[[MiddlewareContext[Any]], Awaitable[Any]]
 
 
 class FastMCPOpenTelemetryMiddleware(Middleware):
-    """Emit OpenTelemetry spans for MCP messages handled by FastMCP."""
+    """Emit OpenTelemetry spans for MCP messages handled by FastMCP.
+
+    ``service_namespace`` defaults to ``bodai``, not ``mcp-ecosystem``. The
+    value is not cosmetic: akosha's OTLP receiver (``spans_substrate``) lists
+    ``service_namespace`` in ``REQUIRED_FIELDS`` and quarantines any span that
+    omits it, so every MCP server inheriting the old default had its spans
+    routed to the dead-letter queue.
+
+    Note the attribute is set on the **Span**, not the Resource, which is
+    where OTel semantic conventions put service identity. The receiver reads
+    the Resource first and falls back to the Span, so both placements are
+    accepted; a future change should move it to the Resource rather than
+    widen the receiver further.
+    """
 
     def __init__(
         self,
         service_name: str,
         *,
         environment: str = "production",
-        service_namespace: str = "mcp-ecosystem",
+        service_namespace: str = "bodai",
     ) -> None:
         self.service_name = service_name
         self.environment = environment
