@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.31.2] - 2026-10-23
+
+### Added
+
+- telemetry: Default service_namespace to bodai (PR-A7)
+
+### Fixed
+
+- deps: Certifi -> 2026.10.19, uv -> 0.13.5 (PYSEC-2026-4320/4321)
+
+### Internal
+
+- deps: Bump oneiric>= to 0.33 (plan_index library floor)
+
 ## [0.31.1] - 2026-10-19
 
 ### Internal

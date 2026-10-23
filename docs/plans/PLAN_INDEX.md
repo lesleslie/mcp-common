@@ -1,6 +1,6 @@
 # Plan Index
 
-_Regenerated 2026-10-19 by `crackerjack.tools.plan_index_sync` (fast-hook)._
+_Regenerated 2026-10-23 by `crackerjack.tools.plan_index_sync` (phase)._
 
 ### Docs: adr
 
@@ -15,12 +15,6 @@ _Regenerated 2026-10-19 by `crackerjack.tools.plan_index_sync` (fast-hook)._
 | _no entries with valid frontmatter_ | | | | | |
 
 ### Docs: specs
-
-| Path | Date | Status | Role | Topic | Title |
-|---|---|---|---|---|---|
-| _no entries with valid frontmatter_ | | | | | |
-
-### Docs: plans
 
 | Path | Date | Status | Role | Topic | Title |
 |---|---|---|---|---|---|
