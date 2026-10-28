@@ -22,6 +22,7 @@ Example:
     ...         await self._create_startup_snapshot()
 """
 
+from mcp_common._version import __version__
 from mcp_common.server.availability import (
     check_rate_limiting_available,
     check_security_available,
@@ -51,6 +52,7 @@ __all__ = [
     "BaseOneiricServerMixin",
     "FastMCPOpenTelemetryMiddleware",
     "RuntimeComponents",
+    "__version__",
     "check_rate_limiting_available",
     "check_security_available",
     "check_serverpanels_available",
@@ -61,5 +63,3 @@ __all__ = [
     "producer_telemetry_enabled",
     "run_liveness_emitter",
 ]
-
-__version__ = "0.4.0"

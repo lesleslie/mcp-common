@@ -33,6 +33,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   BEFORE the opt-in gate. "Can this process export spans" is the real
   question, and a component that installed its own provider exports whether or
   not the endpoint is in the environment.
+- The package version has one source again. `mcp_common.server` and
+  `mcp_common.code_graph` each carried a literal `__version__ = "0.4.0"` — a
+  value from a scheme that had been dead for many releases, and wrong for every
+  one since. Nothing read them, and a reader who found one had no way to tell a
+  stale stamp from a live one. A subpackage is not a separate distribution, so
+  it has no version of its own; both now quote the package's. A test fails the
+  build if any module hard-codes a version again.
 
 ## [0.31.2] - 2026-10-23
 

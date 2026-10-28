@@ -31,9 +31,14 @@ Usage:
 
 from __future__ import annotations
 
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as _pkg_version
 from typing import Any
+
+# Read the version from package metadata so it stays in sync with releases.
+# Falls back to a dev sentinel if the package is imported without being
+# installed (e.g. running tests directly from a source checkout). The
+# resolution lives in its own module so the subpackages can quote the same
+# value instead of hard-coding one that goes stale.
+from mcp_common._version import __version__
 
 # ``oneiric.adapters.http`` is loaded lazily (PEP 562 module ``__getattr__``
 # below). Importing it eagerly cost ~2 s of cold-start time because it
@@ -82,14 +87,6 @@ from mcp_common.server.launcher import launch
 from mcp_common.tools import MANDATORY_TOOLS, ToolProfile, trim_description
 from mcp_common.ui import ServerPanels
 from mcp_common.validation import validate_input, validate_output
-
-# Read the version from package metadata so it stays in sync with releases.
-# Falls back to a dev sentinel if the package is imported without being
-# installed (e.g. running tests directly from a source checkout).
-try:
-    __version__ = _pkg_version("mcp-common")
-except PackageNotFoundError:  # pragma: no cover - dev/source-checkout path
-    __version__ = "0.0.0+unknown"
 
 
 def __getattr__(name: str) -> Any:

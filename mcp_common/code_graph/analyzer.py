@@ -3,8 +3,6 @@ Code Graph Analyzer - Shared infrastructure for Session Buddy and Mahavishnu.
 
 Analyzes codebase structure to extract functions, classes, imports, and call graphs.
 Used for context compaction, RAG enhancement, and workflow intelligence.
-
-Version: 0.4.0
 """
 
 from __future__ import annotations
