@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -20,18 +21,16 @@ def test_atomic_write_json_cleans_temp_on_error(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     target = tmp_path / "snapshot.json"
-    tmp_path_file = target.with_suffix(".tmp")
-    original_replace = Path.replace
 
-    def fake_replace(self: Path, target_path: Path) -> Path:
-        if self.name.endswith(".tmp"):
-            msg = "boom"
-            raise OSError(msg)
-        return original_replace(self, target_path)
+    def fake_replace(src: object, dst: object) -> None:
+        msg = "boom"
+        raise OSError(msg)
 
-    monkeypatch.setattr(Path, "replace", fake_replace)
+    monkeypatch.setattr(os, "replace", fake_replace)
 
     with pytest.raises(OSError, match="boom"):
         atomic_write_json(target, {"ok": True})
 
-    assert not tmp_path_file.exists()
+    # No temp file left behind, and the destination was never created.
+    assert [p for p in tmp_path.iterdir() if p.is_file()] == []
+    assert not target.exists()

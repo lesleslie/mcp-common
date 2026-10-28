@@ -11,6 +11,8 @@ from typing import Any
 
 import psutil
 
+from mcp_common.atomic import atomic_write_text
+
 
 def create_secure_cache_directory(cache_root: Path) -> None:
     """Create cache directory with secure permissions.
@@ -43,11 +45,10 @@ def write_pid_file(pid_path: Path, pid: int) -> None:
         pid_path.chmod(0o600)
         return
 
-    # Atomic write: tmp file → replace
-    tmp = pid_path.with_suffix(".tmp")
-    tmp.write_text(str(pid))
-    tmp.chmod(0o600)  # Owner read/write only
-    tmp.replace(pid_path)
+    # Atomic write via a uniquely named temp file, so concurrent writers
+    # of the same pid path cannot move the temp file out from under
+    # each other.
+    atomic_write_text(pid_path, str(pid))
 
 
 def validate_cache_ownership(cache_root: Path) -> None:
@@ -196,11 +197,7 @@ def atomic_write_json(path: Path, data: dict[str, Any], mode: int = 0o600) -> No
     """
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
 
-    tmp = path.with_suffix(".tmp")
-    try:
-        tmp.write_text(json.dumps(data, indent=2))
-        tmp.chmod(mode)
-        tmp.replace(path)  # Atomic on POSIX systems
-    except OSError:
-        tmp.unlink(missing_ok=True)
-        raise
+    # Atomic write via a uniquely named temp file: a fixed temp name is
+    # shared by every writer of the same destination and they race each
+    # other out of the rename.
+    atomic_write_text(path, json.dumps(data, indent=2), mode=mode)

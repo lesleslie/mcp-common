@@ -1,6 +1,7 @@
 """Comprehensive tests for health snapshot functionality."""
 
 import json
+import os
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -197,20 +198,19 @@ class TestWriteRuntimeHealth:
         """Test tmp cleanup if replace fails."""
         snapshot_path = tmp_path / "health.json"
         snapshot = RuntimeHealthSnapshot(orchestrator_pid=12345)
-        original_replace = Path.replace
 
-        def fake_replace(self: Path, target: Path) -> Path:
-            if self.name.endswith(".tmp"):
-                msg = "boom"
-                raise OSError(msg)
-            return original_replace(self, target)
+        def fake_replace(src: object, dst: object) -> None:
+            msg = "boom"
+            raise OSError(msg)
 
-        monkeypatch.setattr(Path, "replace", fake_replace)
+        monkeypatch.setattr(os, "replace", fake_replace)
 
         with pytest.raises(OSError, match="boom"):
             write_runtime_health(snapshot_path, snapshot)
 
-        assert not snapshot_path.with_suffix(".tmp").exists()
+        # No temp file left behind, and the destination was never created.
+        assert [p for p in tmp_path.iterdir() if p.is_file()] == []
+        assert not snapshot_path.exists()
 
     def test_write_overwrites_existing(self, tmp_path: Path):
         """Test writing to existing file overwrites it."""

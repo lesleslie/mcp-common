@@ -11,6 +11,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from mcp_common.atomic import atomic_write_text
+
 logger = logging.getLogger("mcp_common.cli.health")
 
 
@@ -135,16 +137,12 @@ def write_runtime_health(path: Path, snapshot: RuntimeHealthSnapshot) -> None:
     # Update timestamp
     snapshot.updated_at = datetime.now(UTC).isoformat()
 
-    # Atomic write: tmp file → replace
-    tmp = path.with_suffix(".tmp")
-    try:
-        tmp.write_text(json.dumps(snapshot.as_dict(), indent=2))
-        tmp.chmod(0o600)  # Owner read/write only
-        tmp.replace(path)  # Atomic on POSIX systems
-    except OSError:
-        # Cleanup tmp file on error
-        tmp.unlink(missing_ok=True)
-        raise
+    # Atomic write via a uniquely named temp file. A fixed temp name
+    # would be shared by every writer of this snapshot -- the server
+    # factory writes it at startup and again on shutdown, and the CLI
+    # health probe writes it too -- and the writers would race each
+    # other out of the rename.
+    atomic_write_text(path, json.dumps(snapshot.as_dict(), indent=2))
 
 
 def is_snapshot_fresh(snapshot: RuntimeHealthSnapshot, ttl_seconds: float) -> bool:
