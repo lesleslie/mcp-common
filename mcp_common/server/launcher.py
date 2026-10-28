@@ -15,7 +15,11 @@ responsible only for:
 2. Optionally warming the ``settings`` health feed with ``entities_count > 0``
    (per ``mcp_common/health/feed.py:202-211`` this is required for
    ``is_healthy()`` to return ``StatusValue.HEALTHY`` and ``/health=200``).
-3. Running FastMCP with ``transport="http"`` and
+3. Installing the producer tracer provider and the liveness emitter, so the
+   component reports spans to the Bodai substrate under its
+   ``component_name`` -- which is the same string the receiver's heartbeat
+   roster watches (see ``mcp_common/server/producer_telemetry.py``).
+4. Running FastMCP with ``transport="http"`` and
    ``uvicorn_config={"timeout_graceful_shutdown": 30}`` for SIGTERM-friendly
    shutdown (REQ-007, REQ-014).
 
@@ -25,6 +29,7 @@ Each helper is independently unit-tested (REQ-006); see
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import re
@@ -34,6 +39,10 @@ from pathlib import Path
 from typing import Any
 
 from mcp_common.health.feed import HealthFeedState, record_success
+from mcp_common.server.producer_telemetry import (
+    configure_producer_tracing,
+    run_liveness_emitter,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -255,13 +264,65 @@ async def launch(
     if settings_path is not None:
         warm_settings_feed(settings_path)
 
+    # Producer telemetry is installed BEFORE the server is built, so the
+    # middleware's tracer resolves to this provider rather than to the
+    # SDK's default no-op tracer. The provider is only installed when the
+    # process is pointed at a collector, so MCP servers outside the Bodai
+    # core set keep the behaviour they had.
+    export_spans = configure_producer_tracing(component_name)
+
     server = build_server()
-    await run_with_uvicorn_config(
-        server,
-        host,
-        port,
-        timeout_graceful_shutdown=timeout_graceful_shutdown,
+    _attach_request_span_middleware(server, component_name)
+
+    stop_event = asyncio.Event()
+    liveness_task: asyncio.Task[None] | None = None
+    if export_spans:
+        liveness_task = asyncio.create_task(
+            run_liveness_emitter(component_name, stop_event),
+            name=f"{component_name}-liveness-emitter",
+        )
+    try:
+        await run_with_uvicorn_config(
+            server,
+            host,
+            port,
+            timeout_graceful_shutdown=timeout_graceful_shutdown,
+        )
+    finally:
+        stop_event.set()
+        if liveness_task is not None:
+            liveness_task.cancel()
+            await asyncio.gather(liveness_task, return_exceptions=True)
+
+
+def _attach_request_span_middleware(server: Any, component_name: str) -> bool:
+    """Give the server a request-span middleware, if it does not have one.
+
+    The liveness emitter proves the export path works; this proves the
+    server produces spans worth reading. Both are wanted: a component
+    whose exporter works but whose middleware is missing reports itself
+    alive and nothing else.
+
+    Idempotent by inspection rather than by a flag. A component that
+    already attaches the middleware (mahavishnu, session-buddy) would
+    otherwise end up with two, and every request would be recorded twice.
+    """
+    add_middleware = getattr(server, "add_middleware", None)
+    if not callable(add_middleware):
+        return False
+
+    from mcp_common.server.telemetry import FastMCPOpenTelemetryMiddleware
+
+    existing = getattr(server, "middleware", None) or []
+    if any(isinstance(m, FastMCPOpenTelemetryMiddleware) for m in existing):
+        return False
+
+    add_middleware(FastMCPOpenTelemetryMiddleware(service_name=component_name))
+    logger.info(
+        "mcp-launcher-telemetry-middleware-attached component=%s",
+        component_name,
     )
+    return True
 
 
 __all__ = [

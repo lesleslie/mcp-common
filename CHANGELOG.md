@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- server/producer_telemetry: install a tracer provider that exports to the Bodai
+  substrate, and emit a `_service_liveness` span on a fixed interval
+- server/launcher: configure producer telemetry and attach the request-span
+  middleware under the component's `component_name`, which is the same string
+  the receiver's heartbeat roster watches
+
+### Fixed
+
+- server/launcher: a component launched through it reported no spans at all,
+  because nothing installed a tracer provider. The receiver's heartbeat watcher
+  read every rostered service as absent, forever.
+
 ## [0.31.2] - 2026-10-23
 
 ### Added
