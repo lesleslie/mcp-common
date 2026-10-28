@@ -22,15 +22,20 @@ no second naming scheme to keep in step with the roster.
 **Opt-in, never accidental.** Producer telemetry is installed only when
 the process is pointed at a collector (``OTEL_EXPORTER_OTLP_ENDPOINT`` or
 ``OTEL_EXPORTER_OTLP_TRACES_ENDPOINT``). The launcher is shared with MCP
-servers outside the Bodai core set; those keep the behaviour they had.
-The fleet's launchd plists set the variable explicitly.
+servers outside the Bodai core set; those keep the behaviour they had --
+no provider, and no request-span middleware either, because the launcher
+attaches that only when spans can actually be exported. The fleet's
+launchd plists set the variable explicitly.
 
 **Never override an existing provider.** The OTel SDK refuses to replace
 an installed provider, and this module honours that: if something already
 installed one, it is left alone and this module reports that spans are
 exported without claiming ownership. Without the check the first
 component to boot would win the race for the global provider and the
-others would silently keep the default no-op tracer.
+others would silently keep the default no-op tracer. The check runs
+BEFORE the opt-in gate, because "can this process export spans" is the
+real question: a component that installed its own provider exports
+whether or not the endpoint is in the environment.
 
 The liveness emitter exists because request-driven spans cannot serve as
 a heartbeat. An MCP server emits a span when somebody calls a tool, so an
@@ -150,21 +155,13 @@ def configure_producer_tracing(
         installed. ``False`` when the process is not pointed at a
         collector, or when no provider could be installed.
     """
-    if endpoint is None and not producer_telemetry_enabled():
-        logger.debug(
-            "mcp.producer_telemetry.not_configured service=%s — no OTLP endpoint "
-            "in the environment, so no provider is installed",
-            service_name,
-        )
-        return False
-
     try:
         from opentelemetry import trace
         from opentelemetry.trace import ProxyTracerProvider
     except ImportError:  # pragma: no cover - optional runtime dependency
-        logger.warning(
+        logger.debug(
             "mcp.producer_telemetry.opentelemetry_missing service=%s — the "
-            "OpenTelemetry SDK is not installed, so no spans can be exported",
+            "OpenTelemetry API is not installed, so no spans can be exported",
             service_name,
         )
         return False
@@ -176,12 +173,25 @@ def configure_producer_tracing(
         # there first owns the export path, and two components fighting
         # over the global provider would leave one of them exporting to
         # the wrong place.
+        #
+        # This is checked BEFORE the opt-in gate below, because "can this
+        # process export spans" is the real question. A component that
+        # installed its own provider exports whether or not the endpoint
+        # is in the environment.
         logger.info(
             "mcp.producer_telemetry.provider_already_installed service=%s — "
             "leaving the existing tracer provider in place",
             service_name,
         )
         return True
+
+    if endpoint is None and not producer_telemetry_enabled():
+        logger.debug(
+            "mcp.producer_telemetry.not_configured service=%s — no OTLP endpoint "
+            "in the environment, so no provider is installed",
+            service_name,
+        )
+        return False
 
     try:
         provider = _build_provider(

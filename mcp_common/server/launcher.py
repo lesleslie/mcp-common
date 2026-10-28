@@ -272,7 +272,8 @@ async def launch(
     export_spans = configure_producer_tracing(component_name)
 
     server = build_server()
-    _attach_request_span_middleware(server, component_name)
+    if export_spans:
+        _attach_request_span_middleware(server, component_name)
 
     stop_event = asyncio.Event()
     liveness_task: asyncio.Task[None] | None = None

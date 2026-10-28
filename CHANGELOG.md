@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - server/launcher: configure producer telemetry and attach the request-span
   middleware under the component's `component_name`, which is the same string
   the receiver's heartbeat roster watches
+- server: re-export the producer telemetry helpers from `mcp_common.server`, so
+  the new public API sits on the same surface as the rest of the package
 
 ### Fixed
 
@@ -23,6 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - server/producer_telemetry: accept extra resource attributes, so a component
   can add its own (`telemetry.source` and friends) without rebuilding the
   provider. The canonical identity is applied last and cannot be shadowed.
+- server/launcher: the request-span middleware is attached only when the
+  process can actually export spans. The launcher is shared with MCP servers
+  outside the Bodai core set, and attaching it unconditionally gave every one
+  of them a per-request span that was recorded and then discarded.
+- server/producer_telemetry: an already-installed tracer provider is detected
+  BEFORE the opt-in gate. "Can this process export spans" is the real
+  question, and a component that installed its own provider exports whether or
+  not the endpoint is in the environment.
 
 ## [0.31.2] - 2026-10-23
 

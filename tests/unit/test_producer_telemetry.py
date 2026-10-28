@@ -377,6 +377,72 @@ class TestLauncherMiddlewareAttachment:
         assert _attach_request_span_middleware(object(), "akosha") is False
 
 
+class TestTheMiddlewareIsGatedOnExport:
+    """The request-span middleware is attached only when spans can go somewhere.
+
+    The launcher is shared with MCP servers outside the Bodai core set.
+    Attaching the middleware unconditionally would give every one of them
+    a per-request span that is recorded and then discarded -- new work on
+    a code path they never opted into.
+    """
+
+    async def test_a_process_that_cannot_export_gets_no_middleware(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from mcp_common.server import launcher
+
+        attached: list[str] = []
+
+        monkeypatch.setattr(
+            launcher, "configure_producer_tracing", lambda *a, **k: False
+        )
+        monkeypatch.setattr(
+            launcher,
+            "_attach_request_span_middleware",
+            lambda server, name: attached.append(name) or True,
+        )
+
+        async def _fake_run(*_args: Any, **_kwargs: Any) -> None:
+            return None
+
+        monkeypatch.setattr(launcher, "run_with_uvicorn_config", _fake_run)
+
+        await launcher.launch(
+            build_server=lambda: object(),
+            component_name="third-party",
+        )
+
+        assert attached == []
+
+    async def test_a_process_that_can_export_gets_the_middleware(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from mcp_common.server import launcher
+
+        attached: list[str] = []
+
+        monkeypatch.setattr(
+            launcher, "configure_producer_tracing", lambda *a, **k: True
+        )
+        monkeypatch.setattr(
+            launcher,
+            "_attach_request_span_middleware",
+            lambda server, name: attached.append(name) or True,
+        )
+
+        async def _fake_run(*_args: Any, **_kwargs: Any) -> None:
+            return None
+
+        monkeypatch.setattr(launcher, "run_with_uvicorn_config", _fake_run)
+
+        await launcher.launch(
+            build_server=lambda: object(),
+            component_name="mahavishnu",
+        )
+
+        assert attached == ["mahavishnu"]
+
+
 def test_the_liveness_span_name_is_distinguishable() -> None:
     """Synthetic markers carry an underscore prefix, like the canary.
 
