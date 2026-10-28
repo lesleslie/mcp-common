@@ -6,16 +6,28 @@ import ssl
 import sys
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 # ---------------------------------------------------------------------------
 # Module-level mock: ensure websockets is never actually imported.
 # This must happen BEFORE any import of the server module.
+#
+# Shadow "websockets" with `monkeypatch.setitem`, NOT `patch.dict`.
+# `patch.dict` restores the WHOLE sys.modules mapping when it exits, which
+# evicts every module imported inside the block -- including
+# `mcp_common.websocket.metrics`, whose module-level prometheus Counter
+# registrations survive the eviction. A later test that imports
+# `mcp_common.websocket` again re-executes metrics.py and re-registers the
+# same metric names, and prometheus_client rejects that with
+# DuplicateTimeseries. `monkeypatch.setitem` restores only the one key it
+# shadowed, so the imported modules stay in sys.modules.
+# `tests/unit/test_websocket_client.py` already shadows it this way.
 # ---------------------------------------------------------------------------
 _websockets_mock = MagicMock()
-with patch.dict("sys.modules", {"websockets": _websockets_mock}):
+with pytest.MonkeyPatch.context() as monkeypatch:
+    monkeypatch.setitem(sys.modules, "websockets", _websockets_mock)
     # Import the server module itself so we can patch attributes on it.
     import mcp_common.websocket.server as _server_mod
     from mcp_common.websocket.protocol import (

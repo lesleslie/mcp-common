@@ -1,25 +1,36 @@
-"""Regression tests for mcp_common.cli.factory Python 2 except syntax.
+"""Regression tests for mcp_common.cli.factory ``except`` clause syntax.
 
 Plan 2026-08-25 Task 0.5: ``mcp_common/cli/factory.py`` historically
 contained two ``except ValueError, OSError:`` clauses (lines 530 and 745)
-that are invalid syntax under Python 3.  The module would refuse to parse,
-which would cascade into ``register_lifecycle_handlers`` silently
-mounting broken handlers in Phase 4.2.
+that were invalid syntax under Python 3 at the time.  The module would
+refuse to parse, which would cascade into ``register_lifecycle_handlers``
+silently mounting broken handlers in Phase 4.2.
 
 These tests guard against reintroduction:
 
 1. TestFactoryModuleImports — forces module load (would raise
-   ``SyntaxError`` on Python 3 if any comma-form ``except`` slips back).
-2. TestFactoryExceptSyntax — uses ``ast`` to scan the source for any
-   legacy comma-syntax ``except`` clause and fails loudly if one is
-   found.  This is stronger than just importing because it survives
-   syntax being moved between sites.
+   ``SyntaxError`` on Python 3 if any invalid ``except`` slips back).
+2. TestFactoryExceptSyntax — uses ``ast`` to scan the source for a broken
+   ``except`` clause and fails loudly if one is found.  This is stronger
+   than just importing because it survives syntax being moved between
+   sites.
+
+A note on the comma form.  ``except A, B:`` without parentheses is valid
+syntax under Python 3.14 (PEP 758), and it is the form this package uses:
+``ruff format`` at ``target-version = py314`` rewrites ``except (A, B):``
+back to the comma form, so the parenthesised spelling cannot survive a
+formatting run.  The clause that is still broken is the Python 2 *binding*
+form ``except A, e:`` — PEP 758 parses that as the tuple ``(A, e)``, so
+``e`` is looked up as a class when the handler runs and the error path
+dies with ``NameError`` instead of catching anything.
 """
 
 from __future__ import annotations
 
 import ast
+import builtins
 import importlib.util
+import re
 from pathlib import Path
 
 import pytest
@@ -30,8 +41,8 @@ FACTORY_PATH = (
 
 
 class TestFactoryModuleImports:
-    """Force the module to import.  Any Python 2 ``except`` syntax
-    reintroduction would raise ``SyntaxError`` here."""
+    """Force the module to import.  A ``SyntaxError`` here means the file
+    no longer parses under Python 3."""
 
     def test_module_path_exists(self) -> None:
         assert FACTORY_PATH.is_file(), f"factory.py not found at {FACTORY_PATH}"
@@ -47,9 +58,15 @@ class TestFactoryModuleImports:
 
 
 class TestFactoryExceptSyntax:
-    """Scan the factory source for any legacy comma-form ``except``
-    clause.  Python 3 rejects ``except A, B:`` (treats B as the bound
-    name).  Only ``except (A, B):`` and ``except A as e:`` are valid."""
+    """Scan the factory source for broken ``except`` clauses.
+
+    The comma form ``except A, B:`` is legal under Python 3.14 (PEP 758)
+    and is what ``ruff format`` emits for this package, so it is not an
+    offender.  The Python 2 binding form ``except A, e:`` is: PEP 758
+    parses it as the tuple ``(A, e)``, so ``e`` is resolved as a class
+    when the handler runs and the error path dies with ``NameError``
+    instead of catching anything.
+    """
 
     @pytest.fixture
     def factory_source(self) -> str:
@@ -59,27 +76,72 @@ class TestFactoryExceptSyntax:
     def factory_tree(self, factory_source: str) -> ast.Module:
         return ast.parse(factory_source)
 
-    def _iter_except_handlers(
-        self, tree: ast.Module
-    ) -> list[tuple[ast.ExceptHandler, ast.AST]]:
-        """Yield ``(handler, type_node)`` for each non-empty ``except``."""
-        handlers: list[tuple[ast.ExceptHandler, ast.AST]] = []
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.ExceptHandler):
+    @pytest.fixture
+    def exception_names(self, factory_tree: ast.Module) -> set[str]:
+        """Names that resolve to a class in this module's namespace.
+
+        A PEP 758 handler may only list exception classes.  The builtins
+        that subclass ``BaseException`` are known without looking at the
+        module; for the rest, any name the module binds (a class it
+        defines, or an alias it imports) is accepted, so this check
+        reports a *variable* used as an exception type rather than
+        second-guessing which classes are exceptions.
+        """
+        names = {
+            name
+            for name in dir(builtins)
+            if isinstance(getattr(builtins, name, None), type)
+            and issubclass(getattr(builtins, name), BaseException)
+        }
+        for node in ast.walk(factory_tree):
+            if isinstance(node, ast.ClassDef):
+                names.add(node.name)
+            elif isinstance(node, ast.ImportFrom):
+                for alias in node.names:
+                    names.add(alias.asname or alias.name)
+            elif isinstance(node, ast.Import):
+                for alias in node.names:
+                    names.add((alias.asname or alias.name).split(".")[0])
+        return names
+
+    def test_no_python2_binding_form_except(
+        self, factory_tree: ast.Module, exception_names: set[str]
+    ) -> None:
+        """Every member of a PEP 758 handler tuple must be an exception class.
+
+        ``except ValueError, e:`` binds nothing under PEP 758 — it asks to
+        catch ``ValueError`` or ``e``, and ``e`` is a name lookup that
+        raises ``NameError`` the moment the handler runs.
+        """
+        offenders: list[str] = []
+        for node in ast.walk(factory_tree):
+            if not isinstance(node, ast.ExceptHandler) or node.type is None:
                 continue
-            if node.type is None:
+            if not isinstance(node.type, ast.Tuple):
                 continue
-            handlers.append((node, node.type))
-        return handlers
+            for element in node.type.elts:
+                if isinstance(element, ast.Name) and element.id not in exception_names:
+                    offenders.append(
+                        f"line {node.lineno}: '{element.id}' is not an exception class"
+                    )
+        if offenders:
+            formatted = "\n".join(f"  {offender}" for offender in offenders)
+            msg = (
+                "Python 2 binding-form 'except' clauses detected:\n"
+                f"{formatted}\n"
+                "List real exception classes, or bind with 'except A as e:'."
+            )
+            raise AssertionError(msg)
 
-    def test_no_python2_comma_form_except(self, factory_source: str) -> None:
-        """Reject the literal text ``except A, B:`` anywhere in the file.
+    def test_no_python2_binding_form_textually(self, factory_source: str) -> None:
+        """Textual counterpart of the AST check, for CI log localisation.
 
-        The ast-based test below is the source of truth, but a textual
-        grep makes failures easier to localise in CI logs."""
-        import re
-
-        pattern = re.compile(r"^\s*except\s+[A-Za-z_][\w.]*\s*,\s*[A-Za-z_]")
+        Flags ``except A, e:`` where the second element is lower-case —
+        a variable name rather than an exception class.  Upper-case names
+        (``except ValueError, OSError:``) are the PEP 758 comma form and
+        are left alone.
+        """
+        pattern = re.compile(r"^\s*except\s+[A-Za-z_][\w.]*\s*,\s*([a-z_]\w*)\s*:")
         offenders: list[tuple[int, str]] = []
         for lineno, line in enumerate(factory_source.splitlines(), start=1):
             if pattern.search(line):
@@ -87,9 +149,9 @@ class TestFactoryExceptSyntax:
         if offenders:
             formatted = "\n".join(f"  line {n}: {text}" for n, text in offenders)
             msg = (
-                "Python 2 comma-form 'except' clauses detected:\n"
+                "Python 2 binding-form 'except' clauses detected:\n"
                 f"{formatted}\n"
-                "Modernise to 'except (A, B):' before merging."
+                "List real exception classes, or bind with 'except A as e:'."
             )
             raise AssertionError(msg)
 
@@ -99,7 +161,8 @@ class TestFactoryExceptSyntax:
         """Walk the AST and ensure each ``except`` is bound correctly.
 
         Valid shapes:
-        - ``except Tuple:`` where the type node is a ``Tuple`` ast node.
+        - ``except A, B:`` (PEP 758) or ``except (A, B):``, where the type
+          node is a ``Tuple`` ast node.
         - ``except SomeClass as name:`` where the type node is a Name.
         """
         offenders: list[str] = []
@@ -146,9 +209,9 @@ class TestFactoryExceptSyntax:
 # 1. The file grew past those line numbers; the pinned locations no longer
 #    contain ``except`` clauses at all (line 530 became a comment, line 745
 #    became a closing paren).
-# 2. New instances of the same Python 2 comma-form bug appeared at lines
-#    587 and 802, completely missing the pinned guard.
-# 3. The textual ``test_no_python2_comma_form_except`` and AST-based
+# 2. New instances of the same bug appeared at lines 587 and 802,
+#    completely missing the pinned guard.
+# 3. The AST-based ``test_no_python2_binding_form_except`` and
 #    ``test_every_except_handler_uses_tuple_or_as`` tests above already
-#    cover the actual invariant ("no comma-form ``except`` anywhere in
-#    the file") with stronger guarantees and without line-number brittleness.
+#    cover the actual invariant with stronger guarantees and without
+#    line-number brittleness.

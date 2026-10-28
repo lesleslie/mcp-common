@@ -9,6 +9,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- server: Components launched through the launcher report their spans
+- server: Let a caller add its own resource attributes
+- server: Put the producer API on the package surface, and gate the middleware
+
+### Fixed
+
+- cli: Write the snapshot files through a uniquely named temp file
+- server: Re-export the whole producer telemetry surface
+- The package version has one source again
+
+### Documentation
+
+- changelog: Merge the three [Unreleased] sections into 0.32.0
+
+## [Unreleased]
+
+### Fixed
+
+- The OpenTelemetry SDK and the OTLP exporters that
+  `server/producer_telemetry` imports were not declared anywhere in this
+  project. The module imports them lazily and guards them with
+  `try/except`, so a missing package degraded the server instead of
+  crashing it — but a runtime guard does not satisfy a static import
+  resolver, and the `ty` hook failed on five unresolved imports. The
+  packages now live in a `telemetry` dependency group, included in `dev`,
+  so they are present in this project's own environment. Every other Bodai
+  repo already declares the same four.
+- `atomic_write_bytes`: the temp-file cleanup on a failed write now uses
+  `contextlib.suppress` and `Path.unlink()`. The behaviour is unchanged — a
+  temp file that cannot be removed still does not mask the original
+  exception — but the `refurb` hook asks for this spelling.
+- The test suite could not collect four websocket test modules, so those
+  tests never ran. `tests/test_websocket_server.py` shadowed the
+  `websockets` module with `patch.dict("sys.modules", ...)`, which restores
+  the whole mapping on exit and so evicted every module imported inside the
+  block — including `mcp_common.websocket.metrics`, whose module-level
+  Prometheus counter registrations survive the eviction. A later test that
+  imported `mcp_common.websocket` again re-registered the same metric names,
+  and `prometheus_client` rejected that with `DuplicateTimeseries`. The
+  module is now shadowed with `monkeypatch.setitem`, which restores only the
+  one key it replaced — the pattern `tests/unit/test_websocket_client.py`
+  already used.
+- cli/factory: the `except` clause check in
+  `tests/unit/test_factory_syntax.py` now matches Python 3.14 and the
+  package's own formatter. `except A, B:` without parentheses is valid
+  under PEP 758, and it is the form `ruff format` emits at
+  `target-version = py314` — it rewrites `except (A, B):` back to the comma
+  form, so the parenthesised spelling cannot survive a formatting run. The
+  check rejected the comma form, so it failed against a file the formatter
+  itself had produced. It now flags the Python 2 *binding* form
+  `except A, e:`, which is the one that is still broken: PEP 758 parses it
+  as a tuple, so the name is resolved as a class when the handler runs and
+  the error path dies with `NameError`.
+
+## [0.32.0] - 2026-10-28
+
+### Added
+
 - server/producer_telemetry: install a tracer provider that exports to the Bodai
   substrate, and emit a `_service_liveness` span on a fixed interval
 - server/launcher: configure producer telemetry and attach the request-span
@@ -219,8 +277,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - mcp-common: Emit prometheus_client metrics from the health aggregator —
   `mcp_common.health.metrics.update_health_metrics` wires the aggregator's
   `HealthSnapshot` into the consumer's existing `prometheus_client.CollectorRegistry`
-  (plan §4 Observability + §11.4). Emits four metrics: `health_feed_status{repo, feed,
-  status}`, `health_feed_errors_within_window{repo, feed}`,
+  (plan §4 Observability + §11.4). Emits four metrics: `health_feed_status{repo, feed, status}`, `health_feed_errors_within_window{repo, feed}`,
   `mcp_common_health_halflife_seconds{repo}`, `mcp_common_health_aggregate_duration_ms{repo}`
   (histogram). These are the metric names referenced in the PromQL alert rules at
   `config/prometheus/health_aggregator_alerts.yml`. `prometheus_client>=0.20.0` promoted

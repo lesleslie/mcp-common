@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-common"
-version = "0.31.2"
+version = "0.32.0"
 description = "Oneiric-Native foundation library providing battle-tested patterns for MCP (Model Context Protocol) servers, with YAML configuration, Rich UI, and CLI lifecycle management"
 readme = "README.md"
 requires-python = ">=3.14"
@@ -264,7 +264,7 @@ exclude_patterns = [
 max_complexity = 15
 
 # PEP 735 dependency-groups (replaces [project.optional-dependencies]).
-# Install with: uv sync --group dev --group treesitter --group llm --group macos-prompts --group terminal-prompts
+# Install with: uv sync --group dev --group treesitter --group llm --group macos-prompts --group terminal-prompts --group telemetry
 #
 # Note: previous consumers depended on `mcp-common[treesitter,llm]` extras.
 # Those have been removed; downstream repos must now include the treesitter
@@ -275,6 +275,26 @@ dev = [
     "pytest-benchmark>=5.3.0",
     "respx>=0.23.1",
     "uv-bump>=0.6.0",
+    # Producer telemetry (mcp_common/server/producer_telemetry.py). That
+    # module imports the OTel SDK and the OTLP exporters lazily and guards
+    # them with try/except, so a missing package degrades the server
+    # instead of crashing it -- but ty's static import resolver needs the
+    # packages physically present in site-packages, and a runtime
+    # try/except guard does not satisfy it. Including the group here puts
+    # them in this project's own environment, which is the environment the
+    # type checker resolves against.
+    {include-group = "telemetry"},
+]
+
+# Producer telemetry support (OpenTelemetry SDK + OTLP span exporters).
+# Version floor matches the rest of the fleet (mahavishnu, crackerjack,
+# session-buddy), so every component that talks to the collector resolves
+# the same API.
+telemetry = [
+    "opentelemetry-api>=1.45.1",
+    "opentelemetry-sdk>=1.45.1",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.45.1",
+    "opentelemetry-exporter-otlp-proto-http>=1.45.1",
 ]
 
 # Tree-sitter parsing support (used by session-buddy, mahavishnu, etc.)
