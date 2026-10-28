@@ -31,6 +31,8 @@ from mcp_common.server.availability import (
 from mcp_common.server.base import BaseOneiricServerMixin
 from mcp_common.server.launcher import launch
 from mcp_common.server.producer_telemetry import (
+    DEFAULT_LIVENESS_INTERVAL_SECONDS,
+    DEFAULT_SERVICE_NAMESPACE,
     LIVENESS_SPAN_NAME,
     configure_producer_tracing,
     producer_telemetry_enabled,
@@ -43,6 +45,8 @@ from mcp_common.server.runtime import (
 from mcp_common.server.telemetry import FastMCPOpenTelemetryMiddleware
 
 __all__ = [
+    "DEFAULT_LIVENESS_INTERVAL_SECONDS",
+    "DEFAULT_SERVICE_NAMESPACE",
     "LIVENESS_SPAN_NAME",
     "BaseOneiricServerMixin",
     "FastMCPOpenTelemetryMiddleware",
