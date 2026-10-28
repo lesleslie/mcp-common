@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.32.0] - 2026-10-28
 
 ### Added
 
@@ -19,6 +19,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- cli: the health and security snapshot writers now publish through a uniquely
+  named temp file instead of a fixed one. The fixed name had two failure modes:
+  concurrent writers of the same destination shared one temp file, so whichever
+  renamed first moved it out from under the others (whose rename then failed, or
+  published the other writer's bytes); and a temp file left behind by an earlier
+  write was reused rather than recreated, so the new content inherited the
+  earlier — possibly crashed — write's permissions. `tempfile.mkstemp` closes
+  both: a fresh file, uniquely named, at 0600, and it refuses to follow an
+  existing path.
 - server/launcher: a component launched through it reported no spans at all,
   because nothing installed a tracer provider. The receiver's heartbeat watcher
   read every rostered service as absent, forever.
@@ -157,7 +166,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- mcp-common: Add canonical MCP server launcher (REQ-001..008, 014)
+- mcp-common: Add canonical MCP server launcher (REQ-001..008, 014) —
+  `mcp_common.server.launcher.launch`, the canonical async launcher for Bodai MCP
+  servers. Loads `~/.config/secrets.env`, optionally warms the `settings` health feed
+  (one-shot init), runs FastMCP with `transport="http"` +
+  `uvicorn_config={"timeout_graceful_shutdown": 30}`. Generic — no oneiric coupling.
+  See `docs/mcp/launcher-cookbook.md` for migration patterns.
 
 ### Documentation
 
@@ -196,36 +210,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- mcp-common: Add --health-disable-decay CLI flag (Phase 4 task 7)
-- mcp-common: Emit prometheus_client metrics from the health aggregator
+- mcp-common: Add `--health-disable-decay` CLI flag (Phase 4 task 7) on
+  `MCPServerCLIFactory.start` (plan §5 task 7). Sets `HEALTH_FEED_HALFLIFE_SECONDS=0`
+  before the lifespan runs; emits WARNING + OTel event
+  `health.aggregate.decay_disabled`. Operators use this during incident triage when a
+  known upstream regression is firing repeated errors that would otherwise mask real
+  downstream faults.
+- mcp-common: Emit prometheus_client metrics from the health aggregator —
+  `mcp_common.health.metrics.update_health_metrics` wires the aggregator's
+  `HealthSnapshot` into the consumer's existing `prometheus_client.CollectorRegistry`
+  (plan §4 Observability + §11.4). Emits four metrics: `health_feed_status{repo, feed,
+  status}`, `health_feed_errors_within_window{repo, feed}`,
+  `mcp_common_health_halflife_seconds{repo}`, `mcp_common_health_aggregate_duration_ms{repo}`
+  (histogram). These are the metric names referenced in the PromQL alert rules at
+  `config/prometheus/health_aggregator_alerts.yml`. `prometheus_client>=0.20.0` promoted
+  to a direct runtime dep so the metrics contract is explicit instead of relying on
+  transitive availability.
+
+### Fixed
+
+- mcp-common: `is_healthy` treats `halflife_seconds <= 0` as the "decay disabled"
+  sentinel — no error is ever treated as "recent" regardless of when it occurred. The
+  CLI flag above propagates through to the probe bodies, which already read the env var.
+
+### Changed
+
+- mcp-common: `aggregate_feed_states` returns a typed `HealthSnapshot` instead of
+  `dict[str, object]` — surface TypedDicts `FeedSnapshot` + `HealthSnapshot` for
+  cross-module type resolution.
 
 ## [0.26.3] - 2026-09-15
 
 ### Fixed
 
-- mcp-common: Distinguish never-cycled feed from warming_up (HNSW hardening)
-
-## [Unreleased]
-
-### Added
-
-- mcp-common: `mcp_common.health.metrics.update_health_metrics` wires the aggregator's `HealthSnapshot` into the consumer's existing `prometheus_client.CollectorRegistry` (plan §4 Observability + §11.4). Emits four metrics: `health_feed_status{repo, feed, status}`, `health_feed_errors_within_window{repo, feed}`, `mcp_common_health_halflife_seconds{repo}`, `mcp_common_health_aggregate_duration_ms{repo}` (histogram). These are the metric names referenced in the PromQL alert rules at `config/prometheus/health_aggregator_alerts.yml`. `prometheus_client>=0.20.0` promoted to a direct runtime dep so the metrics contract is explicit instead of relying on transitive availability.
-
-- mcp-common: `--health-disable-decay` CLI flag on `MCPServerCLIFactory.start` (plan §5 task 7). Sets `HEALTH_FEED_HALFLIFE_SECONDS=0` before the lifespan runs; emits WARNING + OTel event `health.aggregate.decay_disabled`. Operators use this during incident triage when a known upstream regression is firing repeated errors that would otherwise mask real downstream faults.
-
-- mcp-common: `mcp_common.server.launcher.launch` — canonical async launcher for Bodai MCP servers. Loads `~/.config/secrets.env`, optionally warms the `settings` health feed (one-shot init), runs FastMCP with `transport="http"` + `uvicorn_config={"timeout_graceful_shutdown": 30}`. Generic — no oneiric coupling. See `docs/mcp/launcher-cookbook.md` for migration patterns.
-
-### Fixed
-
-- mcp-common: `is_healthy` treats `halflife_seconds <= 0` as the "decay disabled" sentinel — no error is ever treated as "recent" regardless of when it occurred. The CLI flag above propagates through to the probe bodies, which already read the env var.
-
-### Changed
-
-- mcp-common: `aggregate_feed_states` returns a typed `HealthSnapshot` instead of `dict[str, object]` — surface TypedDicts `FeedSnapshot` + `HealthSnapshot` for cross-module type resolution.
-
-### Fixed
-
-- mcp-common: Distinguish never-cycled feed from warming_up in `is_healthy` (Phase 4 task 6 / HNSW-on-DuckDB hardening). A feed whose producer reports `ingester_running=True` but `cycles_total == 0` now returns DEGRADED with `FEED_NEVER_POPULATED` instead of WARMING_UP, so operators see a broken-before-first-success producer rather than a healthy-but-still-loading feed.
+- mcp-common: Distinguish never-cycled feed from warming_up in `is_healthy` (Phase 4 task
+  6 / HNSW-on-DuckDB hardening). A feed whose producer reports `ingester_running=True`
+  but `cycles_total == 0` now returns DEGRADED with `FEED_NEVER_POPULATED` instead of
+  WARMING_UP, so operators see a broken-before-first-success producer rather than a
+  healthy-but-still-loading feed.
 
 ## [0.26.2] - 2026-09-15
 
@@ -269,10 +291,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Archive misfiled/migrated docs; update PLAN_INDEX and validator paths
 - CHANGELOG structural fixes, RULES.md coverage gate, AuthHealth via from_providers
 - V0.25.1 doc sweep — version stamps, dep table regen, subpackage list, install commands, server counts
-
-## [Unreleased]
-
-*No unreleased changes yet. When adding entries below, place them above this line and below the [latest release].*
 
 ## [0.25.1] - 2026-09-08
 
