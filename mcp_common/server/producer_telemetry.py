@@ -52,7 +52,7 @@ from typing import TYPE_CHECKING, Any
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping
 
 __all__ = [
     "DEFAULT_LIVENESS_INTERVAL_SECONDS",
@@ -117,6 +117,7 @@ def configure_producer_tracing(
     environment: str = "production",
     endpoint: str | None = None,
     protocol: str | None = None,
+    resource_attributes: Mapping[str, str] | None = None,
 ) -> bool:
     """Install a tracer provider that exports spans to the substrate.
 
@@ -136,6 +137,12 @@ def configure_producer_tracing(
         protocol: Override for the export protocol. ``None`` resolves
             ``OTEL_EXPORTER_OTLP_PROTOCOL``, then falls back to
             ``http/protobuf``.
+        resource_attributes: Extra resource attributes for the provider's
+            ``Resource`` -- the ``telemetry.source`` family, for example.
+            They are applied FIRST, so the canonical identity below
+            always wins: a caller cannot accidentally report a span under
+            a different service name or namespace than the ones it
+            passed to this function.
 
     Returns:
         ``True`` when spans will actually be exported -- either because
@@ -183,6 +190,7 @@ def configure_producer_tracing(
             environment=environment,
             endpoint=endpoint,
             protocol=protocol,
+            resource_attributes=resource_attributes,
         )
     except Exception as exc:  # noqa: BLE001 — telemetry must never take the server down
         # A missing exporter package or a malformed endpoint must not take
@@ -211,6 +219,7 @@ def _build_provider(
     environment: str,
     endpoint: str | None,
     protocol: str | None,
+    resource_attributes: Mapping[str, str] | None = None,
 ) -> Any:
     """Build the ``TracerProvider`` this module installs."""
     from opentelemetry.sdk.resources import Resource
@@ -221,13 +230,20 @@ def _build_provider(
         protocol or os.getenv(_PROTOCOL_ENV) or _DEFAULT_PROTOCOL
     ).lower()
 
-    resource = Resource.create(
+    # The caller's extra attributes go in FIRST so the canonical identity
+    # always wins. The receiver reads ``service.namespace`` from the
+    # resource and quarantines a span whose namespace is not on its
+    # allowlist, so an extra attribute that shadowed the namespace would
+    # silently quarantine every span the service produced.
+    attributes: dict[str, str] = dict(resource_attributes or {})
+    attributes.update(
         {
             "service.name": service_name,
             "service.namespace": service_namespace,
             "deployment.environment": environment,
         }
     )
+    resource = Resource.create(attributes)
     provider = TracerProvider(resource=resource)
     provider.add_span_processor(
         BatchSpanProcessor(_build_exporter(resolved_protocol, endpoint))

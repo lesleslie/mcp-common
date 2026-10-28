@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - server/launcher: a component launched through it reported no spans at all,
   because nothing installed a tracer provider. The receiver's heartbeat watcher
   read every rostered service as absent, forever.
+- server/producer_telemetry: accept extra resource attributes, so a component
+  can add its own (`telemetry.source` and friends) without rebuilding the
+  provider. The canonical identity is applied last and cannot be shadowed.
 
 ## [0.31.2] - 2026-10-23
 

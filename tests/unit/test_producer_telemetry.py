@@ -184,6 +184,57 @@ class TestConfigureProducerTracing:
             trace.get_tracer_provider().resource.attributes["service.name"] == "akosha"
         )
 
+    def test_extra_resource_attributes_reach_the_resource(
+        self,
+        clean_otel_env: None,
+        reset_tracer_provider: Any,
+        otel_sdk: None,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from opentelemetry import trace
+
+        monkeypatch.setenv(_ENDPOINT_ENV, "http://127.0.0.1:4318")
+
+        assert (
+            configure_producer_tracing(
+                "session-buddy",
+                resource_attributes={"telemetry.source": "session-buddy"},
+            )
+            is True
+        )
+        attributes = trace.get_tracer_provider().resource.attributes
+        assert attributes["telemetry.source"] == "session-buddy"
+        assert attributes["service.name"] == "session-buddy"
+
+    def test_extra_attributes_cannot_shadow_the_identity(
+        self,
+        clean_otel_env: None,
+        reset_tracer_provider: Any,
+        otel_sdk: None,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """The canonical identity wins over a caller's extra attributes.
+
+        The receiver quarantines a span whose namespace is not on its
+        allowlist, so an extra attribute that shadowed the namespace
+        would silently quarantine every span the service produced.
+        """
+        from opentelemetry import trace
+
+        monkeypatch.setenv(_ENDPOINT_ENV, "http://127.0.0.1:4318")
+
+        configure_producer_tracing(
+            "session-buddy",
+            service_namespace=DEFAULT_SERVICE_NAMESPACE,
+            resource_attributes={
+                "service.namespace": "session-buddy",
+                "service.name": "wrong-name",
+            },
+        )
+        attributes = trace.get_tracer_provider().resource.attributes
+        assert attributes["service.namespace"] == DEFAULT_SERVICE_NAMESPACE
+        assert attributes["service.name"] == "session-buddy"
+
 
 class TestEndpointNormalization:
     """An explicit OTLP/HTTP endpoint means the same thing as the env var."""
