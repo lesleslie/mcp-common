@@ -1,3 +1,15 @@
+## [0.34.1] - 2026-10-29
+
+### Performance
+
+- Skip Mypy import traversal in the refurb hook
+
+### Documentation
+
+- changelog: Repair the release record
+- Correct the version claim and the dependency drift
+- Stop restating the version in CLAUDE.md so the release audit passes
+
 ## [Unreleased]
 
 ### Fixed
