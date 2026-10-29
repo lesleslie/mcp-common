@@ -51,6 +51,23 @@ dependencies = [
     # so making it a direct runtime dep here pins the metrics contract
     # instead of relying on transitive availability.
     "prometheus_client>=0.20.0",
+    # Producer telemetry (mcp_common/server/producer_telemetry.py and
+    # mcp_common/server/telemetry.py). These four were declared only in
+    # this project's own `telemetry` dependency group, and a dependency
+    # group is never installed for a consumer -- so every Bodai repo that
+    # produces spans had to repeat the same pins in its own pyproject to
+    # get an exporter, and any repo that forgot got a server that recorded
+    # spans and exported none. Declaring them here puts them where they
+    # are imported: the producer API is part of this package's public
+    # surface, so a consumer that calls it gets a working exporter without
+    # having to know which packages that requires.
+    # The version floor matches the rest of the fleet (mahavishnu,
+    # crackerjack, session-buddy), so every component that talks to the
+    # collector resolves the same API.
+    "opentelemetry-api>=1.45.1",
+    "opentelemetry-sdk>=1.45.1",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.45.1",
+    "opentelemetry-exporter-otlp-proto-http>=1.45.1",
 ]
 
 [project.license]
@@ -264,7 +281,7 @@ exclude_patterns = [
 max_complexity = 15
 
 # PEP 735 dependency-groups (replaces [project.optional-dependencies]).
-# Install with: uv sync --group dev --group treesitter --group llm --group macos-prompts --group terminal-prompts --group telemetry
+# Install with: uv sync --group dev --group treesitter --group llm --group macos-prompts --group terminal-prompts
 #
 # Note: previous consumers depended on `mcp-common[treesitter,llm]` extras.
 # Those have been removed; downstream repos must now include the treesitter
@@ -275,26 +292,6 @@ dev = [
     "pytest-benchmark>=5.3.0",
     "respx>=0.23.1",
     "uv-bump>=0.6.0",
-    # Producer telemetry (mcp_common/server/producer_telemetry.py). That
-    # module imports the OTel SDK and the OTLP exporters lazily and guards
-    # them with try/except, so a missing package degrades the server
-    # instead of crashing it -- but ty's static import resolver needs the
-    # packages physically present in site-packages, and a runtime
-    # try/except guard does not satisfy it. Including the group here puts
-    # them in this project's own environment, which is the environment the
-    # type checker resolves against.
-    {include-group = "telemetry"},
-]
-
-# Producer telemetry support (OpenTelemetry SDK + OTLP span exporters).
-# Version floor matches the rest of the fleet (mahavishnu, crackerjack,
-# session-buddy), so every component that talks to the collector resolves
-# the same API.
-telemetry = [
-    "opentelemetry-api>=1.45.1",
-    "opentelemetry-sdk>=1.45.1",
-    "opentelemetry-exporter-otlp-proto-grpc>=1.45.1",
-    "opentelemetry-exporter-otlp-proto-http>=1.45.1",
 ]
 
 # Tree-sitter parsing support (used by session-buddy, mahavishnu, etc.)

@@ -2170,13 +2170,17 @@ wheels = [
 
 [[package]]
 name = "mcp-common"
-version = "0.31.2"
+version = "0.32.0"
 source = { editable = "." }
 dependencies = [
     { name = "cryptography" },
     { name = "fastmcp" },
     { name = "httpx2" },
     { name = "oneiric" },
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-exporter-otlp-proto-grpc" },
+    { name = "opentelemetry-exporter-otlp-proto-http" },
+    { name = "opentelemetry-sdk" },
     { name = "prometheus-client" },
     { name = "psutil" },
     { name = "pydantic" },
@@ -2191,10 +2195,6 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "crackerjack" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-exporter-otlp-proto-grpc" },
-    { name = "opentelemetry-exporter-otlp-proto-http" },
-    { name = "opentelemetry-sdk" },
     { name = "pytest-benchmark" },
     { name = "respx" },
     { name = "uv-bump" },
@@ -2205,12 +2205,6 @@ llm = [
 macos-prompts = [
     { name = "pyobjc-core" },
     { name = "pyobjc-framework-cocoa" },
-]
-telemetry = [
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-exporter-otlp-proto-grpc" },
-    { name = "opentelemetry-exporter-otlp-proto-http" },
-    { name = "opentelemetry-sdk" },
 ]
 terminal-prompts = [
     { name = "prompt-toolkit" },
@@ -2227,6 +2221,10 @@ requires-dist = [
     { name = "fastmcp", specifier = ">=4.0.11" },
     { name = "httpx2", specifier = ">=2.13.1" },
     { name = "oneiric", specifier = ">=0.33" },
+    { name = "opentelemetry-api", specifier = ">=1.45.1" },
+    { name = "opentelemetry-exporter-otlp-proto-grpc", specifier = ">=1.45.1" },
+    { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.45.1" },
+    { name = "opentelemetry-sdk", specifier = ">=1.45.1" },
     { name = "prometheus-client", specifier = ">=0.20.0" },
     { name = "psutil", specifier = ">=7.2.2" },
     { name = "pydantic", specifier = ">=2.13.5" },
@@ -2241,10 +2239,6 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "crackerjack", specifier = ">=0.85.0" },
-    { name = "opentelemetry-api", specifier = ">=1.45.1" },
-    { name = "opentelemetry-exporter-otlp-proto-grpc", specifier = ">=1.45.1" },
-    { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.45.1" },
-    { name = "opentelemetry-sdk", specifier = ">=1.45.1" },
     { name = "pytest-benchmark", specifier = ">=5.3.0" },
     { name = "respx", specifier = ">=0.23.1" },
     { name = "uv-bump", specifier = ">=0.6.0" },
@@ -2253,12 +2247,6 @@ llm = [{ name = "openai", specifier = ">=3.24.0" }]
 macos-prompts = [
     { name = "pyobjc-core", specifier = ">=12.2.2" },
     { name = "pyobjc-framework-cocoa", specifier = ">=10.0" },
-]
-telemetry = [
-    { name = "opentelemetry-api", specifier = ">=1.45.1" },
-    { name = "opentelemetry-exporter-otlp-proto-grpc", specifier = ">=1.45.1" },
-    { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.45.1" },
-    { name = "opentelemetry-sdk", specifier = ">=1.45.1" },
 ]
 terminal-prompts = [{ name = "prompt-toolkit", specifier = ">=3.0.53" }]
 treesitter = [

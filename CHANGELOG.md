@@ -33,9 +33,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `try/except`, so a missing package degraded the server instead of
   crashing it — but a runtime guard does not satisfy a static import
   resolver, and the `ty` hook failed on five unresolved imports. The
-  packages now live in a `telemetry` dependency group, included in `dev`,
-  so they are present in this project's own environment. Every other Bodai
-  repo already declares the same four.
+  packages are now declared as runtime dependencies rather than in a
+  `telemetry` dependency group, and that distinction matters beyond this
+  project's own environment: a dependency group is never installed for a
+  consumer, so every Bodai repo that produces spans had to repeat the same
+  pins in its own pyproject to get an exporter, and a repo that forgot got
+  a server that recorded spans and exported none. The producer API is part
+  of this package's public surface, so the packages belong where they are
+  imported.
 - `atomic_write_bytes`: the temp-file cleanup on a failed write now uses
   `contextlib.suppress` and `Path.unlink()`. The behaviour is unchanged — a
   temp file that cannot be removed still does not mask the original
