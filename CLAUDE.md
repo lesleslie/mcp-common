@@ -8,7 +8,7 @@ For a shorter, tool-neutral bootstrap document, start with `AGENTS.md`.
 
 **mcp-common** is a Oneiric-native foundation library for building production-grade MCP (Model Context Protocol) servers. It provides battle-tested patterns extracted from 8 production servers including crackerjack, session-buddy, and fastblocks.
 
-**Current Status:** v0.25.1 - **Oneiric-Native (Production Ready)**
+**Current Status: v0.34.0** - **Oneiric-Native (Production Ready)**
 
 - ✅ Core package structure complete
 - ✅ MCPBaseSettings with YAML + environment variable support
@@ -492,7 +492,7 @@ uv run ruff format && uv run ruff check && uv run mypy mcp_common tests && uv ru
 
 ## Implemented Components
 
-Current components as of v0.25.1:
+Current components as of v0.34.0:
 
 - **CLI factory**: `MCPServerCLIFactory` with lifecycle management (`create_app`, `register_lifecycle_handlers`, `create_handlers`)
 - **Settings**: `MCPBaseSettings` with YAML + env var layered configuration
@@ -528,31 +528,44 @@ python weather_server.py
 
 ## Version and Release Information
 
-- **Current Version:** 0.25.1 (Oneiric-Native - production ready)
+- **Current Version:** 0.34.0 (Oneiric-Native - production ready)
 
 See CHANGELOG.md for the full version history.
 
 ## External Dependencies and Their Roles
 
-- **pydantic>=2.12.4** - Data validation and settings management (MCPBaseSettings)
-- **rich>=14.2.0** - Terminal UI for beautiful console output (ServerPanels)
-- **httpx>=0.27.0** - HTTP client with async support (HTTPClientAdapter)
-- **pyyaml>=6.0.0** - YAML configuration file parsing
-- Optional: **fastmcp** - MCP protocol host to run servers and examples (install separately)
+- **pydantic>=2.13.5** - Data validation and settings management (MCPBaseSettings)
+- **rich>=15.0.0** - Terminal UI for beautiful console output (ServerPanels)
+- **httpx2>=2.13.1** - Async HTTP client used by the MCP client and the health checks
+- **pyyaml>=6.0.3** - YAML configuration file parsing
+- **fastmcp>=4.0.11** - MCP protocol host for the server and the examples (a required runtime dependency, not optional)
 
 ## Development Dependencies
 
-- **pytest>=8.3.0** - Test framework
-- **pytest-asyncio>=0.24.0** - Async test support
-- **pytest-cov>=6.0.0** - Coverage reporting
-- **pytest-mock>=3.14.0** - Mocking utilities
-- **hypothesis>=6.122.0** - Property-based testing
-- **ruff>=0.8.0** - Linting and formatting
-- **mypy>=1.13.0** - Static type checking
-- **bandit>=1.8.0** - Security scanning
-- **respx>=0.21.0** - HTTP mocking for httpx
-- **crackerjack** - Reference implementation
-- **session-buddy** - Reference implementation
+The `dev` dependency group declares four packages; the remaining test and lint
+tooling arrives transitively through `crackerjack`:
+
+- **crackerjack>=0.85.0** - Quality gates, and the source of the tooling below
+- **pytest-benchmark>=5.3.0** - Performance benchmarking
+- **respx>=0.23.1** - HTTP mocking
+- **uv-bump>=0.6.0** - Raises dependency minimums in `pyproject.toml` to the latest feasible version
+
+Used by this project's own `[tool.*]` configuration:
+
+- **pytest** - Test framework
+- **pytest-asyncio** - Async test support
+- **pytest-cov** - Coverage reporting
+- **pytest-mock** - Mocking utilities
+- **hypothesis** - Property-based testing
+- **ruff** - Linting and formatting
+- **pyright** - Static type checking
+- **bandit** - Security scanning
+- **codespell** - Spelling checks
+- **creosote** - Dead dependency detection
+- **refurb** - FURB rewrite rules
+- **complexipy** - Cyclomatic-complexity limits
+
+`session-buddy` is a reference implementation, not a dependency.
 
 <!-- CRACKERJACK INTEGRATION START -->
 

@@ -25,17 +25,23 @@ These dependencies are **automatically installed** with `pip install mcp-common`
 
 | Package | Version | Purpose | Why This Library |
 |---------|---------|---------|------------------|
-| **oneiric** | >=0.16.0 | Configuration & HTTP client | Oneiric patterns for YAML + env var config, connection pooling |
-| **pydantic** | >=2.13.4 | Data validation | Type-safe settings with validation |
-| **pydantic-settings** | >=2.14.1 | Settings management | Pydantic-based settings with env var loading |
+| **oneiric** | >=0.33 | Configuration & HTTP client | Oneiric patterns for YAML + env var config, connection pooling |
+| **pydantic** | >=2.13.5 | Data validation | Type-safe settings with validation |
+| **pydantic-settings** | >=2.15.0 | Settings management | Pydantic-based settings with env var loading |
 | **pyyaml** | >=6.0.3 | YAML parsing | Configuration file loading |
 | **rich** | >=15.0.0 | Terminal UI | Beautiful console output |
-| **typer** | >=0.26.7 | CLI framework | Server lifecycle management |
+| **typer** | >=0.27.2 | CLI framework | Server lifecycle management |
 | **psutil** | >=7.2.2 | System utilities | Process monitoring for PID management |
 | **PyJWT** | >=2.8.0 | JWT auth | JWT token verification (auth subsystem) |
-| **cryptography** | >=48.0.0 | Crypto primitives | Required by JWT signing/verification |
-| **websockets** | >=16.0 | WebSocket client/server | Real-time server + client + TLS |
-| **fastmcp** | >=3.4.0 | MCP server framework | FastMCP tool/middleware integration |
+| **cryptography** | >=50.0.2 | Crypto primitives | Required by JWT signing/verification |
+| **websockets** | >=17.2 | WebSocket client/server | Real-time server + client + TLS |
+| **fastmcp** | >=4.0.11 | MCP server framework | FastMCP tool/middleware integration |
+| **httpx2** | >=2.13.1 | Async HTTP client | The MCP client and the health checks talk to peers over HTTP |
+| **prometheus_client** | >=0.20.0 | Prometheus exposition | The health aggregator emits metrics on `/metrics` |
+| **opentelemetry-api** | >=1.45.1 | Trace API | The producer API is part of this package's public surface |
+| **opentelemetry-sdk** | >=1.45.1 | Trace SDK | Installs the tracer provider the producer API configures |
+| **opentelemetry-exporter-otlp-proto-grpc** | >=1.45.1 | OTLP/gRPC exporter | Ships spans to the Bodai substrate collector |
+| **opentelemetry-exporter-otlp-proto-http** | >=1.45.1 | OTLP/HTTP exporter | Alternate span transport for collectors that speak HTTP |
 
 ### Dependency Explanations
 
@@ -76,6 +82,7 @@ from mcp_common.config import MCPBaseSettings
 
 ```python
 from pydantic import Field, field_validator
+
 
 class Settings(MCPBaseSettings):
     api_key: str = Field(description="API key")
@@ -125,10 +132,12 @@ import typer
 
 app = typer.Typer()
 
+
 @app.command()
 def start():
     """Start the server."""
     print("Server started!")
+
 
 if __name__ == "__main__":
     app()
@@ -152,6 +161,7 @@ if __name__ == "__main__":
 ```python
 import psutil
 
+
 def is_process_running(pid: int) -> bool:
     """Check if process is running."""
     try:
@@ -170,10 +180,14 @@ to PEP 735 in v0.25.0):
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| **crackerjack** | >=0.65.3 | Quality control and CI/CD automation |
-| **pytest-benchmark** | >=5.2.3 | Performance benchmarking |
+| **crackerjack** | >=0.85.0 | Quality control and CI/CD automation |
+| **pytest-benchmark** | >=5.3.0 | Performance benchmarking |
 | **respx** | >=0.23.1 | HTTP mocking for tests |
-| **uv-bump** | >=0.5.0 | Version bumping automation |
+| **uv-bump** | >=0.6.0 | Raises dependency minimums in `pyproject.toml` to the latest feasible version |
+
+`uv-bump` does **not** bump the project's own version. The package version
+lives in `pyproject.toml` under `[project] version` and is changed by hand,
+or by `crackerjack run -p` at publish time.
 
 ### Optional Dependency Groups (PEP 735)
 
@@ -182,10 +196,10 @@ with `uv sync --group <name>`:
 
 | Group | Purpose | Notable packages |
 |-------|---------|------------------|
-| **treesitter** | Tree-sitter parsing (used by session-buddy, mahavishnu, etc.) | `tree-sitter>=0.25.2`, `tree-sitter-python>=0.25.0`, `tree-sitter-go>=0.25.0` |
-| **llm** | OpenAI-compatible LLM provider | `openai>=2.41.0` |
-| **macos-prompts** | macOS native prompts via pyobjc | `pyobjc-core>=12.2` |
-| **terminal-prompts** | Terminal prompting backends | (see `pyproject.toml [dependency-groups]`) |
+| **treesitter** | Tree-sitter parsing (used by session-buddy, mahavishnu, etc.) | `tree-sitter>=0.26.0`, `tree-sitter-python>=0.25.0`, `tree-sitter-go>=0.25.0` |
+| **llm** | OpenAI-compatible LLM provider | `openai>=3.24.0` |
+| **macos-prompts** | macOS native prompts via pyobjc | `pyobjc-core>=12.2.2`, `pyobjc-framework-Cocoa>=10.0` |
+| **terminal-prompts** | Terminal prompting backends | `prompt-toolkit>=3.0.53` |
 
 **Migration note**: prior versions exposed `[treesitter,llm]` extras. Those
 extras were removed in v0.25.0; downstream repos must now include the
@@ -195,40 +209,51 @@ extras were removed in v0.25.0; downstream repos must now include the
 
 | Package | Source | Notes |
 |---------|--------|-------|
-| **httpx** | Transitive via `oneiric` | Async HTTP client; pulled in by `oneiric.adapters.http` |
+| **httpx** | Transitive via `oneiric` | Used by `oneiric.adapters.http`; this package's own HTTP client is `httpx2` |
 
-There is **no** optional `opentelemetry` distribution in this package —
-mcp-common does not emit OpenTelemetry traces directly. Consumers wanting
-tracing should add `opentelemetry-api` to their own dependencies.
+There is **no** optional `opentelemetry` distribution in this package. The
+OpenTelemetry SDK and the OTLP exporters are **runtime dependencies**, not a
+dependency group: a dependency group is never installed for a consumer, so
+every Bodai repo that produces spans had to repeat the same pins in its own
+pyproject to get an exporter, and a repo that forgot got a server that
+recorded spans and exported none. mcp-common emits traces directly through
+`mcp_common.server.producer_telemetry`, so the packages belong where they
+are imported.
 
 ## Dependency Tree
 
 ```
-mcp-common (0.25.1)
-├── oneiric (>=0.16.0)
-│   ├── pydantic (>=2.13.4)
-│   ├── pydantic-settings (>=2.14.1)
+mcp-common (0.34.0)
+├── oneiric (>=0.33)
+│   ├── pydantic (>=2.13.5)
+│   ├── pydantic-settings (>=2.15.0)
 │   ├── pyyaml (>=6.0.3)
 │   ├── httpx (transitive)
 │   └── rich (>=15.0.0)
-├── pydantic (>=2.13.4)
-├── pydantic-settings (>=2.14.1)
+├── pydantic (>=2.13.5)
+├── pydantic-settings (>=2.15.0)
 ├── pyyaml (>=6.0.3)
 ├── rich (>=15.0.0)
-├── typer (>=0.26.7)
+├── typer (>=0.27.2)
 │   └── rich (>=15.0.0) [already listed]
 ├── psutil (>=7.2.2)
 ├── PyJWT (>=2.8.0)
-│   └── cryptography (>=48.0.0)
-├── cryptography (>=48.0.0) [already listed]
-├── websockets (>=16.0)
-└── fastmcp (>=3.4.0)
+│   └── cryptography (>=50.0.2)
+├── cryptography (>=50.0.2) [already listed]
+├── websockets (>=17.2)
+├── fastmcp (>=4.0.11)
+├── httpx2 (>=2.13.1)
+├── prometheus_client (>=0.20.0)
+├── opentelemetry-api (>=1.45.1)
+├── opentelemetry-sdk (>=1.45.1)
+├── opentelemetry-exporter-otlp-proto-grpc (>=1.45.1)
+└── opentelemetry-exporter-otlp-proto-http (>=1.45.1)
 ```
 
-**Note**: `httpx` is included transitively via `oneiric` for HTTP client
-functionality. Optional PEP 735 groups (`treesitter`, `llm`, `macos-prompts`,
-`terminal-prompts`) are not part of the runtime tree — install with
-`uv sync --group <name>`.
+**Note**: `httpx` is included transitively via `oneiric`; this package's own
+HTTP client is `httpx2`, which is declared directly. Optional PEP 735 groups
+(`treesitter`, `llm`, `macos-prompts`, `terminal-prompts`) are not part of
+the runtime tree — install with `uv sync --group <name>`.
 
 ## Version Compatibility
 
@@ -244,34 +269,41 @@ functionality. Optional PEP 735 groups (`treesitter`, `llm`, `macos-prompts`,
 
 ### Dependency Version Policy
 
-mcp-common uses **compatible release clauses** (`~=`) for stable dependencies:
+mcp-common uses **lower bounds** (`>=`) for its dependencies:
 
 ```toml
 [project]
 dependencies = [
-    "oneiric>=0.16.0",
-    "pydantic>=2.13.4",
-    "pydantic-settings>=2.14.1",
+    "oneiric>=0.33",
+    "pydantic>=2.13.5",
+    "pydantic-settings>=2.15.0",
     "psutil>=7.2.2",
     "pyyaml>=6.0.3",
     "rich>=15.0.0",
-    "typer>=0.26.7",
+    "typer>=0.27.2",
     "PyJWT>=2.8.0",
-    "cryptography>=48.0.0",
-    "websockets>=16.0",
-    "fastmcp>=3.4.0",
+    "cryptography>=50.0.2",
+    "websockets>=17.2",
+    "httpx2>=2.13.1",
+    "fastmcp>=4.0.11",
+    "prometheus_client>=0.20.0",
+    "opentelemetry-api>=1.45.1",
+    "opentelemetry-sdk>=1.45.1",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.45.1",
+    "opentelemetry-exporter-otlp-proto-http>=1.45.1",
 ]
 
 [dependency-groups]
 dev = [
-    "crackerjack>=0.65.3",
-    "pytest-benchmark>=5.2.3",
+    "crackerjack>=0.85.0",
+    "pytest-benchmark>=5.3.0",
     "respx>=0.23.1",
-    "uv-bump>=0.5.0",
+    "uv-bump>=0.6.0",
 ]
-treesitter = ["tree-sitter>=0.25.2", "tree-sitter-python>=0.25.0", "tree-sitter-go>=0.25.0"]
-llm = ["openai>=2.41.0"]
-macos-prompts = ["pyobjc-core>=12.2"]
+treesitter = ["tree-sitter>=0.26.0", "tree-sitter-python>=0.25.0", "tree-sitter-go>=0.25.0"]
+llm = ["openai>=3.24.0"]
+macos-prompts = ["pyobjc-core>=12.2.2", "pyobjc-framework-Cocoa>=10.0"]
+terminal-prompts = ["prompt-toolkit>=3.0.53"]
 ```
 
 **Why not `~=` (compatible release)**:
@@ -330,7 +362,7 @@ bandit -r mcp_common/
 safety check
 ```
 
-**Current Status**: ✅ Zero critical vulnerabilities (as of v0.25.1)
+**Current Status**: ✅ Zero critical vulnerabilities (as of v0.34.0)
 
 ### Dependency Updates
 
@@ -401,10 +433,10 @@ poetry add mcp-common>=0.25.0
 
 ```bash
 # Pin to specific version
-pip install mcp-common==0.25.1
+pip install mcp-common==0.34.0
 
 # Pin to minor version (allows patches)
-pip install mcp-common~=0.25.0
+pip install mcp-common~=0.34.0
 
 # Minimum version (allows updates)
 pip install "mcp-common>=0.25.0"
@@ -471,10 +503,10 @@ When contributing to mcp-common:
 
 mcp-common provides a **minimal, production-ready foundation** for MCP servers with:
 
-- **11 core dependencies** (oneiric, pydantic, pydantic-settings, pyyaml, rich, typer, psutil, PyJWT, cryptography, websockets, fastmcp)
+- **17 runtime dependencies** (oneiric, pydantic, pydantic-settings, psutil, pyyaml, rich, typer, PyJWT, cryptography, websockets, httpx2, fastmcp, prometheus_client, and the four `opentelemetry-*` packages)
 - **~28MB memory overhead** (minimal impact)
 - **~100ms startup time** (fast initialization)
-- **Zero security vulnerabilities** (as of v0.25.1)
+- **Zero security vulnerabilities** (as of v0.34.0)
 - **10 ecosystem projects** using mcp-common in production
 
 **Ready to build?** See [QUICKSTART.md](../../QUICKSTART.md) for 5-minute getting started guide!
