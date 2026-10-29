@@ -1,5 +1,18 @@
 ## [Unreleased]
 
+### Fixed
+
+- docs: the release audit could not pass on a bumped version. The audit
+  compares a version claim in `CLAUDE.md` against `pyproject.toml`, and
+  the publish flow re-runs that audit *after* Crackerjack bumps the
+  version. A claim in `CLAUDE.md` is stale the moment the bump lands, so
+  every publish aborted on the audit and rolled the bump back — three
+  consecutive attempts on 2026-10-29 each ended in a reset to the
+  pre-bump commit. The version now lives only in `pyproject.toml`, the
+  single source of truth; `CLAUDE.md` points at it instead of restating
+  a number that no release step maintains. This is the convention the
+  other five Bodai repos already follow.
+
 ### Internal
 
 - perf(refurb): the `refurb` hook now passes `--follow-imports=skip` and

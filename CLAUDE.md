@@ -8,7 +8,7 @@ For a shorter, tool-neutral bootstrap document, start with `AGENTS.md`.
 
 **mcp-common** is a Oneiric-native foundation library for building production-grade MCP (Model Context Protocol) servers. It provides battle-tested patterns extracted from 8 production servers including crackerjack, session-buddy, and fastblocks.
 
-**Current Status: v0.34.0** - **Oneiric-Native (Production Ready)**
+**Current Status: Oneiric-Native (Production Ready)** — version: see [`pyproject.toml`](pyproject.toml)
 
 - ✅ Core package structure complete
 - ✅ MCPBaseSettings with YAML + environment variable support
@@ -492,7 +492,7 @@ uv run ruff format && uv run ruff check && uv run mypy mcp_common tests && uv ru
 
 ## Implemented Components
 
-Current components as of v0.34.0:
+Current components as of the current release:
 
 - **CLI factory**: `MCPServerCLIFactory` with lifecycle management (`create_app`, `register_lifecycle_handlers`, `create_handlers`)
 - **Settings**: `MCPBaseSettings` with YAML + env var layered configuration
@@ -528,9 +528,21 @@ python weather_server.py
 
 ## Version and Release Information
 
-- **Current Version:** 0.34.0 (Oneiric-Native - production ready)
+- **Current Version:** defined in `pyproject.toml` (`[project] version`) — the
+  single source of truth (Oneiric-Native - production ready)
 
 See CHANGELOG.md for the full version history.
+
+> **Why this file does not restate the version.** Crackerjack's release audit
+> compares a version claim in this file against `pyproject.toml`, and the
+> publish flow re-runs that audit *after* the version bump. A claim here is
+> therefore stale the moment Crackerjack bumps, so every publish of a repo that
+> carries one aborts on the audit and rolls the bump back. Crackerjack's bump
+> updates `pyproject.toml` and `CHANGELOG.md`; `mcp_common/_version.py`
+> resolves from installed package metadata, so it needs no edit. Nothing
+> rewrites this prose file — and should not. Point at `pyproject.toml`
+> instead. The other five Bodai repos carry no version claim for the same
+> reason.
 
 ## External Dependencies and Their Roles
 
