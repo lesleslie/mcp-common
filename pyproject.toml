@@ -271,6 +271,36 @@ deps-file = "pyproject.toml"
 enable_all = false
 quiet = true
 python_version = "3.14"
+# Refurb drives Mypy internally (Mypy is a hard dependency, not a pluggable
+# backend), so Mypy's own flags are the only speed lever available.
+#
+# ``follow_imports`` defaults to ``normal``: Mypy type-checks every import
+# transitively, and any dependency shipping ``py.typed`` is analyzed as if
+# it were first-party source. That pulls the whole third-party graph into
+# the build to lint the ~119 files in ``mcp_common`` and costs minutes per
+# run -- warm cache included, because Refurb forces fine-grained
+# incremental mode on, which does not help when the entire third-party
+# graph is re-verified each time.
+#
+# ``skip`` leaves imported modules unanalyzed (``Any``). The scanned
+# package's own modules stay in Mypy's build set, so their types stay
+# precise and rules that depend on in-package types still fire. What is
+# lost is anything whose "correct" answer comes from a third-party
+# library's default value: FURB120 (redundant default argument) compares
+# the argument against the callee's default, and a skipped library has no
+# default to compare against. Measured here with ``--enable-all``: 30
+# findings without the flag, 21 with it. The skipped set is a strict
+# subset -- no new findings appear -- and this repo's default check set is
+# unaffected.
+#
+# NOTE: this is safe only because the scan covers the whole package. A
+# single-file scan puts no sibling modules in Mypy's build set, so their
+# types degrade to ``Any`` and type-aware rules stop firing.
+#
+# ``ignore_missing_imports`` keeps an optional dependency that is absent
+# from the current venv (the ``llm`` group's openai is not part of ``dev``)
+# from turning into a spurious Mypy import error.
+mypy_args = ["--follow-imports=skip", "--ignore-missing-imports"]
 
 [tool.complexipy]
 default_pattern = "**/*.py"
