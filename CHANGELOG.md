@@ -1,56 +1,137 @@
-# Changelog
+## [Unreleased]
 
-All notable changes to this project will be documented in this file.
+### Internal
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+- perf(refurb): the `refurb` hook now passes `--follow-imports=skip` and
+  `--ignore-missing-imports` to Mypy. Refurb drives Mypy internally — Mypy
+  is a hard dependency, not a pluggable backend — so Mypy's own flags are
+  the only speed lever available, and the default `follow_imports = normal`
+  pulled the whole third-party graph into every scan of this package's ~119
+  files. That cost minutes per run, warm cache included, because Refurb
+  forces fine-grained incremental mode on and the entire third-party graph
+  is re-verified each time. The scanned package's own modules stay in
+  Mypy's build set, so their types stay precise; what is lost is any rule
+  whose answer comes from a third-party library's default — FURB120
+  compares an argument against the callee's default, and a skipped library
+  has none to compare against. Measured here with `--enable-all`: 30
+  findings without the flag, 21 with it. The skipped set is a strict
+  subset, no new findings appear, and this repo's default check set is
+  unaffected. This is safe only because the scan covers the whole package:
+  a single-file scan puts no sibling modules in Mypy's build set, so their
+  types degrade to `Any` and type-aware rules stop firing.
+
+## [0.34.0] - 2026-10-29
+
+### Added
+
+- llm: `ProviderConfig.default_headers` — extra HTTP headers sent with every
+  request to a provider. They are merged with the SDK's own headers, never
+  substituted for them, so `Authorization` still comes from `api_key`. The
+  Bifrost gateway path uses this to carry the gateway virtual key
+  (`x-bf-vk`) and the cache headers (`x-bf-cache-type`, `x-bf-cache-key`,
+  `x-bf-cache-no-store`) in headers rather than in the URL or the bearer
+  token. The local no-auth provider path merges them the same way.
+- llm: a task may carry its own `extra_headers`, which are passed to the
+  SDK call for that request alone — for callers that need to vary the
+  headers per request, such as a per-tenant cache bucket. The key is
+  omitted entirely when absent, so the SDK call shape is unchanged for
+  every existing caller.
+
+## [0.33.1] - 2026-10-28
+
+### Changed
+
+- server/producer_telemetry: `configure_producer_tracing()` now returns a
+  `ProducerTracingResult` instead of a `bool`. The two questions the old
+  return value tried to answer are not the same question. `export_spans`
+  says whether this process will ship spans to the collector, which is true
+  whenever a provider exists, whoever installed it. `provider` says whether
+  the provider is OURS — the one this call installed, or `None` when it
+  declined to replace an existing one — and that is what decides who may
+  shut it down. Collapsing the two into a single `bool` is what made
+  ownership unknowable: `True` used to mean "we installed it" in one branch
+  and "someone else installed it and we declined" in another, so a caller
+  could not tell "I may close this" from "I must not". Closing someone
+  else's exporter is how a process ends up flushing another component's
+  spans into the void at exit.
+
+### Added
+
+- server: `ProducerTracingResult` is exported from `mcp_common.server`.
 
 ## [0.33.0] - 2026-10-28
 
 ### Build
 
-- deps: Declare the OTel packages as runtime dependencies
+- deps: Declare the OTel packages as runtime dependencies. The OpenTelemetry
+  SDK and the OTLP exporters that `server/producer_telemetry` imports were not
+  declared anywhere in this project. The module imports them lazily and guards
+  them with `try/except`, so a missing package degraded the server instead of
+  crashing it — but a runtime guard does not satisfy a static import
+  resolver, and the `ty` hook failed on five unresolved imports. The packages
+  are now declared as runtime dependencies rather than in a `telemetry`
+  dependency group, and that distinction matters beyond this project's own
+  environment: a dependency group is never installed for a consumer, so every
+  Bodai repo that produces spans had to repeat the same pins in its own
+  pyproject to get an exporter, and a repo that forgot got a server that
+  recorded spans and exported none. The producer API is part of this
+  package's public surface, so the packages belong where they are imported.
 
 ## [0.32.0] - 2026-10-28
 
 ### Added
 
-- server: Components launched through the launcher report their spans
-- server: Let a caller add its own resource attributes
-- server: Put the producer API on the package surface, and gate the middleware
+- server: Components launched through the launcher report their spans.
+  `server/producer_telemetry` installs a tracer provider that exports to the
+  Bodai substrate and emits a `_service_liveness` span on a fixed interval,
+  and `server/launcher` configures producer telemetry and attaches the
+  request-span middleware under the component's `component_name`, which is
+  the same string the receiver's heartbeat roster watches. A component
+  launched through it previously reported no spans at all, because nothing
+  installed a tracer provider — the receiver's heartbeat watcher read every
+  rostered service as absent, forever.
+- server: Let a caller add its own resource attributes.
+  `server/producer_telemetry` accepts extra resource attributes, so a
+  component can add its own (`telemetry.source` and friends) without
+  rebuilding the provider. The canonical identity is applied last and cannot
+  be shadowed.
+- server: Put the producer API on the package surface, and gate the
+  middleware. The producer telemetry helpers are re-exported from
+  `mcp_common.server`, so the new public API sits on the same surface as the
+  rest of the package. The request-span middleware is attached only when
+  the process can actually export spans: the launcher is shared with MCP
+  servers outside the Bodai core set, and attaching it unconditionally gave
+  every one of them a per-request span that was recorded and then
+  discarded. An already-installed tracer provider is detected BEFORE the
+  opt-in gate — "can this process export spans" is the real question, and a
+  component that installed its own provider exports whether or not the
+  endpoint is in the environment.
 
 ### Fixed
 
-- cli: Write the snapshot files through a uniquely named temp file
-- server: Re-export the whole producer telemetry surface
-- The package version has one source again
-
-### Documentation
-
-- changelog: Merge the three [Unreleased] sections into 0.32.0
-
-## [Unreleased]
-
-### Fixed
-
-- The OpenTelemetry SDK and the OTLP exporters that
-  `server/producer_telemetry` imports were not declared anywhere in this
-  project. The module imports them lazily and guards them with
-  `try/except`, so a missing package degraded the server instead of
-  crashing it — but a runtime guard does not satisfy a static import
-  resolver, and the `ty` hook failed on five unresolved imports. The
-  packages are now declared as runtime dependencies rather than in a
-  `telemetry` dependency group, and that distinction matters beyond this
-  project's own environment: a dependency group is never installed for a
-  consumer, so every Bodai repo that produces spans had to repeat the same
-  pins in its own pyproject to get an exporter, and a repo that forgot got
-  a server that recorded spans and exported none. The producer API is part
-  of this package's public surface, so the packages belong where they are
-  imported.
-- `atomic_write_bytes`: the temp-file cleanup on a failed write now uses
-  `contextlib.suppress` and `Path.unlink()`. The behaviour is unchanged — a
-  temp file that cannot be removed still does not mask the original
-  exception — but the `refurb` hook asks for this spelling.
+- cli: Write the snapshot files through a uniquely named temp file. The
+  health and security snapshot writers now publish through a uniquely named
+  temp file instead of a fixed one. The fixed name had two failure modes:
+  concurrent writers of the same destination shared one temp file, so
+  whichever renamed first moved it out from under the others (whose rename
+  then failed, or published the other writer's bytes); and a temp file left
+  behind by an earlier write was reused rather than recreated, so the new
+  content inherited the earlier — possibly crashed — write's permissions.
+  `tempfile.mkstemp` closes both: a fresh file, uniquely named, at 0600, and
+  it refuses to follow an existing path.
+  - `atomic_write_bytes`: the temp-file cleanup on a failed write now uses
+    `contextlib.suppress` and `Path.unlink()`. The behaviour is unchanged --
+    a temp file that cannot be removed still does not mask the original
+    exception — but the `refurb` hook asks for this spelling.
+- server: Re-export the whole producer telemetry surface.
+- The package version has one source again. `mcp_common.server` and
+  `mcp_common.code_graph` each carried a literal `__version__ = "0.4.0"` — a
+  value from a scheme that had been dead for many releases, and wrong for
+  every one since. Nothing read them, and a reader who found one had no way
+  to tell a stale stamp from a live one. A subpackage is not a separate
+  distribution, so it has no version of its own; both now quote the
+  package's. A test fails the build if any module hard-codes a version
+  again.
 - The test suite could not collect four websocket test modules, so those
   tests never ran. `tests/test_websocket_server.py` shadowed the
   `websockets` module with `patch.dict("sys.modules", ...)`, which restores
@@ -74,50 +155,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   as a tuple, so the name is resolved as a class when the handler runs and
   the error path dies with `NameError`.
 
-## [0.32.0] - 2026-10-28
+### Documentation
 
-### Added
-
-- server/producer_telemetry: install a tracer provider that exports to the Bodai
-  substrate, and emit a `_service_liveness` span on a fixed interval
-- server/launcher: configure producer telemetry and attach the request-span
-  middleware under the component's `component_name`, which is the same string
-  the receiver's heartbeat roster watches
-- server: re-export the producer telemetry helpers from `mcp_common.server`, so
-  the new public API sits on the same surface as the rest of the package
-
-### Fixed
-
-- cli: the health and security snapshot writers now publish through a uniquely
-  named temp file instead of a fixed one. The fixed name had two failure modes:
-  concurrent writers of the same destination shared one temp file, so whichever
-  renamed first moved it out from under the others (whose rename then failed, or
-  published the other writer's bytes); and a temp file left behind by an earlier
-  write was reused rather than recreated, so the new content inherited the
-  earlier — possibly crashed — write's permissions. `tempfile.mkstemp` closes
-  both: a fresh file, uniquely named, at 0600, and it refuses to follow an
-  existing path.
-- server/launcher: a component launched through it reported no spans at all,
-  because nothing installed a tracer provider. The receiver's heartbeat watcher
-  read every rostered service as absent, forever.
-- server/producer_telemetry: accept extra resource attributes, so a component
-  can add its own (`telemetry.source` and friends) without rebuilding the
-  provider. The canonical identity is applied last and cannot be shadowed.
-- server/launcher: the request-span middleware is attached only when the
-  process can actually export spans. The launcher is shared with MCP servers
-  outside the Bodai core set, and attaching it unconditionally gave every one
-  of them a per-request span that was recorded and then discarded.
-- server/producer_telemetry: an already-installed tracer provider is detected
-  BEFORE the opt-in gate. "Can this process export spans" is the real
-  question, and a component that installed its own provider exports whether or
-  not the endpoint is in the environment.
-- The package version has one source again. `mcp_common.server` and
-  `mcp_common.code_graph` each carried a literal `__version__ = "0.4.0"` — a
-  value from a scheme that had been dead for many releases, and wrong for every
-  one since. Nothing read them, and a reader who found one had no way to tell a
-  stale stamp from a live one. A subpackage is not a separate distribution, so
-  it has no version of its own; both now quote the package's. A test fails the
-  build if any module hard-codes a version again.
+- changelog: Merge the three [Unreleased] sections into 0.32.0
 
 ## [0.31.2] - 2026-10-23
 
@@ -169,6 +209,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Untrack 19 historical archive files
 
+## [0.30.7] - 2026-10-12
+
+### Internal
+
+- mcp-common: The release committed a stray backup copy of `.gitignore`
+  (`.gitignore.bak.20261012T223411Z`, byte-identical to `.gitignore`) that was
+  not intended to be tracked.
+
 ## [0.30.6] - 2026-10-12
 
 ### Added
@@ -184,6 +232,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Internal
 
 - mcp-common: Upgrade minimums via uv-bump
+
+## [0.30.4] - 2026-10-03
+
+### Added
+
+- mcp-common: `RegisterFn`, the Protocol that describes a tool registration
+  callable, is now public and exported from `mcp_common.tools`.
+
+### Changed
+
+- mcp-common: The registration callable's `server` parameter is now
+  positional-only, so any callable whose first positional parameter is a
+  `FastMCP` satisfies the Protocol regardless of what that parameter is named
+  (`mcp`, `app`, `mcp_server` all qualify).
 
 ## [0.30.3] - 2026-10-03
 
