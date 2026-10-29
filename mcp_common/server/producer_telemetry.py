@@ -52,6 +52,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 logger = logging.getLogger(__name__)
@@ -59,14 +60,18 @@ logger = logging.getLogger(__name__)
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
 
+    from opentelemetry.sdk.trace import TracerProvider
+
 __all__ = [
     "DEFAULT_LIVENESS_INTERVAL_SECONDS",
     "DEFAULT_SERVICE_NAMESPACE",
     "LIVENESS_SPAN_NAME",
+    "ProducerTracingResult",
     "configure_producer_tracing",
     "producer_telemetry_enabled",
     "run_liveness_emitter",
 ]
+
 
 #: Span name for the periodic producer liveness marker.
 #:
@@ -105,6 +110,33 @@ _TRACES_PATH: str = "/v1/traces"
 _DEFAULT_PROTOCOL: str = "http/protobuf"
 
 
+@dataclass(frozen=True, slots=True)
+class ProducerTracingResult:
+    """What the tracing call did, and who owns the provider.
+
+    Two questions, two answers, because they are not the same question.
+
+    ``export_spans`` says whether this process will ship spans to the
+    collector. That is true when a provider is installed, whoever
+    installed it -- the launcher needs this to decide whether to attach
+    the request-span middleware and start the liveness emitter.
+
+    ``provider`` says whether the provider is OURS: the one this call
+    installed. That is what decides who may shut it down. A caller that
+    holds a provider it did not install must not close it -- closing
+    someone else's exporter is how a process ends up flushing another
+    component's spans into the void at exit.
+
+    Collapsing the two into a single ``bool`` is what made ownership
+    unknowable. ``True`` used to mean "we installed it" in one branch
+    and "someone else installed it and we declined" in another, so a
+    caller could not tell "I may close this" from "I must not".
+    """
+
+    provider: TracerProvider | None
+    export_spans: bool
+
+
 def producer_telemetry_enabled() -> bool:
     """Whether this process is pointed at an OTLP collector.
 
@@ -123,7 +155,7 @@ def configure_producer_tracing(
     endpoint: str | None = None,
     protocol: str | None = None,
     resource_attributes: Mapping[str, str] | None = None,
-) -> bool:
+) -> ProducerTracingResult:
     """Install a tracer provider that exports spans to the substrate.
 
     Args:
@@ -150,10 +182,13 @@ def configure_producer_tracing(
             passed to this function.
 
     Returns:
-        ``True`` when spans will actually be exported -- either because
-        this call installed the provider, or because one was already
-        installed. ``False`` when the process is not pointed at a
-        collector, or when no provider could be installed.
+        A :class:`ProducerTracingResult`. Its ``provider`` is the
+        provider THIS call installed, or ``None`` when it did not install
+        one -- either because nothing was configured, or because a
+        provider was already installed and this call declined to replace
+        it. Its ``export_spans`` says whether spans will reach the
+        collector at all, which is true whenever a provider exists,
+        whoever installed it.
     """
     try:
         from opentelemetry import trace
@@ -164,7 +199,7 @@ def configure_producer_tracing(
             "OpenTelemetry API is not installed, so no spans can be exported",
             service_name,
         )
-        return False
+        return ProducerTracingResult(None, False)
 
     existing = trace.get_tracer_provider()
     if not isinstance(existing, ProxyTracerProvider):
@@ -178,12 +213,15 @@ def configure_producer_tracing(
         # process export spans" is the real question. A component that
         # installed its own provider exports whether or not the endpoint
         # is in the environment.
+        #
+        # The provider is NOT returned: it belongs to whoever installed
+        # it, and this caller must not close it.
         logger.info(
             "mcp.producer_telemetry.provider_already_installed service=%s — "
             "leaving the existing tracer provider in place",
             service_name,
         )
-        return True
+        return ProducerTracingResult(None, True)
 
     if endpoint is None and not producer_telemetry_enabled():
         logger.debug(
@@ -191,7 +229,7 @@ def configure_producer_tracing(
             "in the environment, so no provider is installed",
             service_name,
         )
-        return False
+        return ProducerTracingResult(None, False)
 
     try:
         provider = _build_provider(
@@ -210,7 +248,7 @@ def configure_producer_tracing(
             service_name,
             exc,
         )
-        return False
+        return ProducerTracingResult(None, False)
 
     trace.set_tracer_provider(provider)
     logger.info(
@@ -219,7 +257,7 @@ def configure_producer_tracing(
         service_namespace,
         _describe_endpoint(endpoint),
     )
-    return True
+    return ProducerTracingResult(provider, True)
 
 
 def _build_provider(

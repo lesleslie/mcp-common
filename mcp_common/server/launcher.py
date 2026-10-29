@@ -269,7 +269,7 @@ async def launch(
     # SDK's default no-op tracer. The provider is only installed when the
     # process is pointed at a collector, so MCP servers outside the Bodai
     # core set keep the behaviour they had.
-    export_spans = configure_producer_tracing(component_name)
+    export_spans = configure_producer_tracing(component_name).export_spans
 
     server = build_server()
     if export_spans:

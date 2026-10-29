@@ -27,6 +27,7 @@ import pytest
 from mcp_common.server.producer_telemetry import (
     DEFAULT_SERVICE_NAMESPACE,
     LIVENESS_SPAN_NAME,
+    ProducerTracingResult,
     _normalize_http_endpoint,
     configure_producer_tracing,
     producer_telemetry_enabled,
@@ -76,12 +77,13 @@ def reset_tracer_provider() -> Any:
 def otel_sdk() -> None:
     """Skip when the OpenTelemetry SDK is not installed.
 
-    mcp-common does not depend on the SDK: it ships the *API* surface and
-    leaves the SDK to the consumer, the same way
-    ``mcp_common/server/telemetry.py`` leaves ``opentelemetry-api`` to
-    whoever installs the library. Every consumer that reports spans
-    brings the SDK; a developer running the suite without it gets the
-    SDK-dependent tests skipped rather than failed.
+    The SDK is a declared dependency of this package -- it was promoted
+    out of the ``telemetry`` dependency group precisely so a consumer
+    that calls the producer API gets a working exporter without having
+    to know which packages that requires. The skip is still worth
+    keeping: a developer running the suite in an environment where the
+    SDK is absent should get the SDK-dependent tests skipped rather
+    than failed.
     """
     pytest.importorskip(
         "opentelemetry.sdk.trace",
@@ -127,7 +129,9 @@ class TestConfigureProducerTracing:
         from opentelemetry import trace
         from opentelemetry.trace import ProxyTracerProvider
 
-        assert configure_producer_tracing("mahavishnu") is False
+        result = configure_producer_tracing("mahavishnu")
+        assert result.export_spans is False
+        assert result.provider is None
         assert isinstance(trace.get_tracer_provider(), ProxyTracerProvider)
 
     def test_the_provider_carries_the_roster_identity(
@@ -141,7 +145,9 @@ class TestConfigureProducerTracing:
 
         monkeypatch.setenv(_ENDPOINT_ENV, "http://127.0.0.1:4318")
 
-        assert configure_producer_tracing("mahavishnu") is True
+        result = configure_producer_tracing("mahavishnu")
+        assert result.export_spans is True
+        assert result.provider is trace.get_tracer_provider()
 
         resource = trace.get_tracer_provider().resource
         assert resource.attributes["service.name"] == "mahavishnu"
@@ -162,7 +168,11 @@ class TestConfigureProducerTracing:
         incumbent = TracerProvider()
         trace.set_tracer_provider(incumbent)
 
-        assert configure_producer_tracing("oneiric") is True
+        result = configure_producer_tracing("oneiric")
+        assert result.export_spans is True
+        # The incumbent's provider, not ours: we declined to replace it,
+        # so we do not get to close it either.
+        assert result.provider is None
         assert trace.get_tracer_provider() is incumbent
 
     def test_an_explicit_endpoint_overrides_the_environment(
@@ -176,10 +186,10 @@ class TestConfigureProducerTracing:
 
         monkeypatch.setenv(_ENDPOINT_ENV, "http://127.0.0.1:4318")
 
-        assert (
-            configure_producer_tracing("akosha", endpoint="http://127.0.0.1:9999")
-            is True
+        result = configure_producer_tracing(
+            "akosha", endpoint="http://127.0.0.1:9999"
         )
+        assert result.export_spans is True
         assert (
             trace.get_tracer_provider().resource.attributes["service.name"] == "akosha"
         )
@@ -195,13 +205,11 @@ class TestConfigureProducerTracing:
 
         monkeypatch.setenv(_ENDPOINT_ENV, "http://127.0.0.1:4318")
 
-        assert (
-            configure_producer_tracing(
-                "session-buddy",
-                resource_attributes={"telemetry.source": "session-buddy"},
-            )
-            is True
+        result = configure_producer_tracing(
+            "session-buddy",
+            resource_attributes={"telemetry.source": "session-buddy"},
         )
+        assert result.export_spans is True
         attributes = trace.get_tracer_provider().resource.attributes
         assert attributes["telemetry.source"] == "session-buddy"
         assert attributes["service.name"] == "session-buddy"
@@ -234,6 +242,66 @@ class TestConfigureProducerTracing:
         attributes = trace.get_tracer_provider().resource.attributes
         assert attributes["service.namespace"] == DEFAULT_SERVICE_NAMESPACE
         assert attributes["service.name"] == "session-buddy"
+
+
+class TestProviderOwnership:
+    """Who installed the provider decides who may close it.
+
+    The result carries two facts because they answer two questions.
+    ``export_spans`` says whether spans can go anywhere at all. ``provider``
+    says whether the provider is OURS. Conflating them is what let a
+    caller shut down an exporter it never installed -- reaching into
+    another component's provider at process exit.
+    """
+
+    def test_the_provider_we_installed_is_ours(
+        self,
+        clean_otel_env: None,
+        reset_tracer_provider: Any,
+        otel_sdk: None,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from opentelemetry import trace
+
+        monkeypatch.setenv(_ENDPOINT_ENV, "http://127.0.0.1:4318")
+
+        result = configure_producer_tracing("session-buddy")
+
+        assert result.provider is not None
+        assert result.provider is trace.get_tracer_provider()
+
+    def test_a_provider_we_declined_to_replace_is_not_ours(
+        self,
+        clean_otel_env: None,
+        reset_tracer_provider: Any,
+        otel_sdk: None,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from opentelemetry import trace
+        from opentelemetry.sdk.trace import TracerProvider
+
+        monkeypatch.setenv(_ENDPOINT_ENV, "http://127.0.0.1:4318")
+
+        incumbent = TracerProvider()
+        trace.set_tracer_provider(incumbent)
+
+        result = configure_producer_tracing("session-buddy")
+
+        # Spans will export -- the incumbent's provider does that -- but
+        # the incumbent owns it, so a caller must not close it.
+        assert result.export_spans is True
+        assert result.provider is None
+
+    def test_an_unconfigured_process_owns_nothing(
+        self,
+        clean_otel_env: None,
+        reset_tracer_provider: Any,
+        otel_sdk: None,
+    ) -> None:
+        result = configure_producer_tracing("mahavishnu")
+
+        assert result.provider is None
+        assert result.export_spans is False
 
 
 class TestEndpointNormalization:
@@ -394,7 +462,9 @@ class TestTheMiddlewareIsGatedOnExport:
         attached: list[str] = []
 
         monkeypatch.setattr(
-            launcher, "configure_producer_tracing", lambda *a, **k: False
+            launcher,
+            "configure_producer_tracing",
+            lambda *a, **k: ProducerTracingResult(None, False),
         )
         monkeypatch.setattr(
             launcher,
@@ -422,7 +492,9 @@ class TestTheMiddlewareIsGatedOnExport:
         attached: list[str] = []
 
         monkeypatch.setattr(
-            launcher, "configure_producer_tracing", lambda *a, **k: True
+            launcher,
+            "configure_producer_tracing",
+            lambda *a, **k: ProducerTracingResult(None, True),
         )
         monkeypatch.setattr(
             launcher,
