@@ -78,6 +78,7 @@ class TestExceptions:
 class TestUnsupportedModalityError:
     def test_unsupported_modality_inherits_llm_error(self) -> None:
         from mcp_common.llm.exceptions import UnsupportedModalityError
+
         err = UnsupportedModalityError("VIDEO_GENERATION not supported by this tier")
         assert isinstance(err, LLMError)
         assert "VIDEO_GENERATION" in str(err)
@@ -277,7 +278,9 @@ class TestProviderConfig:
         config = ProviderConfig(api_key=SecretStr("${LLM_API_KEY}"))
         assert config.api_key.get_secret_value() == "sk-resolved-key"
 
-    def test_resolve_env_vars_api_key_unset(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_resolve_env_vars_api_key_unset(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.delenv("LLM_API_KEY", raising=False)
         config = ProviderConfig(api_key=SecretStr("${LLM_API_KEY}"))
         assert config.api_key.get_secret_value() == "${LLM_API_KEY}"
@@ -308,7 +311,9 @@ class TestProviderConfig:
         assert config.base_url == "https://plain.url.com"
         assert config.api_key.get_secret_value() == "plain-key"
 
-    def test_resolve_env_vars_partial_match(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_resolve_env_vars_partial_match(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Only exact ${VAR} patterns (entire field) are resolved."""
         monkeypatch.setenv("PREFIX", "https://prefix")
         config = ProviderConfig(base_url="https://api.com/${PREFIX}")
@@ -346,7 +351,9 @@ llama_server:
         settings = LLMSettings.from_yaml(str(p))
         assert "llama_server" in [p.name for p in settings.get_enabled_providers()]
 
-    def test_missing_required_api_key_raises_at_load(self, tmp_path, monkeypatch) -> None:
+    def test_missing_required_api_key_raises_at_load(
+        self, tmp_path, monkeypatch
+    ) -> None:
         monkeypatch.delenv("MINIMAX_API_KEY", raising=False)
         yaml_content = """
 default_provider: minimax
@@ -528,9 +535,27 @@ class TestLLMSettings:
         # No-auth providers so fail-closed doesn't filter them
         content = {
             "fallback_chain": ["tier_a", "tier_b"],
-            "tier_a": {"enabled": True, "priority": 2, "base_url": "", "api_key": "", "require_auth": False},
-            "tier_b": {"enabled": True, "priority": 1, "base_url": "", "api_key": "", "require_auth": False},
-            "unlisted": {"enabled": True, "priority": 0, "base_url": "", "api_key": "", "require_auth": False},
+            "tier_a": {
+                "enabled": True,
+                "priority": 2,
+                "base_url": "",
+                "api_key": "",
+                "require_auth": False,
+            },
+            "tier_b": {
+                "enabled": True,
+                "priority": 1,
+                "base_url": "",
+                "api_key": "",
+                "require_auth": False,
+            },
+            "unlisted": {
+                "enabled": True,
+                "priority": 0,
+                "base_url": "",
+                "api_key": "",
+                "require_auth": False,
+            },
         }
         path = tmp_path / "ordering.yaml"
         path.write_text(yaml.dump(content))
@@ -549,9 +574,27 @@ class TestLLMSettings:
         """get_enabled_providers returns in fallback_chain order, not priority order."""
         content = {
             "fallback_chain": ["tier_c", "tier_a", "tier_b"],
-            "tier_a": {"enabled": True, "priority": 1, "base_url": "", "api_key": "", "require_auth": False},
-            "tier_b": {"enabled": True, "priority": 5, "base_url": "", "api_key": "", "require_auth": False},
-            "tier_c": {"enabled": True, "priority": 10, "base_url": "", "api_key": "", "require_auth": False},
+            "tier_a": {
+                "enabled": True,
+                "priority": 1,
+                "base_url": "",
+                "api_key": "",
+                "require_auth": False,
+            },
+            "tier_b": {
+                "enabled": True,
+                "priority": 5,
+                "base_url": "",
+                "api_key": "",
+                "require_auth": False,
+            },
+            "tier_c": {
+                "enabled": True,
+                "priority": 10,
+                "base_url": "",
+                "api_key": "",
+                "require_auth": False,
+            },
         }
         path = tmp_path / "chain_order.yaml"
         path.write_text(yaml.dump(content))
@@ -565,8 +608,20 @@ class TestLLMSettings:
     def test_get_enabled_providers_excludes_disabled(self, tmp_path: Path) -> None:
         content = {
             "fallback_chain": ["active", "disabled"],
-            "active": {"enabled": True, "priority": 1, "base_url": "", "api_key": "", "require_auth": False},
-            "disabled": {"enabled": False, "priority": 0, "base_url": "", "api_key": "", "require_auth": False},
+            "active": {
+                "enabled": True,
+                "priority": 1,
+                "base_url": "",
+                "api_key": "",
+                "require_auth": False,
+            },
+            "disabled": {
+                "enabled": False,
+                "priority": 0,
+                "base_url": "",
+                "api_key": "",
+                "require_auth": False,
+            },
         }
         path = tmp_path / "excludes_disabled.yaml"
         path.write_text(yaml.dump(content))
@@ -649,7 +704,54 @@ class TestOpenAICompatibleProvider:
             base_url="https://api.minimax.io/v1",
             max_retries=0,
             timeout=60,
+            default_headers={},
         )
+
+    def test_constructor_passes_default_headers(
+        self, mock_openai_module: MagicMock
+    ) -> None:
+        """Caller-supplied headers reach the client.
+
+        The Bifrost gateway path carries the gateway virtual key
+        (``x-bf-vk``) and the cache headers in ``default_headers``.
+        """
+        config = ProviderConfig(
+            name="minimax",
+            base_url="http://127.0.0.1:8471/v1",
+            api_key=SecretStr("sk-test"),
+            default_headers={
+                "x-bf-vk": "sk-bf-test",
+                "x-bf-cache-type": "semantic",
+            },
+        )
+        _build_provider_with_mock_openai(config, mock_openai_module)
+        _, kwargs = mock_openai_module.AsyncOpenAI.call_args
+        assert kwargs["default_headers"] == {
+            "x-bf-vk": "sk-bf-test",
+            "x-bf-cache-type": "semantic",
+        }
+
+    def test_no_auth_provider_keeps_blank_authorization(
+        self, mock_openai_module: MagicMock
+    ) -> None:
+        """The no-auth provider still blanks Authorization, and keeps our headers.
+
+        The local llama-server path sends an empty ``Authorization`` so the
+        SDK does not inject ``Bearer no-auth``; the caller's headers must
+        not displace it.
+        """
+        config = ProviderConfig(
+            name="llama_server",
+            base_url="http://127.0.0.1:8081",
+            require_auth=False,
+            default_headers={"x-bf-vk": "sk-bf-test"},
+        )
+        _build_provider_with_mock_openai(config, mock_openai_module)
+        _, kwargs = mock_openai_module.AsyncOpenAI.call_args
+        assert kwargs["default_headers"] == {
+            "Authorization": "",
+            "x-bf-vk": "sk-bf-test",
+        }
 
     @pytest.mark.asyncio
     async def test_execute_success(self, mock_openai_module: MagicMock) -> None:
@@ -742,6 +844,57 @@ class TestOpenAICompatibleProvider:
         assert kwargs["temperature"] == 0.7
 
     @pytest.mark.asyncio
+    async def test_execute_forwards_per_call_extra_headers(
+        self, mock_openai_module: MagicMock
+    ) -> None:
+        """A task may carry per-call headers (e.g. a per-tenant cache bucket)."""
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock(message=MagicMock(content="ok"))]
+        mock_response.usage = None
+
+        mock_client = mock_openai_module._async_client
+        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+
+        config = ProviderConfig(
+            name="zai", base_url="https://api.z.ai/v4", api_key=SecretStr("sk-test")
+        )
+        provider = _build_provider_with_mock_openai(config, mock_openai_module)
+        await provider.execute(
+            {
+                "model": "glm-4.7",
+                "messages": [{"role": "user", "content": "Hi"}],
+                "extra_headers": {"x-bf-cache-key": "tenant-a"},
+            }
+        )
+        _, kwargs = mock_client.chat.completions.create.call_args
+        assert kwargs["extra_headers"] == {"x-bf-cache-key": "tenant-a"}
+
+    @pytest.mark.asyncio
+    async def test_execute_omits_extra_headers_when_absent(
+        self, mock_openai_module: MagicMock
+    ) -> None:
+        """Without per-call headers the SDK call shape is unchanged."""
+        mock_response = MagicMock()
+        mock_response.choices = [MagicMock(message=MagicMock(content="ok"))]
+        mock_response.usage = None
+
+        mock_client = mock_openai_module._async_client
+        mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
+
+        config = ProviderConfig(
+            name="zai", base_url="https://api.z.ai/v4", api_key=SecretStr("sk-test")
+        )
+        provider = _build_provider_with_mock_openai(config, mock_openai_module)
+        await provider.execute(
+            {
+                "model": "glm-4.7",
+                "messages": [{"role": "user", "content": "Hi"}],
+            }
+        )
+        _, kwargs = mock_client.chat.completions.create.call_args
+        assert "extra_headers" not in kwargs
+
+    @pytest.mark.asyncio
     async def test_execute_wraps_errors_as_llm_error(
         self, mock_openai_module: MagicMock
     ) -> None:
@@ -801,9 +954,7 @@ class TestOpenAICompatibleProvider:
     async def test_health_check_failure(self, mock_openai_module: MagicMock) -> None:
         """health_check returns False when models.list raises."""
         mock_client = mock_openai_module._async_client
-        mock_client.models.list = AsyncMock(
-            side_effect=ConnectionError("unreachable")
-        )
+        mock_client.models.list = AsyncMock(side_effect=ConnectionError("unreachable"))
 
         config = ProviderConfig(
             name="zai", base_url="https://api.z.ai/v4", api_key=SecretStr("sk-test")
@@ -1036,9 +1187,7 @@ def _make_mock_provider(
             }
         )
     else:
-        provider.execute = AsyncMock(
-            side_effect=error or LLMError(f"{name} failed")
-        )
+        provider.execute = AsyncMock(side_effect=error or LLMError(f"{name} failed"))
     return provider
 
 
@@ -1090,7 +1239,9 @@ class TestFallbackChainRetry:
 
         chain = FallbackChain([mock_tier1, mock_tier2], max_attempts_per_tier=3)
         # Pin failure_threshold explicitly so the test doesn't depend on the default
-        chain._circuit_breakers["tier1"] = CircuitBreaker(failure_threshold=5, reset_timeout=60.0)
+        chain._circuit_breakers["tier1"] = CircuitBreaker(
+            failure_threshold=5, reset_timeout=60.0
+        )
 
         # After 5 tier-calls (each with 3 attempts = 15 total attempts), breaker opens
         for _ in range(5):
@@ -1314,8 +1465,20 @@ class TestFallbackChain:
     def test_from_settings_skips_disabled_providers(self, tmp_path: Path) -> None:
         content = {
             "fallback_chain": ["tier_a", "tier_b"],
-            "tier_a": {"enabled": True, "base_url": "", "api_key": "", "require_auth": False, "priority": 1},
-            "tier_b": {"enabled": False, "base_url": "", "api_key": "", "require_auth": False, "priority": 2},
+            "tier_a": {
+                "enabled": True,
+                "base_url": "",
+                "api_key": "",
+                "require_auth": False,
+                "priority": 1,
+            },
+            "tier_b": {
+                "enabled": False,
+                "base_url": "",
+                "api_key": "",
+                "require_auth": False,
+                "priority": 2,
+            },
         }
         path = tmp_path / "models.yaml"
         path.write_text(yaml.dump(content))
@@ -1348,7 +1511,9 @@ class TestFallbackChain:
 class TestHailuoAdapter:
     """Tests for the MiniMax Hailuo video generation adapter."""
 
-    def _make_httpx_response(self, json_body: dict, status_code: int = 200) -> MagicMock:
+    def _make_httpx_response(
+        self, json_body: dict, status_code: int = 200
+    ) -> MagicMock:
         resp = MagicMock()
         resp.status_code = status_code
         resp.json.return_value = json_body
@@ -1368,7 +1533,9 @@ class TestHailuoAdapter:
         }
 
         mock_client = AsyncMock()
-        mock_client.post = AsyncMock(return_value=self._make_httpx_response(submit_resp))
+        mock_client.post = AsyncMock(
+            return_value=self._make_httpx_response(submit_resp)
+        )
         mock_client.get = AsyncMock(return_value=self._make_httpx_response(poll_done))
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
@@ -1387,17 +1554,34 @@ class TestHailuoAdapter:
         from mcp_common.llm.hailuo import HailuoAdapter
 
         submit_resp = {"task_id": "task-poll-123", "base_resp": {"status_code": 0}}
-        poll_pending = {"task_id": "task-poll-123", "status": "Queueing", "base_resp": {"status_code": 0}}
-        poll_processing = {"task_id": "task-poll-123", "status": "Processing", "base_resp": {"status_code": 0}}
-        poll_done = {"task_id": "task-poll-123", "status": "Success", "file_id": "file-done-999", "base_resp": {"status_code": 0}}
+        poll_pending = {
+            "task_id": "task-poll-123",
+            "status": "Queueing",
+            "base_resp": {"status_code": 0},
+        }
+        poll_processing = {
+            "task_id": "task-poll-123",
+            "status": "Processing",
+            "base_resp": {"status_code": 0},
+        }
+        poll_done = {
+            "task_id": "task-poll-123",
+            "status": "Success",
+            "file_id": "file-done-999",
+            "base_resp": {"status_code": 0},
+        }
 
         mock_client = AsyncMock()
-        mock_client.post = AsyncMock(return_value=self._make_httpx_response(submit_resp))
-        mock_client.get = AsyncMock(side_effect=[
-            self._make_httpx_response(poll_pending),
-            self._make_httpx_response(poll_processing),
-            self._make_httpx_response(poll_done),
-        ])
+        mock_client.post = AsyncMock(
+            return_value=self._make_httpx_response(submit_resp)
+        )
+        mock_client.get = AsyncMock(
+            side_effect=[
+                self._make_httpx_response(poll_pending),
+                self._make_httpx_response(poll_processing),
+                self._make_httpx_response(poll_done),
+            ]
+        )
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
@@ -1415,10 +1599,16 @@ class TestHailuoAdapter:
         from mcp_common.llm.hailuo import HailuoAdapter
 
         submit_resp = {"task_id": "task-err-001", "base_resp": {"status_code": 0}}
-        poll_failed = {"task_id": "task-err-001", "status": "Fail", "base_resp": {"status_code": 2013, "status_msg": "quota exceeded"}}
+        poll_failed = {
+            "task_id": "task-err-001",
+            "status": "Fail",
+            "base_resp": {"status_code": 2013, "status_msg": "quota exceeded"},
+        }
 
         mock_client = AsyncMock()
-        mock_client.post = AsyncMock(return_value=self._make_httpx_response(submit_resp))
+        mock_client.post = AsyncMock(
+            return_value=self._make_httpx_response(submit_resp)
+        )
         mock_client.get = AsyncMock(return_value=self._make_httpx_response(poll_failed))
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
@@ -1435,16 +1625,26 @@ class TestHailuoAdapter:
         from mcp_common.llm.hailuo import HailuoAdapter
 
         submit_resp = {"task_id": "task-timeout-001", "base_resp": {"status_code": 0}}
-        poll_pending = {"task_id": "task-timeout-001", "status": "Processing", "base_resp": {"status_code": 0}}
+        poll_pending = {
+            "task_id": "task-timeout-001",
+            "status": "Processing",
+            "base_resp": {"status_code": 0},
+        }
 
         mock_client = AsyncMock()
-        mock_client.post = AsyncMock(return_value=self._make_httpx_response(submit_resp))
-        mock_client.get = AsyncMock(return_value=self._make_httpx_response(poll_pending))
+        mock_client.post = AsyncMock(
+            return_value=self._make_httpx_response(submit_resp)
+        )
+        mock_client.get = AsyncMock(
+            return_value=self._make_httpx_response(poll_pending)
+        )
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
         # max_poll_seconds so small it expires after first poll
-        adapter = HailuoAdapter(api_key="test-key", poll_interval=0.01, max_poll_seconds=0.001)
+        adapter = HailuoAdapter(
+            api_key="test-key", poll_interval=0.01, max_poll_seconds=0.001
+        )
 
         with patch("mcp_common.llm.hailuo.httpx.AsyncClient", return_value=mock_client):
             with pytest.raises(LLMError, match="timed out"):
@@ -1460,7 +1660,10 @@ class TestHailuoAdapter:
         assert poll_url.startswith("https://api.minimax.io/v1/query/video_generation")
         assert "task-123" in poll_url
         # Must not be a URL constructed from any mutable/external input beyond task_id
-        assert poll_url == "https://api.minimax.io/v1/query/video_generation?task_id=task-123"
+        assert (
+            poll_url
+            == "https://api.minimax.io/v1/query/video_generation?task_id=task-123"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1492,7 +1695,9 @@ class TestFallbackChainEdgeCases:
         from mcp_common.llm.fallback import FallbackChain
 
         empty_provider = _make_mock_provider("empty")
-        empty_provider.execute = AsyncMock(return_value={"content": "", "provider": "empty", "model": "m", "usage": {}})
+        empty_provider.execute = AsyncMock(
+            return_value={"content": "", "provider": "empty", "model": "m", "usage": {}}
+        )
         good_provider = _make_mock_provider("good")
         chain = FallbackChain([empty_provider, good_provider], max_attempts_per_tier=1)
 
@@ -1534,14 +1739,19 @@ class TestFallbackChainEdgeCases:
         with pytest.raises(AllProvidersExhaustedError):
             await chain.execute({"model": "m", "messages": []})
 
-    def test_circuit_breaker_half_open_after_timeout(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_circuit_breaker_half_open_after_timeout(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         from mcp_common.llm.fallback import CircuitBreaker
 
         breaker = CircuitBreaker(failure_threshold=2, reset_timeout=10.0)
         breaker.record_failure()
         breaker.record_failure()
 
-        monkeypatch.setattr("mcp_common.llm.fallback.time.monotonic", lambda: breaker._last_failure_time + 11.0)
+        monkeypatch.setattr(
+            "mcp_common.llm.fallback.time.monotonic",
+            lambda: breaker._last_failure_time + 11.0,
+        )
 
         assert breaker.is_open is False
 

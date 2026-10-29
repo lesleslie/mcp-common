@@ -2168,7 +2168,7 @@ wheels = [
 
 [[package]]
 name = "mcp-common"
-version = "0.33.0"
+version = "0.33.1"
 source = { editable = "." }
 dependencies = [
     { name = "cryptography" },
@@ -2629,7 +2629,7 @@ wheels = [
 
 [[package]]
 name = "oneiric"
-version = "0.33.4"
+version = "0.33.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aioboto3" },
@@ -2653,9 +2653,9 @@ dependencies = [
     { name = "typer" },
     { name = "watchfiles" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/39/ec/702ff5929bead2128ddc7021a39697e011185ab8a323d0d98003b225eaa8/oneiric-0.33.4.tar.gz", hash = "sha256:a3e7602e004547e6f0d6a6b503f41e17b3e5e579c059ed49e2478b2e4d0dbdd7", size = 1801540, upload-time = "2026-10-28T22:09:05.488Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e2/7d/f927805025e64984104e9f1e8707aed3859b996fed364e6e74a9a1eb5e68/oneiric-0.33.5.tar.gz", hash = "sha256:5819dc7072d18ddc5e9f40deaaf44cc30ab973021dfef9c7df085c1bc79744fc", size = 1801793, upload-time = "2026-10-29T03:19:18.697Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/11/58/2ceeda9f955f036ab095b7a796d429da11ed471cfdb2695d07e399bb79af/oneiric-0.33.4-py3-none-any.whl", hash = "sha256:fb4b6fcdd3db19a4722a2f7bb5cc79e79debbf5cc4b58f7b29c88ac069fc661f", size = 514278, upload-time = "2026-10-28T22:09:03.33Z" },
+    { url = "https://files.pythonhosted.org/packages/c2/ec/ec3a51901fa61a68b9e634ffbee31c03225efeed41d35455df4dae415573/oneiric-0.33.5-py3-none-any.whl", hash = "sha256:dc715af532c208db36384fe24d375c44a7c64b83491f21180c47a573c5e50cff", size = 514277, upload-time = "2026-10-29T03:19:16.936Z" },
 ]
 
 [[package]]
@@ -4306,7 +4306,7 @@ wheels = [
 
 [[package]]
 name = "transformers"
-version = "5.21.0"
+version = "5.21.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "huggingface-hub" },
@@ -4319,9 +4319,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f6/9d/59e6232df8761e2c82d52e0bef5382e830d1cd65f02f648712ccd7675e7b/transformers-5.21.0.tar.gz", hash = "sha256:43c971a3eb9ab68dc9dfff430f8ab8a0fba09af2f68b608fd70c6245d2ddb8e7", size = 10321727, upload-time = "2026-10-26T18:17:26.892Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4e/56/142f54fb87a4880fdfe37f8fe776a9045177165182bf1383dc0732c59ae3/transformers-5.21.1.tar.gz", hash = "sha256:65e82dfbe8d0d0d6d09d402dca28e60b3f483beadbb7bdd259ea0e33a04e2efa", size = 10321725, upload-time = "2026-10-29T08:34:30.466Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/73/fa/fb638d54bffff44700c8d487608c1f2872823e606fbd043b3c29c93236cf/transformers-5.21.0-py3-none-any.whl", hash = "sha256:8803a8712932aa3441c1e8bb340e66d5e3eca079fe65d9b717ede2f3ead01c79", size = 12978463, upload-time = "2026-10-26T18:17:23.647Z" },
+    { url = "https://files.pythonhosted.org/packages/1b/83/7983b6002977982929657c4e7473fc1dc8b329259ff864f0c97d1d218f4e/transformers-5.21.1-py3-none-any.whl", hash = "sha256:53b5fd825d009cb7700285acbb4e36e745c7f7df859202ba1a4f21a10eda8e3a", size = 12978536, upload-time = "2026-10-29T08:34:26.151Z" },
 ]
 
 [[package]]

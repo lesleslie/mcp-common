@@ -29,6 +29,16 @@ class ProviderConfig(BaseModel):
     max_retries: int = 2
     task_routing: dict[str, str] = {}
     fallback: dict[str, str] = {}
+    #: Extra HTTP headers sent with every request to this provider.
+    #:
+    #: Used by the Bifrost gateway path, which authenticates with a
+    #: gateway virtual key (``x-bf-vk``) and selects a cache path
+    #: (``x-bf-cache-type`` / ``x-bf-cache-key`` / ``x-bf-cache-no-store``)
+    #: in headers rather than in the URL or the bearer token.
+    #:
+    #: These are merged with the SDK's own headers -- they do not replace
+    #: them, so ``Authorization`` is still set from ``api_key``.
+    default_headers: dict[str, str] = {}
 
     model_config = {"extra": "forbid"}
 

@@ -39,12 +39,19 @@ class OpenAICompatibleProvider:
         self.timeout_seconds = config.timeout_seconds
         self._config = config
 
+        # Caller-supplied headers are merged with the SDK's own, never
+        # substituted for them: ``Authorization`` still comes from
+        # ``api_key``. The Bifrost gateway path uses this to carry the
+        # gateway virtual key (``x-bf-vk``) and the cache headers.
+        extra_headers = config.default_headers.copy()
+
         if config.require_auth:
             self._client = openai.AsyncOpenAI(
                 api_key=config.api_key.get_secret_value(),
                 base_url=config.base_url,
                 max_retries=0,  # retries handled by FallbackChain
                 timeout=config.timeout_seconds,
+                default_headers=extra_headers,
             )
         else:
             # Local no-auth provider (llama-server) —
@@ -52,7 +59,7 @@ class OpenAICompatibleProvider:
             self._client = openai.AsyncOpenAI(
                 api_key="no-auth",
                 base_url=config.base_url,
-                default_headers={"Authorization": ""},
+                default_headers={"Authorization": ""} | extra_headers,
                 max_retries=0,
                 timeout=config.timeout_seconds,
             )
@@ -89,12 +96,19 @@ class OpenAICompatibleProvider:
         """
         model = self._resolve_model(task)
         try:
-            response = await self._client.chat.completions.create(
-                model=model,
-                messages=task["messages"],
-                max_tokens=task.get("max_tokens", 4096),
-                temperature=task.get("temperature", 0.7),
-            )
+            create_kwargs: dict[str, Any] = {
+                "model": model,
+                "messages": task["messages"],
+                "max_tokens": task.get("max_tokens", 4096),
+                "temperature": task.get("temperature", 0.7),
+            }
+            # Per-call headers, for callers that need to vary them per
+            # request (e.g. a per-tenant cache bucket). Omitted entirely
+            # when absent so the SDK call shape is unchanged.
+            call_headers = task.get("extra_headers")
+            if call_headers:
+                create_kwargs["extra_headers"] = dict(call_headers)
+            response = await self._client.chat.completions.create(**create_kwargs)
             return {
                 "content": response.choices[0].message.content or "",
                 "provider": self.name,
