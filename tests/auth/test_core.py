@@ -56,12 +56,12 @@ def test_verify_rejects_unknown_issuer_via_provider():
     )
     token = provider.issue_token(
         issuer="rogue-service",
-        audience="dhara",
+        audience="oneiric",
         permissions=[Permission.READ],
         subject="attacker",
     )
     with pytest.raises(UnknownIssuerError):
-        _await_or_sync(provider.verify_token(token, expected_audience="dhara"))
+        _await_or_sync(provider.verify_token(token, expected_audience="oneiric"))
 
 
 def test_verify_rejects_expired_token():
@@ -89,10 +89,10 @@ def test_verify_rejects_bad_signature():
 
 def test_token_payload_has_jti():
     token = create_service_token(
-        secret=SECRET, issuer="crackerjack", audience="dhara",
+        secret=SECRET, issuer="crackerjack", audience="oneiric",
         permissions=[Permission.READ],
     )
-    payload = verify_token(token, secret=SECRET, expected_audience="dhara")
+    payload = verify_token(token, secret=SECRET, expected_audience="oneiric")
     assert payload.jti is not None
     assert len(payload.jti) > 0
 

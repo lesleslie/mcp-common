@@ -13,7 +13,6 @@ now live here too, so the four local files can become thin re-exports
 (`from mcp_common.canonical_schemas.agent import AgentCanonicalSchema as AgentMetadata`).
 
 Refs:
-- docs/specs/2026-09-14-dhara-mcp-decomposition-design.md §4.11
 - docs/audits/2026-09-15-decomposition-final-review.md §2.1 W4
 """
 
@@ -102,7 +101,7 @@ class AgentCanonicalSchema(BaseModel):
 
     # ``server_key`` is the registry key for the originating server
     # (e.g. ``"akosha"``, ``"mahavishnu"``, ``"session-buddy"``,
-    # ``"dhara"``, ``"crackerjack"``). Open string rather than Literal
+    # ``"oneiric"``, ``"crackerjack"``). Open string rather than Literal
     # because new Bodai components may join and the federation layer
     # must accept any well-formed key.
     server_key: str = Field(

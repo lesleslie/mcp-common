@@ -69,7 +69,7 @@ The following modules are excluded from coverage measurement via
 
 Achievable from the now-measurable surface without forcing per-stub
 mocking. Matches the band other Bodai ecosystem repos operate in
-(dhara/session-buddy/akosha/crackerjack run around 89%).
+(session-buddy/akosha/crackerjack/oneiric run around 89%).
 
 `pyproject.toml --cov-fail-under=90.0` enforces this gate in CI.
 

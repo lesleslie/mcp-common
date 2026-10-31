@@ -49,13 +49,13 @@ mcp-common.
 3. Phase 3 - Cross-server regression test in mcp-common plus
    per-repo gate in Session-Buddy (this commit).
 4. Follow-up - Migrate remaining Bodai core consumers (Akosha,
-   Dhara, Crackerjack) to use `mcp_common.register_baseline_tools`
+   Oneiric, Crackerjack) to use `mcp_common.register_baseline_tools`
    instead of hand-rolled equivalents; remove the `ping` deprecated
    alias after one release.
 
 ## Verification
 
-- `pytest mcp-common/tests/test_baseline_surface.py -v` - 5 cases
+- `pytest mcp-common/tests/test_baseline_surface.py -v` - 4 cases
   parametrized over the Bodai core servers; collects when servers
   are reachable, fails when any server drops a baseline tool.
 - `pytest session-buddy/tests/test_mcp_baseline.py -v` - per-repo

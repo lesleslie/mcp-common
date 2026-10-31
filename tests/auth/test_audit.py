@@ -59,7 +59,7 @@ def test_custom_sink_receives_event():
 
     event = AuthAuditEvent(
         timestamp=datetime.now(UTC),
-        service="dhara",
+        service="oneiric",
         caller_service="crackerjack",
         caller_id="system",
         action="list",

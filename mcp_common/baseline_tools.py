@@ -15,7 +15,7 @@ This module provides a single registration function
 a FastMCP instance using the canonical envelope shapes. The shapes
 mirror mahavishnu's reference implementation (see
 ``mahavishnu/mcp/server_core.py:discover_tools``) so drift across the
-5 Bodai core servers is impossible - consumers and cross-server
+Bodai core servers is impossible - consumers and cross-server
 regression tests can assert against a single source of truth.
 
 The ``get_liveness`` tool reads its ``{start_time, service_name,
@@ -200,7 +200,7 @@ async def _baseline_discover_tools(
     the set of tool names this server has registered at *some* point
     (typically via the FastMCP tool-version registry); defaults to
     "all currently registered tools" which is the leaner shape
-    Session-Buddy and Dhara use.
+    Session-Buddy and Oneiric use.
 
     Args:
         server: The FastMCP server instance to introspect.
@@ -211,7 +211,7 @@ async def _baseline_discover_tools(
             Bodai core servers ignore this for now.
         known_tool_names: Optional pre-known set. If ``None``, we use
             the currently registered tools as the "known" universe -
-            this keeps lean servers (Dhara) honest without forcing
+            this keeps lean servers (Oneiric) honest without forcing
             them to maintain a static registry.
 
     Returns:
@@ -410,7 +410,7 @@ def register_baseline_tools(
             singleton.
         known_tool_names: Optional pre-known tool universe for
             ``discover_tools``. Defaults to "currently registered
-            tools" which is the lean shape used by Dhara.
+            tools" which is the lean shape used by Oneiric.
 
     Raises:
         TypeError: If ``server`` does not expose ``tool()`` and

@@ -6,9 +6,10 @@ health_check_all) so that any future commit removing a baseline tool
 from any Bodai core MCP server fails CI.
 
 Each parametrized case opens an MCP ``tools/list`` against one
-of the 5 Bodai core servers and asserts the 4 canonical baseline tools
-are present in the response. The test is marked ``requires_network``
-so it auto-skips in offline CI when none of the servers are reachable.
+of the Bodai core servers that exposes the baseline and asserts the
+4 canonical baseline tools are present in the response. The test is
+marked ``requires_network`` so it auto-skips in offline CI when none
+of the servers are reachable.
 """
 
 from __future__ import annotations
@@ -20,11 +21,12 @@ from mcp_common.testing.baseline_surface import (
     assert_baseline_surface,
 )
 
-# Canonical 5-server list per Phase 3 §3 task 2.
+# Canonical baseline-bearing server list per Phase 3 §3 task 2. A
+# server belongs here only once it registers ``register_baseline_tools``
+# — the assertion is that the 4 canonical tools are present.
 BODAI_CORE_SERVERS = (
     pytest.param("http://localhost:8680/mcp", id="mahavishnu"),
     pytest.param("http://localhost:8682/mcp", id="akosha"),
-    pytest.param("http://localhost:8683/mcp", id="dhara"),
     pytest.param("http://localhost:8676/mcp", id="crackerjack"),
     pytest.param("http://localhost:8678/mcp", id="session-buddy"),
 )

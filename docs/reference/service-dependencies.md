@@ -322,7 +322,7 @@ mcp-common is the **foundation library** for the Mahavishnu ecosystem. These pro
 |---------|------|-------|
 | **Mahavishnu** | Orchestrator | Configuration management, CLI lifecycle, Rich UI |
 | **Session-Buddy** | Session Manager | Settings, HTTP client, server panels |
-| **Dhara** | Curator (State) | Configuration patterns, CLI factory |
+| **Oneiric** | Configuration Substrate | Configuration patterns, CLI factory |
 | **Akosha** | Pattern Recognition | Settings management, HTTP pooling |
 | **Crackerjack** | Quality Inspector | Server lifecycle, health checks |
 

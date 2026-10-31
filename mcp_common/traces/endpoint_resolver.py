@@ -1,14 +1,17 @@
 """Per-component DuckDB trace path resolver.
 
-Per Phase 5 / spec §5 — each Bodai component writes its OTel traces
-to a per-component DuckDB file. The default path convention is
+Each trace-writing Bodai component writes its OTel traces to a
+per-component DuckDB file. The default path convention is
 ``/Users/les/.local/share/<component>/traces.duckdb``. Operators can
 override via env vars (``MAHAVISHNU_TRACES_PATH``, ``AKOSHA_TRACES_PATH``,
 ``CRACKERJACK_TRACES_PATH``, ``SESSION_BUDDY_TRACES_PATH``,
-``DHARA_TRACES_PATH``).
+``ONEIRIC_TRACES_PATH``).
+
+The component → env-var registry lives in ``_COMPONENT_ENV`` below.
+``resolve()`` accepts any component name: components without a
+registry entry fall back to the default path convention.
 
 Refs:
-- docs/specs/2026-09-14-dhara-mcp-decomposition-design.md §5 Phase 5
 - docs/audits/2026-09-15-decomposition-final-review.md §2.1 W4
 """
 
@@ -27,7 +30,7 @@ _COMPONENT_ENV: dict[str, str] = {
     "akosha": "AKOSHA_TRACES_PATH",
     "crackerjack": "CRACKERJACK_TRACES_PATH",
     "session_buddy": "SESSION_BUDDY_TRACES_PATH",
-    "dhara": "DHARA_TRACES_PATH",
+    "oneiric": "ONEIRIC_TRACES_PATH",
 }
 
 

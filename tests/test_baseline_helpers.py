@@ -162,12 +162,12 @@ class TestLivenessContextSingleton:
 
     def test_seed_returns_seeded_context(self) -> None:
         seeded = seed_liveness_context(
-            service_name="dhara",
+            service_name="oneiric",
             version="1.2.3",
             start_time=1_234_567.0,
         )
         assert isinstance(seeded, LivenessContext)
-        assert seeded.service_name == "dhara"
+        assert seeded.service_name == "oneiric"
 
     def test_uptime_seconds_is_non_negative(self) -> None:
         ctx = LivenessContext(start_time=time.time() - 5.0)
@@ -295,7 +295,7 @@ class TestBaselineGetLiveness:
     @pytest.mark.asyncio
     async def test_uptime_rounds_to_two_decimals(self) -> None:
         seed_liveness_context(
-            service_name="dhara",
+            service_name="oneiric",
             version="1.0.0",
             start_time=time.time() - 3.14159,
         )

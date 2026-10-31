@@ -33,7 +33,7 @@ def test_resolve_all_returns_five_components():
     resolver = EndpointResolver(base_dir=Path("/tmp"))
     eps = resolver.resolve_all()
     components = {ep.component for ep in eps}
-    assert components == {"mahavishnu", "akosha", "crackerjack", "session_buddy", "dhara"}
+    assert components == {"mahavishnu", "akosha", "crackerjack", "session_buddy", "oneiric"}
 
 
 def test_unknown_component_falls_through_to_base():

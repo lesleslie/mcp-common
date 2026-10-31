@@ -12,6 +12,17 @@
 
 ## [Unreleased]
 
+### Changed
+
+- The Bodai core component set is now six repos — mahavishnu, akosha,
+  session-buddy, crackerjack, oneiric, mcp-common. This repo no longer
+  references any component outside that set: the per-component trace
+  registry in `mcp_common/traces/endpoint_resolver.py` now maps
+  `oneiric`, the baseline-surface regression test drops the retired
+  server and keeps the four that expose the 4-tool baseline, and the
+  module docstrings no longer point at the out-of-repo decomposition
+  spec.
+
 ### Fixed
 
 - docs: the release audit could not pass on a bumped version. The audit
@@ -354,7 +365,7 @@
 
 ### Documentation
 
-- Drop dhara row from MCP tool inventory table (Phase 8 T16)
+- Drop retired row from MCP tool inventory table (Phase 8 T16)
 
 ### Testing
 

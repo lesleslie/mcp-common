@@ -1,7 +1,6 @@
 """Canonical schemas for cross-component agent + skill publication.
 
-Per docs/specs/2026-09-14-dhara-mcp-decomposition-design.md
-§4.11 — canonical schemas live with mcp-common so multiple components
+Canonical schemas live with mcp-common so multiple components
 (Mahavishnu, Crackerjack, Oneiric) consume them without cross-component
 imports.
 
@@ -11,7 +10,7 @@ Wire-shape contract
 The canonical ``AgentCanonicalSchema`` and ``SkillCanonicalSchema``
 classes are the canonical **wire shape** for the bus-publication
 envelope. Federation clients (Mahavishnu's tool picker, Akosha's
-knowledge graph, Dhara's curator) consume this 6/8-field bus surface.
+knowledge graph) consume this 6/8-field bus surface.
 
 Per-repo schemas (akosha, mahavishnu, session-buddy, crackerjack) may
 extend the canonical schema with installer / Pydantic fields (``id``,
@@ -30,7 +29,6 @@ components.
 
 Refs:
 - docs/audits/2026-09-15-decomposition-final-review.md §2.1 W4
-- docs/specs/2026-09-14-dhara-mcp-decomposition-design.md §4.11
 """
 
 from __future__ import annotations
