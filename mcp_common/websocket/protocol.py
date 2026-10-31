@@ -152,7 +152,7 @@ class EventTypes:
     QUALITY_GATE_CHECKED = "quality_gate.checked"
     COVERAGE_UPDATED = "coverage.updated"
 
-    # Dhruva events
+    # Adapter and storage events
     ADAPTER_STORED = "adapter.stored"
     ADAPTER_UPDATED = "adapter.updated"
     ADAPTER_DISTRIBUTED = "adapter.distributed"
