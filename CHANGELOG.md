@@ -1,3 +1,13 @@
+## [0.34.2] - 2026-11-01
+
+### Changed
+
+- Drop every reference to the retired Bodai component
+
+### Documentation
+
+- websocket: Name the adapter event group by what it holds
+
 ## [0.34.1] - 2026-10-29
 
 ### Performance
