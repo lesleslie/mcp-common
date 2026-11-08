@@ -72,6 +72,10 @@
   a single-file scan puts no sibling modules in Mypy's build set, so their
   types degrade to `Any` and type-aware rules stop firing.
 
+### Build
+
+- deps: Add a 7-day dependency cooldown with CVE and tooling carve-outs
+
 ## [0.34.0] - 2026-10-29
 
 ### Added
