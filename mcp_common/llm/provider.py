@@ -23,11 +23,11 @@ class OpenAICompatibleProvider:
         try:
             # ``openai`` is an optional dependency from the ``llm`` PEP 735 group;
             # the runtime ``ImportError`` below gives a clear install hint.
-            # The ``ty: unresolved-import`` suppression is needed in clean venvs
+            # The ``ty: import-not-found`` suppression is needed in clean venvs
             # where the optional dep is not installed; locally ty resolves it
             # via venv bleed and reports the directive as unused (warning only,
             # does not fail the gate).
-            import openai  # type: ignore[import-not-found]  # ty: ignore[unresolved-import, unused-ignore-comment]
+            import openai  # type: ignore[import-not-found]  # ty: ignore[import-not-found, unused-ignore-comment]
         except ImportError as e:
             msg = (
                 "openai package required for OpenAICompatibleProvider. "

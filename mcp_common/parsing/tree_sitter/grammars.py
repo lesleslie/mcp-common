@@ -36,7 +36,7 @@ def load_python_grammar() -> tree_sitter.Language | None:
         # ``# type: ignore[import-not-found]`` directive covers Mypy/Pyright
         # in clean venvs where the optional dep is not installed.
         from tree_sitter_python import (
-            language as python_language,  # type: ignore[import-not-found]  # ty: ignore[unresolved-import, unused-ignore-comment]
+            language as python_language,  # type: ignore[import-not-found]  # ty: ignore[import-not-found, unused-ignore-comment]
         )
 
         # ``Language`` accepts a ``PyCapsule`` (the current API). Earlier

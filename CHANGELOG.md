@@ -1,3 +1,9 @@
+## [0.34.3] - 2026-11-07
+
+### Internal
+
+- gitignore: Ignore the Understand-Anything knowledge graph
+
 ## [0.34.2] - 2026-11-01
 
 ### Changed
