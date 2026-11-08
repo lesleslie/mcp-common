@@ -50,11 +50,9 @@ from mcp_common._version import __version__
 # preserves the public API (``from mcp_common import HTTPClientAdapter``)
 # without paying for it until something actually needs the adapter.
 from mcp_common.baseline_tools import (
+    BASELINE_REGISTERED_TOOL_NAMES,
     BASELINE_TOOL_NAMES,
-    LivenessContext,
-    get_liveness_context,
     register_baseline_tools,
-    seed_liveness_context,
 )
 from mcp_common.bootstrap import bootstrap_baseline_tools
 from mcp_common.cli import MCPServerCLIFactory, MCPServerSettings, RuntimeHealthSnapshot
@@ -77,8 +75,11 @@ from mcp_common.health import (
     HealthCheckResponse,
     HealthCheckResult,
     HealthStatus,
+    LivenessContext,
     WaitResult,
+    get_liveness_context,
     register_health_tools,
+    seed_liveness_context,
 )
 from mcp_common.interfaces import DualUseTool, ensure_dual_use
 from mcp_common.profiles import FullServer, MinimalServer, StandardServer
@@ -114,6 +115,7 @@ def __getattr__(name: str) -> Any:
 
 
 __all__: list[str] = [
+    "BASELINE_REGISTERED_TOOL_NAMES",
     "BASELINE_TOOL_NAMES",
     "MANDATORY_TOOLS",
     "APIKeyFormatError",

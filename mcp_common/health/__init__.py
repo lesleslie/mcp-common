@@ -22,12 +22,15 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import threading
 import time
 import typing as t
-from collections.abc import Callable
+import warnings
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
+from weakref import WeakSet
 
 from mcp_common.auth.health import AuthHealth
 
@@ -549,12 +552,129 @@ class DependencyWaiter:
 # =============================================================================
 
 
+@dataclass
+class LivenessContext:
+    """Process-level state required by the ``get_liveness`` tool.
+
+    Attributes:
+        start_time: Unix timestamp (from ``time.time()``) marking
+            when the server started.
+        service_name: Human-readable service identifier (e.g.
+            ``"mahavishnu"``, ``"session-buddy"``).
+        version: Service version string.
+
+    A module-level singleton of this dataclass is mutated by
+    ``seed_liveness_context`` and read by the ``get_liveness`` /
+    ``get_readiness`` tools registered by :func:`register_health_tools`.
+    The state lives here - in the module that owns the health tools -
+    so there is exactly one implementation of the liveness envelope.
+    """
+
+    start_time: float = field(default_factory=time.time)
+    service_name: str = "mcp-server"
+    version: str = "0.0.0"
+
+    def uptime_seconds(self) -> float:
+        """Return seconds elapsed since ``start_time``."""
+        return max(0.0, time.time() - self.start_time)
+
+
+# Module-level singleton. Lock protects concurrent seeding from a
+# lifespan hook plus a fallback ``register_health_tools`` call.
+_LIVENESS_LOCK = threading.Lock()
+_LIVENESS_CONTEXT = LivenessContext()
+
+# Servers whose health tools are already registered. FastMCP replaces a
+# duplicate registration (logging "Component already exists"), which
+# leaves the first copy shadowed - the exact defect the Phase 2 collapse
+# removes. Tracking the servers we wired keeps "one registration per
+# name" true even when a consumer mounts the health tools twice
+# (Session-Buddy mounts ``bootstrap_baseline_tools`` AND
+# ``register_health_tools``).
+_WIRED_SERVERS: WeakSet[t.Any] = WeakSet()
+
+
+def _is_wired(mcp: t.Any) -> bool:
+    """Return True when the health tools are already registered on ``mcp``."""
+    try:
+        return mcp in _WIRED_SERVERS
+    except TypeError:
+        # Not hashable - treat as never wired rather than failing the boot.
+        return False
+
+
+def _mark_wired(mcp: t.Any) -> None:
+    """Record that the health tools are registered on ``mcp``."""
+    try:
+        _WIRED_SERVERS.add(mcp)
+    except TypeError:
+        # Not weak-referenceable - the guard simply cannot track it.
+        pass
+
+
+def get_liveness_context() -> LivenessContext:
+    """Return the current module-level ``LivenessContext``.
+
+    Returns:
+        The singleton. May be the seeded-at-import default if
+        ``seed_liveness_context`` has not been called.
+    """
+    with _LIVENESS_LOCK:
+        return _LIVENESS_CONTEXT
+
+
+def seed_liveness_context(
+    *,
+    service_name: str,
+    version: str,
+    start_time: float | None = None,
+) -> LivenessContext:
+    """Seed the module-level ``LivenessContext`` for ``get_liveness``.
+
+    Intended to be called from a FastMCP lifespan hook at server boot.
+    Subsequent calls overwrite the singleton - useful for tests that
+    reset the start time between scenarios.
+
+    Args:
+        service_name: Service identifier written into the
+            ``get_liveness`` envelope.
+        version: Version string written into the ``get_liveness``
+            envelope.
+        start_time: Optional Unix timestamp. Defaults to ``time.time()``
+            at call time.
+
+    Returns:
+        The seeded context, so lifespan hooks can capture and yield it
+        if desired.
+    """
+    if start_time is None:
+        start_time = time.time()
+
+    with _LIVENESS_LOCK:
+        global _LIVENESS_CONTEXT
+        _LIVENESS_CONTEXT = LivenessContext(
+            start_time=start_time,
+            service_name=service_name,
+            version=version,
+        )
+        seeded = _LIVENESS_CONTEXT
+
+    logger.info(
+        "Seeded LivenessContext service=%s version=%s start_time=%.3f",
+        service_name,
+        version,
+        start_time,
+    )
+    return seeded
+
+
 def register_health_tools(  # noqa: C901
     mcp: t.Any,
-    service_name: str = "mcp-server",
+    server_name: str = "mcp-server",
     version: str = "0.0.0",
     start_time: float | None = None,
     dependencies: dict[str, DependencyConfig] | None = None,
+    deprecated_tools: Mapping[str, str] | None = None,
 ) -> None:
     """Register health check MCP tools with FastMCP server.
 
@@ -569,12 +689,40 @@ def register_health_tools(  # noqa: C901
         - get_liveness: Basic liveness probe (is process running)
         - get_readiness: Readiness probe (can accept work)
 
+    These six tools are the single implementation of the Bodai health
+    surface. ``mcp_common.baseline_tools`` deliberately registers only
+    ``discover_tools`` so a server that mounts both modules cannot
+    double-register ``get_liveness`` / ``get_readiness`` /
+    ``health_check_all``.
+
+    The liveness state (``service_name`` / ``version`` / ``start_time``)
+    is seeded into the module-level :class:`LivenessContext` singleton,
+    which the ``get_liveness`` / ``get_readiness`` tools read at call
+    time. A lifespan hook that calls :func:`seed_liveness_context`
+    therefore still wins over the values passed here.
+
+    Registering twice on the same server is a no-op: the first
+    registration owns the tool names, so a server that mounts the
+    health surface through two paths (for example Session-Buddy's
+    ``bootstrap_baseline_tools`` plus ``register_health_tools``) still
+    registers each name exactly once.
+
     Args:
         mcp: FastMCP server instance
-        service_name: Name of this service
+        server_name: Name of *this* service, reported by the
+            ``get_liveness`` / ``get_readiness`` envelopes. Deliberately
+            not named ``service_name``: the ``health_check_service`` tool
+            owns that parameter name, and shadowing it leaked
+            ``service_name_arg`` into the published input schema.
         version: Service version string
         start_time: Server start time (time.time()), defaults to now
         dependencies: Configured dependencies to check
+        deprecated_tools: Optional mapping of tool name -> replacement
+            tool name. A tool whose name is a key emits a
+            ``DeprecationWarning`` (and a WARNING log line) when it is
+            called, pointing at its replacement. Tool names that are
+            absent from the mapping never warn, so a server that
+            deprecates nothing stays warning-free.
 
     Example:
         >>> from fastmcp import FastMCP
@@ -586,18 +734,50 @@ def register_health_tools(  # noqa: C901
         ... }
         >>> register_health_tools(mcp, "my-server", "1.0.0", dependencies=dependencies)
     """
+    if _is_wired(mcp):
+        logger.warning(
+            "Health tools are already registered on this server; skipping "
+            "re-registration so each tool name is registered exactly once. "
+            "The first registration's identity and dependencies apply."
+        )
+        return
+
     if start_time is None:
         start_time = time.time()
 
     if dependencies is None:
         dependencies = {}
 
+    # The liveness state is owned by this module; seed it with the
+    # identity this registration was given so ``get_liveness`` and
+    # ``get_readiness`` report it.
+    seed_liveness_context(
+        service_name=server_name,
+        version=version,
+        start_time=start_time,
+    )
+
     checker = HealthChecker()
     waiter = DependencyWaiter()
 
+    deprecations: dict[str, str] = dict(deprecated_tools or {})
+
+    def _warn_if_deprecated(tool_name: str) -> None:
+        """Warn when ``tool_name`` is listed in ``deprecated_tools``.
+
+        Only names present in the mapping warn - every other tool stays
+        silent, so a server that deprecates nothing is warning-free.
+        """
+        replacement = deprecations.get(tool_name)
+        if replacement is None:
+            return
+        message = f"{tool_name} is deprecated; use {replacement} instead."
+        logger.warning(message)
+        warnings.warn(message, DeprecationWarning, stacklevel=3)
+
     @mcp.tool()  # type: ignore[untyped-decorator]
     async def health_check_service(
-        service_name_arg: str,
+        service_name: str,
         host: str = "localhost",
         port: int = 8080,
         timeout: int = 5,
@@ -609,7 +789,7 @@ def register_health_tools(  # noqa: C901
         Performs an HTTP GET request to the service's health endpoint.
 
         Args:
-            service_name_arg: Name of the service to check
+            service_name: Name of the service to check
             host: Hostname or IP address
             port: Port number
             timeout: Request timeout in seconds
@@ -619,13 +799,14 @@ def register_health_tools(  # noqa: C901
         Returns:
             Health status dictionary with status, latency, and any errors
         """
+        _warn_if_deprecated("health_check_service")
         config = DependencyConfig(
             host=host, port=port, use_tls=use_tls, health_path=health_path
         )
         result = await checker.check(
             config.to_url(),
             timeout=timeout,
-            service_name=service_name_arg,
+            service_name=service_name,
         )
         return result.to_dict()
 
@@ -636,6 +817,7 @@ def register_health_tools(  # noqa: C901
         Returns:
             Dictionary with health status of all services
         """
+        _warn_if_deprecated("health_check_all")
         if not dependencies:
             return {
                 "status": "healthy",
@@ -704,6 +886,7 @@ def register_health_tools(  # noqa: C901
         Returns:
             Result indicating success or timeout
         """
+        _warn_if_deprecated("wait_for_dependency")
         config = DependencyConfig(
             host=host,
             port=port,
@@ -746,6 +929,7 @@ def register_health_tools(  # noqa: C901
         Returns:
             Result indicating overall success and per-dependency status
         """
+        _warn_if_deprecated("wait_for_all_dependencies")
         if not dependencies:
             return {
                 "success": True,
@@ -786,11 +970,13 @@ def register_health_tools(  # noqa: C901
         Returns:
             Health response with status, service name, version, and uptime
         """
+        _warn_if_deprecated("get_liveness")
+        ctx = get_liveness_context()
         return {
             "status": "ok",
-            "service": service_name,
-            "version": version,
-            "uptime_seconds": round(time.time() - start_time, 2),
+            "service": ctx.service_name,
+            "version": ctx.version,
+            "uptime_seconds": round(ctx.uptime_seconds(), 2),
         }
 
     @mcp.tool()  # type: ignore[untyped-decorator]
@@ -803,10 +989,12 @@ def register_health_tools(  # noqa: C901
         Returns:
             Readiness response with dependency status
         """
+        _warn_if_deprecated("get_readiness")
+        ctx = get_liveness_context()
         if not dependencies:
             return {
                 "ready": True,
-                "service": service_name,
+                "service": ctx.service_name,
                 "checks": {"process": "ok"},
             }
 
@@ -822,10 +1010,15 @@ def register_health_tools(  # noqa: C901
 
         return {
             "ready": result.success,
-            "service": service_name,
+            "service": ctx.service_name,
             "checks": checks,
             "failed_required": result.failed_required,
         }
+
+    # The six tool names are now owned by this server. A second
+    # registration on the same server is skipped (see the guard at the
+    # top of this function) so each name stays registered exactly once.
+    _mark_wired(mcp)
 
 
 # =============================================================================
@@ -934,6 +1127,8 @@ __all__ = [
     # is_healthy, record_error, record_success
     # Phase 4 (2026-09-15): Prometheus metrics emission
     # update_health_metrics
+    # Phase 2 (2026-11-08): liveness state ownership moved here from
+    # mcp_common.baseline_tools, which now only registers discover_tools.
     "ComponentHealth",
     "DependencyConfig",
     "DependencyWaiter",
@@ -943,14 +1138,17 @@ __all__ = [
     "HealthChecker",
     "HealthFeedState",
     "HealthStatus",
+    "LivenessContext",
     "ReasonCode",
     "StatusValue",
     "WaitResult",
     "aggregate_feed_states",
+    "get_liveness_context",
     "is_healthy",
     "record_error",
     "record_success",
     "register_health_tools",
     "register_http_health_route",
+    "seed_liveness_context",
     "update_health_metrics",
 ]

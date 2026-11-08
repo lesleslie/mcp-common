@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Manual smoke script for the Bodai baseline tools (Phase 1).
 
-Registers ``register_baseline_tools`` on a fresh FastMCP instance and
-exercises each of the 4 canonical tools, printing the structured JSON
-envelope. Run from the repo root::
+Seeds the liveness identity and calls ``bootstrap_baseline_tools`` on a
+fresh FastMCP instance, then exercises each of the 4 canonical tools,
+printing the structured JSON envelope. Run from the repo root::
 
     PYTHONPATH=. python scripts/smoke_baseline.py
 
@@ -26,10 +26,8 @@ from fastmcp import FastMCP
 # repo root without an editable install (matches the test-suite path).
 sys.path.insert(0, ".")
 
-from mcp_common.baseline_tools import (
-    register_baseline_tools,
-    seed_liveness_context,
-)
+from mcp_common.baseline_tools import seed_liveness_context
+from mcp_common.bootstrap import bootstrap_baseline_tools
 
 
 def _print_envelope(label: str, payload: dict[str, Any]) -> None:
@@ -68,20 +66,20 @@ async def _main() -> int:
     """Build a fresh FastMCP server, register the baseline, run each tool."""
     server = FastMCP(name="smoke-baseline", version="0.0.0+smoke")
 
-    # Seed the liveness context BEFORE registration so get_liveness
-    # reports meaningful numbers.
+    # Seed the liveness identity BEFORE the bootstrap so get_liveness
+    # reports meaningful numbers. The bootstrap forwards the seeded
+    # identity to the health registration.
     seed_liveness_context(
         service_name="smoke-baseline",
         version="0.0.0+smoke",
-        start_time=time.time() - 1.25,  # pretend we started 1.25s ago
+        # Pretend we started 1.25s ago.
+        start_time=time.time() - 1.25,
     )
 
-    register_baseline_tools(
-        server,
-        # No dependencies - get_readiness + health_check_all should
-        # short-circuit to the ready/healthy paths.
-        dependencies={},
-    )
+    # ``discover_tools`` comes from mcp_common.baseline_tools; the
+    # health trio comes from mcp_common.health (Phase 2 collapse - one
+    # registration per name, one implementation behind it).
+    bootstrap_baseline_tools(server)
 
     # discover_tools: list the registered set with a query filter.
     discover_payload = await _invoke(server, "discover_tools", query="health")

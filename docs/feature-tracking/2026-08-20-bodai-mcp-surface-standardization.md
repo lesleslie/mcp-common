@@ -41,6 +41,19 @@ mcp-common.
   test (`mcp_common.testing.assert_baseline_surface`) plus the
   per-repo gate in Session-Buddy. Adoption flips to `true` once
   CI is green across all 5 Bodai core consumers.
+- Ownership split (2026-11-08, MCP tool-disambiguation Phase 2) -
+  the 4-tool SURFACE above is unchanged, but it is no longer served
+  by one module. `mcp_common.baseline_tools` registers
+  `discover_tools` only; `mcp_common.health.register_health_tools`
+  owns `get_liveness`, `get_readiness` and `health_check_all`.
+  Before the split both modules registered the health trio, so any
+  server mounting both (Session-Buddy) double-registered those three
+  names on every boot. The liveness state (`LivenessContext`,
+  `get_liveness_context`, `seed_liveness_context`) moved with the
+  tools into `mcp_common.health` and is re-exported from
+  `mcp_common.baseline_tools` and `mcp_common` so every existing
+  import path keeps working. `bootstrap_baseline_tools` still mounts
+  the full 4-name surface.
 
 ## Rollout Plan
 

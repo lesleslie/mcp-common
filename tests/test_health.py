@@ -1200,7 +1200,7 @@ class TestRegisterHealthTools:
         ):
             register_health_tools(
                 mock_mcp,
-                service_name="test-service",
+                server_name="test-service",
                 version="1.2.3",
                 dependencies={},
             )
@@ -1225,7 +1225,7 @@ class TestRegisterHealthTools:
              patch("mcp_common.health.DependencyWaiter"):
             register_health_tools(
                 mock_mcp,
-                service_name="test",
+                server_name="test",
                 version="1.0.0",
             )
 

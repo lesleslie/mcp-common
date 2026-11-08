@@ -34,10 +34,17 @@ Notes
 -----
 - ``register_baseline_tools`` is idempotent at the FastMCP level: calling
   it twice on the same server is safe.
-- This helper does NOT seed ``LivenessContext``. Call
-  ``mcp_common.baseline_tools.seed_liveness_context`` from your
-  lifespan startup if you want ``get_liveness()`` to return a
-  service-specific ``{service, version, uptime}`` envelope.
+- Since the Phase 2 collapse, ``mcp_common.baseline_tools`` registers
+  ``discover_tools`` ONLY, and this helper mounts the health trio
+  through :func:`mcp_common.health.register_health_tools` - the single
+  owner of those three names. A server that mounts the health surface
+  through two paths (Session-Buddy mounts this helper AND
+  ``register_health_tools``) still registers each name exactly once:
+  the health registration is a no-op on an already-wired server.
+- The liveness identity is forwarded from the current
+  :class:`~mcp_common.health.LivenessContext`, so a lifespan hook that
+  called ``seed_liveness_context`` before the bootstrap keeps its
+  service name and version.
 """
 
 from __future__ import annotations
@@ -45,13 +52,20 @@ from __future__ import annotations
 from typing import Any
 
 from mcp_common.baseline_tools import (
+    BASELINE_REGISTERED_TOOL_NAMES,
     BASELINE_TOOL_NAMES,
     register_baseline_tools,
 )
+from mcp_common.health import get_liveness_context, register_health_tools
 
 
 def bootstrap_baseline_tools(server: Any) -> list[str]:
     """Register the 4 canonical Bodai baseline tools on ``server``.
+
+    ``discover_tools`` comes from
+    :func:`mcp_common.baseline_tools.register_baseline_tools`; the health
+    trio comes from :func:`mcp_common.health.register_health_tools`,
+    which owns the single implementation of those three names.
 
     Args:
         server: A FastMCP server instance (or any object that
@@ -63,7 +77,22 @@ def bootstrap_baseline_tools(server: Any) -> list[str]:
         Useful for tests that want to assert the baseline surface.
     """
     register_baseline_tools(server)
-    return list(BASELINE_TOOL_NAMES)
+
+    # Forward the current liveness identity so a prior
+    # ``seed_liveness_context`` call keeps winning over the defaults.
+    ctx = get_liveness_context()
+    register_health_tools(
+        server,
+        server_name=ctx.service_name,
+        version=ctx.version,
+        start_time=ctx.start_time,
+    )
+
+    return sorted(BASELINE_TOOL_NAMES)
 
 
-__all__ = ["BASELINE_TOOL_NAMES", "bootstrap_baseline_tools"]
+__all__ = [
+    "BASELINE_REGISTERED_TOOL_NAMES",
+    "BASELINE_TOOL_NAMES",
+    "bootstrap_baseline_tools",
+]
