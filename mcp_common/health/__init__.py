@@ -735,7 +735,7 @@ def register_health_tools(  # noqa: C901
         >>> register_health_tools(mcp, "my-server", "1.0.0", dependencies=dependencies)
     """
     if _is_wired(mcp):
-        logger.warning(
+        logger.debug(
             "Health tools are already registered on this server; skipping "
             "re-registration so each tool name is registered exactly once. "
             "The first registration's identity and dependencies apply."
