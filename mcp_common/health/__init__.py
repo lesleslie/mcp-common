@@ -27,6 +27,7 @@ import time
 import typing as t
 import warnings
 from collections.abc import Callable, Mapping
+from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -605,11 +606,9 @@ def _is_wired(mcp: t.Any) -> bool:
 
 def _mark_wired(mcp: t.Any) -> None:
     """Record that the health tools are registered on ``mcp``."""
-    try:
-        _WIRED_SERVERS.add(mcp)
-    except TypeError:
+    with suppress(TypeError):
         # Not weak-referenceable - the guard simply cannot track it.
-        pass
+        _WIRED_SERVERS.add(mcp)
 
 
 def get_liveness_context() -> LivenessContext:

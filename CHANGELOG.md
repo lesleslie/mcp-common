@@ -107,6 +107,11 @@
   unaffected. This is safe only because the scan covers the whole package:
   a single-file scan puts no sibling modules in Mypy's build set, so their
   types degrade to `Any` and type-aware rules stop firing.
+- health: the weak-reference guard in `_mark_wired` uses
+  `contextlib.suppress(TypeError)` rather than `try`/`except`/`pass`,
+  which is what the refurb hook's FURB107 rule requires. The behaviour is
+  unchanged — a server that cannot be weakly referenced is still skipped
+  without raising.
 
 ### Build
 
