@@ -28,8 +28,39 @@
 
 ## [Unreleased]
 
+### Added
+
+- health: `mcp_common.health` now owns the whole health surface —
+  `get_liveness`, `get_readiness`, `health_check_all`,
+  `health_check_service`, `wait_for_dependency` and
+  `wait_for_all_dependencies` — together with the `LivenessContext`
+  dataclass and the `get_liveness_context()` / `seed_liveness_context()`
+  accessors. The liveness state used to live in `baseline_tools`, so the
+  two modules each carried a half of the same envelope; the state now
+  lives with the tools that read it, and `mcp_common.health` re-exports
+  the paths that existed before.
+- baseline_tools: `BASELINE_REGISTERED_TOOL_NAMES` names the tools
+  `bootstrap_baseline_tools` actually registers, which is now only
+  `discover_tools`. `BASELINE_TOOL_NAMES` is unchanged — it is the
+  documented four-name baseline surface, which a server reaches through
+  `register_health_tools` rather than through this helper.
+
 ### Changed
 
+- health: `register_health_tools()` takes `server_name=` where it
+  previously took `service_name=`. The old name shadowed the
+  `health_check_service` tool's own `service_name` parameter, so the
+  published input schema carried `service_name_arg` — a parameter name
+  no caller wrote. The two positional parameters (server name, version)
+  are unchanged, so only callers passing the keyword are affected.
+- baseline_tools: `bootstrap_baseline_tools` registers only
+  `discover_tools`. It used to mount the four-name baseline surface,
+  which meant a server that also called `register_health_tools`
+  registered `get_liveness`, `get_readiness` and `health_check_all`
+  twice; FastMCP replaced the duplicate and left the first copy
+  shadowed. The health surface now comes from `register_health_tools`
+  alone, and a server that mounts both paths still registers each name
+  exactly once.
 - The Bodai core component set is now six repos — mahavishnu, akosha,
   session-buddy, crackerjack, oneiric, mcp-common. This repo no longer
   references any component outside that set: the per-component trace
@@ -54,6 +85,11 @@
 
 ### Internal
 
+- health: the duplicate-registration skip is logged at debug level, not
+  warning. Session-Buddy mounts the health tools through two paths on
+  purpose, so the guard's skip is the expected case rather than a
+  problem, and the warning fired on every startup and buried the log
+  lines an operator actually reads.
 - perf(refurb): the `refurb` hook now passes `--follow-imports=skip` and
   `--ignore-missing-imports` to Mypy. Refurb drives Mypy internally — Mypy
   is a hard dependency, not a pluggable backend — so Mypy's own flags are
