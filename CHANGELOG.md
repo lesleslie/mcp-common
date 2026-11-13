@@ -1,3 +1,9 @@
+## [0.36.0] - 2026-11-13
+
+### Added
+
+- health: Let a server contribute its own readiness state
+
 ## [0.35.0] - 2026-11-13
 
 ### Changed
@@ -101,6 +107,21 @@
   single source of truth; `CLAUDE.md` points at it instead of restating
   a number that no release step maintains. This is the convention the
   other five Bodai repos already follow.
+- test: `pytest.ini` shadowed the `[tool.pytest.ini_options]` table in
+  `pyproject.toml`, so the whole table was dead. pytest gives
+  `pytest.ini` the higher priority, and the shadowing file carried none
+  of the coverage flags — a plain `pytest` run collected no coverage at
+  all, wrote no `coverage.json`, and never enforced
+  `--cov-fail-under`. The coverage floor in `pyproject.toml` was
+  therefore enforced by nothing. `pytest.ini` is deleted; its
+  `pythonpath = .` moves into `pyproject.toml` as `pythonpath = ["."]`.
+- coverage: the release audit rejected the coverage claim with
+  "ratchet file could not be read" while the ratchet was present and
+  readable — it was rejected as stale. The floor was refreshed from a
+  real measurement (95.58% combined line+branch coverage, against the
+  86.42% the ratchet carried), and the `CLAUDE.md` claims were
+  synchronised to match. See
+  [the ratchet refresh memo](docs/audits/2026-11-13-coverage-ratchet-refresh.md).
 
 ### Internal
 

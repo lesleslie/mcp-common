@@ -18,7 +18,7 @@ For a shorter, tool-neutral bootstrap document, start with `AGENTS.md`.
 - ✅ Health check system (HTTP connectivity, component health)
 - ✅ Exception hierarchy (MCPServerError, validation errors)
 - ✅ ValidationMixin for Pydantic models
-- ✅ Comprehensive test suite with **90% line, 80% branch** coverage (post optional-dep stub exclusion; see [coverage memo](docs/audits/2026-09-05-coverage-ratchet-memo.md))
+- ✅ Comprehensive test suite with **96% line, 93% branch** coverage (post optional-dep stub exclusion; see [coverage memo](docs/audits/2026-09-05-coverage-ratchet-memo.md) and [ratchet refresh](docs/audits/2026-11-13-coverage-ratchet-refresh.md))
 - ✅ Complete example server (`examples/weather_server.py`)
 - ✅ Oneiric CLI Factory with lifecycle management (NEW in v0.3.3)
 - ✅ CLI example server (`examples/cli_server.py`)
@@ -485,7 +485,7 @@ uv run ruff format && uv run ruff check && uv run mypy mcp_common tests && uv ru
 1. **Not validating API keys** - Use `get_api_key()` or `get_api_key_secure()` for validation
 1. **Hardcoding paths** - Use Path expansion (`~` → home) via MCPBaseSettings
 1. **Creating new clients per request** - Use HTTPClientAdapter for connection pooling
-1. **Ignoring test coverage** - Must maintain ≥90% line coverage (enforced by CI ratchet at `.coverage-ratchet.json`). Exceptions require an audit memo in `docs/audits/`.
+1. **Ignoring test coverage** - Must maintain ≥96% line coverage (enforced by CI ratchet at `.coverage-ratchet.json`). Exceptions require an audit memo in `docs/audits/`.
 1. **Skipping type hints** - Strict MyPy requires full type coverage
 1. **Missing docstrings** - All public APIs need Google-style docstrings
 1. **Not using ServerPanels** - Use Rich UI for professional console output

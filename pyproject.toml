@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mcp-common"
-version = "0.35.0"
+version = "0.36.0"
 description = "Oneiric-Native foundation library providing battle-tested patterns for MCP (Model Context Protocol) servers, with YAML configuration, Rich UI, and CLI lifecycle management"
 readme = "README.md"
 requires-python = ">=3.14"
@@ -197,9 +197,10 @@ addopts = [
     "-ra",
     "--tb=short",
     "--cov-branch",
-    "--cov-fail-under=86.42358417377812",
+    "--cov-fail-under=95.57730650715969",
 ]
 testpaths = ["tests"]
+pythonpath = ["."]
 markers = [
     "unit: Unit tests",
     "integration: Integration tests",

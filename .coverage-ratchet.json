@@ -1,19 +1,35 @@
 {
-  "baseline": 86.42358417377812,
-  "current_minimum": 86.42358417377812,
+  "baseline": 95.57730650715969,
+  "current_minimum": 95.57730650715969,
   "target": 100.0,
-  "last_updated": "2026-10-14T10:02:23.282124",
+  "last_updated": "2026-11-13T05:53:49.670612",
   "history": [
     {
       "date": "2026-10-14T10:02:23.282140",
       "coverage": 86.42358417377812,
       "commit": "baseline",
       "milestone": false
+    },
+    {
+      "date": "2026-11-13T05:36:30.738443",
+      "coverage": 95.57730650715969,
+      "commit": "current",
+      "milestone": [
+        90,
+        95
+      ],
+      "milestones_hit": [
+        90,
+        95
+      ]
     }
   ],
-  "milestones_achieved": [],
-  "next_milestone": 90,
-  "generated_at": "2026-10-14T10:02:23.282148",
+  "milestones_achieved": [
+    90,
+    95
+  ],
+  "next_milestone": 100,
+  "generated_at": "2026-11-13T05:53:49.670627",
   "coverage_data_path": "/Users/les/Projects/mcp-common/coverage.json",
-  "coverage_data_mtime": 1791997176.0627959
+  "coverage_data_mtime": 1794578004.7367072
 }
