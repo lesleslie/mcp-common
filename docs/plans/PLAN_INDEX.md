@@ -1,6 +1,6 @@
 # Plan Index
 
-_Regenerated 2026-11-08 by `crackerjack.tools.plan_index_sync` (phase)._
+_Regenerated 2026-11-13 by `crackerjack.tools.plan_index_sync` (phase)._
 
 ### Docs: adr
 

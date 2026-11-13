@@ -1,3 +1,22 @@
+## [0.35.0] - 2026-11-13
+
+### Changed
+
+- Feat/mcp-common-phase2-tool-disambiguation -> main
+
+### Fixed
+
+- health: Log the duplicate-registration skip at debug level
+- health: Use contextlib.suppress for the weak-reference guard
+
+### Documentation
+
+- changelog: Record the health-surface collapse for the next release
+
+### Build
+
+- deps: Add a 7-day dependency cooldown with CVE and tooling carve-outs
+
 ## [0.34.3] - 2026-11-07
 
 ### Internal

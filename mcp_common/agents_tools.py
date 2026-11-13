@@ -421,6 +421,15 @@ def build_register_agents_tools(
 
         @app.tool(name=list_tool_name)
         async def list_agents() -> list[dict[str, Any]]:
+            """List the agents this server publishes, with unsigned metadata.
+
+            Each entry carries the agent's ``name``, ``description`` and
+            ``system_prompt`` so a picker can preview the body without a
+            second round-trip. The ``signature`` and ``server_pubkey_id``
+            fields are ``None`` here — ``get_agent`` fills them in, since
+            the signature covers the canonical payload without the
+            signing fields themselves.
+            """
             return await _list_agents_impl(
                 server_key=server_key,
                 name_to_entry=name_to_entry,
@@ -430,6 +439,13 @@ def build_register_agents_tools(
 
         @app.tool(name=get_tool_name)
         async def get_agent(name: str) -> dict[str, Any]:
+            """Return one published agent's signed metadata and body.
+
+            ``name`` must appear in this server's agent allowlist. On
+            success the result is ``{"success": True, "metadata": <signed>,
+            "body": <body>}``; on failure it is
+            ``{"success": False, "error": "..."}``.
+            """
             return await _get_agent_impl(
                 name,
                 server_key=server_key,

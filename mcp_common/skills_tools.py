@@ -383,6 +383,15 @@ def build_register_skills_tools(
 
         @app.tool(name=list_tool_name)
         async def list_skills() -> list[dict[str, Any]]:
+            """List the skills this server publishes, with unsigned metadata.
+
+            The metadata's ``content_hash`` is computed from the stripped
+            body bytes; the body itself is not inlined — use ``get_skill``
+            for that. The ``signature`` and ``server_pubkey_id`` fields are
+            ``None`` here — ``get_skill`` fills them in, since the
+            signature covers the canonical payload without the signing
+            fields themselves.
+            """
             return await _list_skills_impl(
                 server_key=server_key,
                 name_to_entry=name_to_entry,
@@ -393,6 +402,13 @@ def build_register_skills_tools(
 
         @app.tool(name=get_tool_name)
         async def get_skill(name: str) -> dict[str, Any]:
+            """Return one published skill's signed metadata and body.
+
+            ``name`` must appear in this server's skill allowlist. On
+            success the result is ``{"success": True, "metadata": <signed>,
+            "body": <body>}``; on failure it is
+            ``{"success": False, "error": "..."}``.
+            """
             return await _get_skill_impl(
                 name,
                 server_key=server_key,
