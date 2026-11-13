@@ -674,6 +674,7 @@ def register_health_tools(  # noqa: C901
     start_time: float | None = None,
     dependencies: dict[str, DependencyConfig] | None = None,
     deprecated_tools: Mapping[str, str] | None = None,
+    readiness_extra: Callable[[], t.Awaitable[dict[str, t.Any]]] | None = None,
 ) -> None:
     """Register health check MCP tools with FastMCP server.
 
@@ -722,6 +723,16 @@ def register_health_tools(  # noqa: C901
             called, pointing at its replacement. Tool names that are
             absent from the mapping never warn, so a server that
             deprecates nothing stays warning-free.
+        readiness_extra: Optional async callable invoked on every
+            ``get_readiness`` call, returning a dict that is merged into
+            the readiness payload. This is the extension point for
+            server-specific state that belongs in the readiness answer:
+            worker capability state, for instance, is one server's
+            concept and has no fleet-wide meaning, so it cannot live
+            here. The hook keeps the MCP tool and the server's own HTTP
+            readiness route in agreement without this module needing to
+            know what the extra fields mean. Called at probe time, not
+            captured at registration, so the payload reflects live state.
 
     Example:
         >>> from fastmcp import FastMCP
@@ -991,11 +1002,14 @@ def register_health_tools(  # noqa: C901
         _warn_if_deprecated("get_readiness")
         ctx = get_liveness_context()
         if not dependencies:
-            return {
+            payload: dict[str, t.Any] = {
                 "ready": True,
                 "service": ctx.service_name,
                 "checks": {"process": "ok"},
             }
+            if readiness_extra is not None:
+                payload.update(await readiness_extra())
+            return payload
 
         result = await waiter.wait_for_all(dependencies)
 
@@ -1007,12 +1021,19 @@ def register_health_tools(  # noqa: C901
             }
         )
 
-        return {
+        payload = {
             "ready": result.success,
             "service": ctx.service_name,
             "checks": checks,
             "failed_required": result.failed_required,
         }
+        if readiness_extra is not None:
+            # The server contributes its own domain-specific state. This
+            # module stays generic: it merges the extra fields without
+            # knowing what they mean, so the MCP tool can carry the same
+            # payload as the server's own HTTP readiness route.
+            payload.update(await readiness_extra())
+        return payload
 
     # The six tool names are now owned by this server. A second
     # registration on the same server is skipped (see the guard at the

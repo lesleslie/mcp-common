@@ -384,3 +384,95 @@ class TestRegisterHealthTools:
         # With localhost (default)
         default_host = DependencyConfig(port=5432)
         assert default_host.to_url() == "http://localhost:5432/health"
+
+
+class TestReadinessExtraHook:
+    """Test the ``readiness_extra`` extension point.
+
+    The hook lets a server contribute its own domain-specific state to the
+    ``get_readiness`` payload. Worker capability state is one server's
+    concept and has no fleet-wide meaning, so it cannot live in this
+    module; the hook lets the MCP tool carry the same payload as the
+    server's own HTTP readiness route without this module needing to know
+    what the extra fields mean.
+    """
+
+    async def test_extra_fields_merge_into_readiness(self) -> None:
+        """Extra fields land in the payload alongside the dependency checks."""
+        mcp = MockMCP()
+        waiter = MagicMock()
+        waiter.wait_for_all = AsyncMock(
+            return_value=WaitResult(
+                success=True,
+                dependencies={
+                    "db": HealthCheckResult(
+                        service_name="db",
+                        status=HealthStatus.HEALTHY,
+                        latency_ms=1.0,
+                    ),
+                },
+                total_wait_seconds=0.5,
+                failed_required=[],
+                skipped_optional=[],
+            )
+        )
+        checker = MagicMock()
+        deps = {"db": DependencyConfig(port=5432, required=True)}
+
+        async def readiness_extra() -> dict:
+            return {"workers": {"status": "healthy"}}
+
+        with patch("mcp_common.health.HealthChecker", return_value=checker), patch(
+            "mcp_common.health.DependencyWaiter", return_value=waiter
+        ):
+            register_health_tools(
+                mcp,
+                "test-server",
+                "1.0.0",
+                dependencies=deps,
+                readiness_extra=readiness_extra,
+            )
+
+        result = await mcp.tools["get_readiness"]()
+
+        assert result["ready"] is True
+        assert result["checks"]["db"] == "healthy"
+        assert result["workers"] == {"status": "healthy"}
+
+    async def test_extra_fields_merge_without_dependencies(self) -> None:
+        """A server with no dependencies still gets its extra fields."""
+        mcp = MockMCP()
+        checker = MagicMock()
+
+        async def readiness_extra() -> dict:
+            return {"workers": {"status": "warming_up"}}
+
+        with patch("mcp_common.health.HealthChecker", return_value=checker):
+            register_health_tools(
+                mcp,
+                "test-server",
+                "1.0.0",
+                dependencies={},
+                readiness_extra=readiness_extra,
+            )
+
+        result = await mcp.tools["get_readiness"]()
+
+        assert result["ready"] is True
+        assert result["workers"] == {"status": "warming_up"}
+
+    async def test_hook_is_optional(self) -> None:
+        """Without the hook the payload is unchanged."""
+        mcp = MockMCP()
+        checker = MagicMock()
+
+        with patch("mcp_common.health.HealthChecker", return_value=checker):
+            register_health_tools(mcp, "test-server", "1.0.0", dependencies={})
+
+        result = await mcp.tools["get_readiness"]()
+
+        assert result == {
+            "ready": True,
+            "service": "test-server",
+            "checks": {"process": "ok"},
+        }
